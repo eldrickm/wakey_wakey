@@ -1,0 +1,9 @@
+name: rtl
+
+outputs:
+  - design.v
+  - design.vcs.v
+
+commands: 
+  - cat verilog/accumulation_buffer.v verilog/conv_optimized.v verilog/ifmap_radr_gen.v verilog/skew_registers.v verilog/adr_gen_sequential.v verilog/deaggregator.v verilog/mac.v verilog/systolic_array.v verilog/aggregator.v verilog/double_buffer.v verilog/ram_sync_1r1w.v verilog/systolic_array_with_skew.v verilog/conv_controller_optimized.v verilog/fifo.v verilog/SizedFIFO.v > outputs/design.v
+  - cp outputs/design.v outputs/design.vcs.v

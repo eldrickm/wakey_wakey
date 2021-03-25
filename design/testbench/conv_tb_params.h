@@ -1,0 +1,11 @@
+const int IC0 = 16;
+const int OC0 = 16;
+const int IC1 = 4;
+const int OC1 = 4;
+const int FX = 3;
+const int FY = 3;
+const int OX0 = 14;
+const int OY0 = 14;
+const int OX1 = 4;
+const int OY1 = 4;
+const int STRIDE = 1; 

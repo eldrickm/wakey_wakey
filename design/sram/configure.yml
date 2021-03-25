@@ -1,0 +1,58 @@
+#=========================================================================
+# OpenRAM SRAM Compiler 
+#=========================================================================
+# Author : Kartik Prabhu
+# Date   : February 15, 2020
+#
+
+name: sram
+
+#-------------------------------------------------------------------------
+# Outputs
+#-------------------------------------------------------------------------
+
+outputs:
+  - sky130_sram_4kbyte_1rw1r_32x1024_8.sp
+  - sky130_sram_4kbyte_1rw1r_32x1024_8.v
+  - sky130_sram_4kbyte_1rw1r_32x1024_8.lef
+  - sky130_sram_4kbyte_1rw1r_32x1024_8_TT_1p8V_25C.lib
+  - sky130_sram_4kbyte_1rw1r_32x1024_8.gds
+  - sky130_sram_4kbyte_1rw1r_32x1024_8_TT_1p8V_25C.db
+  - sky130_sram_2kbyte_1rw1r_32x512_8.sp
+  - sky130_sram_2kbyte_1rw1r_32x512_8.v
+  - sky130_sram_2kbyte_1rw1r_32x512_8.lef
+  - sky130_sram_2kbyte_1rw1r_32x512_8_TT_1p8V_25C.lib
+  - sky130_sram_2kbyte_1rw1r_32x512_8.gds
+  - sky130_sram_2kbyte_1rw1r_32x512_8_TT_1p8V_25C.db
+  - sky130_sram_1kbyte_1rw1r_32x256_8.sp
+  - sky130_sram_1kbyte_1rw1r_32x256_8.v
+  - sky130_sram_1kbyte_1rw1r_32x256_8.lef
+  - sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib
+  - sky130_sram_1kbyte_1rw1r_32x256_8.gds
+  - sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.db
+
+#-------------------------------------------------------------------------
+# Commands
+#-------------------------------------------------------------------------
+
+commands:
+  - cp /afs/ir.stanford.edu/class/ee272/skywater-openram/sky130_fd_bd_sram/macros/sky130_sram_4kbyte_1rw1r_32x1024_8/sky130_sram_4kbyte_1rw1r_32x1024_8.sp outputs/
+  - cp /afs/ir.stanford.edu/class/ee272/skywater-openram/sky130_fd_bd_sram/macros/sky130_sram_4kbyte_1rw1r_32x1024_8/sky130_sram_4kbyte_1rw1r_32x1024_8.v outputs/
+  - cp /afs/ir.stanford.edu/class/ee272/skywater-openram/sky130_fd_bd_sram/macros/sky130_sram_4kbyte_1rw1r_32x1024_8/sky130_sram_4kbyte_1rw1r_32x1024_8.lef outputs/
+  - cp /afs/ir.stanford.edu/class/ee272/skywater-openram/sky130_fd_bd_sram/macros/sky130_sram_4kbyte_1rw1r_32x1024_8/sky130_sram_4kbyte_1rw1r_32x1024_8_TT_1p8V_25C.lib outputs/
+  - cp /afs/ir.stanford.edu/class/ee272/skywater-openram/sky130_fd_bd_sram/macros/sky130_sram_4kbyte_1rw1r_32x1024_8/sky130_sram_4kbyte_1rw1r_32x1024_8.gds outputs/
+  - cp /afs/ir.stanford.edu/class/ee272/skywater-openram/sky130_fd_bd_sram/macros/sky130_sram_4kbyte_1rw1r_32x1024_8/sky130_sram_4kbyte_1rw1r_32x1024_8_TT_1p8V_25C.db outputs/
+
+  - cp /afs/ir.stanford.edu/class/ee272/skywater-openram/sky130_fd_bd_sram/macros/sky130_sram_2kbyte_1rw1r_32x512_8/sky130_sram_2kbyte_1rw1r_32x512_8.sp outputs/
+  - cp /afs/ir.stanford.edu/class/ee272/skywater-openram/sky130_fd_bd_sram/macros/sky130_sram_2kbyte_1rw1r_32x512_8/sky130_sram_2kbyte_1rw1r_32x512_8.v outputs/
+  - cp /afs/ir.stanford.edu/class/ee272/skywater-openram/sky130_fd_bd_sram/macros/sky130_sram_2kbyte_1rw1r_32x512_8/sky130_sram_2kbyte_1rw1r_32x512_8.lef outputs/
+  - cp /afs/ir.stanford.edu/class/ee272/skywater-openram/sky130_fd_bd_sram/macros/sky130_sram_2kbyte_1rw1r_32x512_8/sky130_sram_2kbyte_1rw1r_32x512_8_TT_1p8V_25C.lib outputs/
+  - cp /afs/ir.stanford.edu/class/ee272/skywater-openram/sky130_fd_bd_sram/macros/sky130_sram_2kbyte_1rw1r_32x512_8/sky130_sram_2kbyte_1rw1r_32x512_8.gds outputs/
+  - cp /afs/ir.stanford.edu/class/ee272/skywater-openram/sky130_fd_bd_sram/macros/sky130_sram_2kbyte_1rw1r_32x512_8/sky130_sram_2kbyte_1rw1r_32x512_8_TT_1p8V_25C.db outputs/
+
+  - cp /afs/ir.stanford.edu/class/ee272/skywater-openram/sky130_fd_bd_sram/macros/sky130_sram_1kbyte_1rw1r_32x256_8/sky130_sram_1kbyte_1rw1r_32x256_8.sp outputs/
+  - cp /afs/ir.stanford.edu/class/ee272/skywater-openram/sky130_fd_bd_sram/macros/sky130_sram_1kbyte_1rw1r_32x256_8/sky130_sram_1kbyte_1rw1r_32x256_8.v outputs/
+  - cp /afs/ir.stanford.edu/class/ee272/skywater-openram/sky130_fd_bd_sram/macros/sky130_sram_1kbyte_1rw1r_32x256_8/sky130_sram_1kbyte_1rw1r_32x256_8.lef outputs/
+  - cp /afs/ir.stanford.edu/class/ee272/skywater-openram/sky130_fd_bd_sram/macros/sky130_sram_1kbyte_1rw1r_32x256_8/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib outputs/
+  - cp /afs/ir.stanford.edu/class/ee272/skywater-openram/sky130_fd_bd_sram/macros/sky130_sram_1kbyte_1rw1r_32x256_8/sky130_sram_1kbyte_1rw1r_32x256_8.gds outputs/
+  - cp /afs/ir.stanford.edu/class/ee272/skywater-openram/sky130_fd_bd_sram/macros/sky130_sram_1kbyte_1rw1r_32x256_8/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.db outputs/

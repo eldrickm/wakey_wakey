@@ -1,0 +1,12 @@
+name: cadence-ncsim-sim
+
+inputs:
+  - design.v
+  - testbench.v
+  - design.args
+
+outputs:
+  - design.vcd
+
+commands:
+  - xrun -gui +access+r -sv -timescale 1ns/1ps inputs/testbench.v inputs/*.v -incdir inputs

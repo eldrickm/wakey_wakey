@@ -1,0 +1,11 @@
+`define IC0 16
+`define OC0 16
+`define IC1 4
+`define OC1 4
+`define FX 3
+`define FY 3
+`define OX0 14
+`define OY0 14
+`define OX1 4
+`define OY1 4
+`define STRIDE 1
