@@ -1,6 +1,6 @@
 # Wakey-Wakey: A Low-Power Reconfigurable Wake Word Accelerator
 
-![](img/overveiw.png?raw=true)
+![](<img/overveiw.png>)
 
 
 ## Table of Contents
