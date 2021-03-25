@@ -1,4 +1,5 @@
-# Wakey-Wakey: A Low-Power Reconfigurable Wake Word Accelerator
+# Wakey-Wakey
+## A Low-Power Reconfigurable Wake Word Accelerator
 
 ![Wakey-Wakey High Level Block Diagram](./img/overview.png)
 
