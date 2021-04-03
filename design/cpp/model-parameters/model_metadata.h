@@ -40,10 +40,10 @@
 #define EI_CLASSIFIER_DATATYPE_FLOAT32           1
 #define EI_CLASSIFIER_DATATYPE_INT8              9
 
-#define EI_CLASSIFIER_PROJECT_ID                 23368
-#define EI_CLASSIFIER_PROJECT_OWNER              "Eldrick Millares"
-#define EI_CLASSIFIER_PROJECT_NAME               "wakey-wakey-test"
-#define EI_CLASSIFIER_PROJECT_DEPLOY_VERSION     1
+#define EI_CLASSIFIER_PROJECT_ID                 24007
+#define EI_CLASSIFIER_PROJECT_OWNER              "Matthew"
+#define EI_CLASSIFIER_PROJECT_NAME               "mjpauly-project-1"
+#define EI_CLASSIFIER_PROJECT_DEPLOY_VERSION     2
 #define EI_CLASSIFIER_NN_INPUT_FRAME_SIZE        650
 #define EI_CLASSIFIER_RAW_SAMPLE_COUNT           16000
 #define EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME      1
@@ -51,17 +51,20 @@
 #define EI_CLASSIFIER_INPUT_WIDTH                0
 #define EI_CLASSIFIER_INPUT_HEIGHT               0
 #define EI_CLASSIFIER_INTERVAL_MS                0.0625
-#define EI_CLASSIFIER_OUT_TENSOR_NAME            "y_pred/Softmax_1:0"
-#define EI_CLASSIFIER_LABEL_COUNT                2
+#define EI_CLASSIFIER_LABEL_COUNT                3
 #define EI_CLASSIFIER_HAS_ANOMALY                0
 #define EI_CLASSIFIER_FREQUENCY                  16000
 #define EI_CLASSIFIER_USE_QUANTIZED_DSP_BLOCK    0
 
+
+#define EI_CLASSIFIER_OBJECT_DETECTION           0
+
+
 #define EI_CLASSIFIER_TFLITE_ARENA_SIZE          10355
 #define EI_CLASSIFIER_TFLITE_INPUT_DATATYPE      EI_CLASSIFIER_DATATYPE_INT8
 #define EI_CLASSIFIER_TFLITE_INPUT_QUANTIZED     1
-#define EI_CLASSIFIER_TFLITE_INPUT_SCALE         0.04627494141459465
-#define EI_CLASSIFIER_TFLITE_INPUT_ZEROPOINT     23
+#define EI_CLASSIFIER_TFLITE_INPUT_SCALE         0.04553147777915001
+#define EI_CLASSIFIER_TFLITE_INPUT_ZEROPOINT     8
 #define EI_CLASSIFIER_TFLITE_OUTPUT_DATATYPE     EI_CLASSIFIER_DATATYPE_INT8
 #define EI_CLASSIFIER_TFLITE_OUTPUT_QUANTIZED    1
 #define EI_CLASSIFIER_TFLITE_OUTPUT_SCALE        0.00390625
@@ -86,7 +89,7 @@
 #endif
 #endif // EI_CLASSIFIER_INFERENCING_ENGINE == EI_CLASSIFIER_TFLITE && EI_CLASSIFIER_USE_FULL_TFLITE == 1
 
-const char* ei_classifier_inferencing_categories[] = { "no", "noise" };
+const char* ei_classifier_inferencing_categories[] = { "noise", "unknown", "yes" };
 
 typedef struct {
     uint16_t implementation_version;

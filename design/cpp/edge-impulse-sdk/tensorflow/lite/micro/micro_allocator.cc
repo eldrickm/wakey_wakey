@@ -762,6 +762,7 @@ TfLiteStatus MicroAllocator::PrepareNodeAndRegistrationDataFromFlatbuffer(
     const Model* model, const SubGraph* subgraph,
     const MicroOpResolver& op_resolver,
     NodeAndRegistration* node_and_registrations) {
+  static int counter = 0;
   TfLiteStatus status = kTfLiteOk;
   auto* opcodes = model->operator_codes();
   MicroBuiltinDataAllocator builtin_data_allocator(memory_allocator_);
