@@ -1,8 +1,8 @@
 /*
- * vector multiplication
+ * Vector Multiplied
  */
 
-module vec_mult #(
+module vec_mul #(
     parameter INPUT_BW = 8,
     parameter OUTPUT_BW = 8,
     parameter VECTOR_SIZE = 13
@@ -34,8 +34,8 @@ module vec_mult #(
 
     `ifdef COCOTB_SIM
     initial begin
-      $dumpfile ("vec_mult.vcd");
-      $dumpvars (0, vec_mult);
+      $dumpfile ("vec_mul.vcd");
+      $dumpvars (0, vec_mul);
       #1;
     end
     `endif

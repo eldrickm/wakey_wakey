@@ -8,7 +8,7 @@ from cocotb.triggers import FallingEdge
 
 
 @cocotb.test()
-async def test_vec_mult(dut):
+async def test_vec_mul(dut):
     """ Test Vector Multiplier """
 
     clock = Clock(dut.clk_i, 10, units="us")  # Create a 10us period clock on port clk

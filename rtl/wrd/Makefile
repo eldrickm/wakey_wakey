@@ -8,8 +8,8 @@ SIM			   ?= icarus			# Simulator (icarus, verilator, ...)
 TOPLEVEL_LANG  ?= verilog			# HDL (verilog, vhdl, ...)
 RTL_DIR			= $(shell pwd)
 VERILOG_SOURCES = $(RTL_DIR)/*.sv
-MODULE			= test_vec_mult		# Python cocotb tests
-TOPLEVEL        = vec_mult			# Top level RTL module
+MODULE			= test_vec_mul		# Python cocotb tests
+TOPLEVEL        = vec_mul			# Top level RTL module
 # ===
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
