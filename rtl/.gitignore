@@ -1,2 +1,3 @@
-sim_build/
-results.xml
+**/*.vcd
+**/sim_build/
+**/results.xml
