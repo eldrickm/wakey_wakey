@@ -1,5 +1,7 @@
 # Wakey-Wakey - RTL and Simulation
 
+[Verlog Style Guide](https://github.com/lowRISC/style-guides/blob/master/VerilogCodingStyle.md)
+
 ## Setup
 
 You have two options for a simulation backend - Icarus Verilog or Verilator
@@ -49,8 +51,17 @@ You can follow the
 [cocotb Quickstart Guide](https://docs.cocotb.org/en/stable/quickstart.html)
 to walk you through an example `cocotb` testbench.
 
+## External IP - Dependencies
+- [FFT - zipcpu/dblclockfft](https://github.com/ZipCPU/dblclockfft)
 
-### Resources
+## External IP - Resources
+In order of where you should look first!
+- [UCSC OpenRAM](https://github.com/VLSIDA/OpenRAM)
+- [UW Basejump STL](https://github.com/bespoke-silicon-group/basejump_stl)
+- [TU Dresden Pile of Cores](https://github.com/VLSI-EDA/PoC)
+- [FOSSi LibreCores](https://www.librecores.org/)
+
+## Tool Documentation
 - [Verilator Manual](https://www.veripool.org/wiki/verilator/Manual-verilator)
 - [cocotb Documentation](https://docs.cocotb.org/en/stable/)
 
