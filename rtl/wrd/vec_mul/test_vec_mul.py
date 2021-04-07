@@ -1,7 +1,6 @@
 # This file is public domain, it can be freely copied without restrictions.
 # SPDX-License-Identifier: CC0-1.0
 
-import random
 import numpy as np
 
 import cocotb
@@ -30,13 +29,12 @@ async def test_vec_mul(dut):
 
     # Synchronize with the clock
     await FallingEdge(dut.clk_i)
-    for i in range(10):
+    for _ in range(10):
         val1 = np.random.randint(-128, 128, size=DUT_VECTOR_SIZE, dtype=np.int8)
         val2 = np.random.randint(-128, 128, size=DUT_VECTOR_SIZE, dtype=np.int8)
 
-        for i in range(DUT_VECTOR_SIZE):
-            dut.data1_i <= np2bv(val1)
-            dut.data2_i <= np2bv(val2)
+        dut.data1_i <= np2bv(val1)
+        dut.data2_i <= np2bv(val2)
 
         dut.last1_i <= 0
         dut.last2_i <= 0
@@ -48,8 +46,8 @@ async def test_vec_mul(dut):
 
         expected = np2bv(val1 * val2)
         await FallingEdge(dut.clk_i)
-        for i in range(DUT_VECTOR_SIZE):
+        for j in range(DUT_VECTOR_SIZE):
             observed = dut.data_o.value
             assert observed == expected,\
                    "data1_i = %d, data2_i = %d, expected = %d, observed = %d" %\
-                   (val1[i], val2[i], expected, observed)
+                   (val1[j], val2[j], expected, observed)

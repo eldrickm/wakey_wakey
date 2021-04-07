@@ -20,4 +20,4 @@ clean::
 	rm -rf __pycache__/
 
 wave:
-	gtkwave vec_mul.vcd
+	gtkwave *.vcd
