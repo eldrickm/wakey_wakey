@@ -18,3 +18,6 @@ clean::
 	rm -f results.xml
 	rm -f *.vcd
 	rm -rf __pycache__/
+
+wave:
+	gtkwave vec_mul.vcd
