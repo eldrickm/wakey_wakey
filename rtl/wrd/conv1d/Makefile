@@ -7,7 +7,8 @@
 SIM			   ?= icarus			# Simulator (icarus, verilator, ...)
 TOPLEVEL_LANG  ?= verilog			# HDL (verilog, vhdl, ...)
 RTL_DIR			= $(shell pwd)
-VERILOG_SOURCES = $(RTL_DIR)/*.sv
+VERILOG_SOURCES += $(RTL_DIR)/*.sv
+VERILOG_SOURCES += ../../lib/*.v
 MODULE			= test_conv1d		# Python cocotb tests
 TOPLEVEL        = conv1d			# Top level RTL module
 # ===
@@ -20,4 +21,4 @@ clean::
 	rm -rf __pycache__/
 
 wave:
-	gtkwave $(TOPLEVEL).vcd
+	gtkwave *.vcd
