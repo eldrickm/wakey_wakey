@@ -1,12 +1,14 @@
 /*
  * 1D Convolution
+ * Design: Eldrick Millares
+ * Verification: Matthew Pauly
  * TODO: Handle deassertion of valid
  */
 
 module conv1d #(
-    parameter BW = 8,
-    parameter FRAME_SIZE = 50,
-    parameter VECTOR_SIZE = 1
+    parameter FRAME_SIZE  = 50,
+    parameter VECTOR_SIZE = 1,
+    parameter NUM_FILTERS = 8
 ) (
     input                                      clk_i,
     input                                      rst_i_n,
@@ -22,11 +24,12 @@ module conv1d #(
     input                                      ready_i
 );
 
-    localparam FILTER_SIZE = 3;
-    localparam NUM_FILTERS = 8;
-
-    localparam VECTOR_BW = VECTOR_SIZE * BW;
-    localparam MAX_CYCLES = NUM_FILTERS * FRAME_SIZE;
+    localparam BW             = 8;
+    localparam MUL_OUT_BW     = 32;
+    localparam ADD_OUT_BW     = 33;
+    localparam FILTER_SIZE    = 3;
+    localparam VECTOR_BW      = VECTOR_SIZE * BW;
+    localparam MAX_CYCLES     = NUM_FILTERS * FRAME_SIZE;
     localparam CYCLE_COUNT_BW = $clog2(MAX_CYCLES);
 
     genvar i;
@@ -63,7 +66,7 @@ module conv1d #(
                 end
                 FIFO_STATE_CYCLE: begin
                     cycle_counter <= cycle_counter + 'd1;
-                    fifo_state <= (cycle_counter < MAX_CYCLES - 1) ? FIFO_STATE_CYCLE : 
+                    fifo_state <= (cycle_counter < MAX_CYCLES - 1) ? FIFO_STATE_CYCLE :
                                   ((valid_i) ? FIFO_STATE_PRELOAD : FIFO_STATE_IDLE);
                 end
                 default: begin
@@ -138,6 +141,7 @@ module conv1d #(
         end
     endgenerate
 
+    // TODO: Parametrize this shift register
     reg sr_valid_q, sr_valid_q2, sr_valid_q3;
     always @(posedge clk_i) begin
         sr_valid_q <= (fifo_state == FIFO_STATE_CYCLE);
@@ -145,6 +149,7 @@ module conv1d #(
         sr_valid_q3 <= sr_valid_q2;
     end
 
+    // TODO: Remove, temporary debug wires
     wire [VECTOR_BW - 1 : 0] sr0 = fifo_out_sr[0];
     wire [VECTOR_BW - 1 : 0] sr1 = fifo_out_sr[1];
     wire [VECTOR_BW - 1 : 0] sr2 = fifo_out_sr[2];
@@ -162,29 +167,30 @@ module conv1d #(
     // SIMD Multiplication
     // generate
     //     for (i = 0; i < FILTER_SIZE; i = i + 1) begin: unpack_inputs
+    //         vec_mul #(
+    //             .BW_I(BW),
+    //             .BW_O(MUL_OUT_BW),
+    //             .FILTER_SIZE(FILTER_SIZE)
+    //         ) vec_mul_inst_1 (
+    //             .clk_i(clk_i),
+    //             .rst_ni(rst_ni),
     //
-    // vec_mul #(
-    //     .BW(BW),
-    //     .FILTER_SIZE(FILTER_SIZE)
-    // ) vec_mul_inst_1 (
-    //     .clk_i(),
-    //     .rstn_i(),
+    //             .data1_i(),
+    //             .valid1_i(),
+    //             .last1_i(),
+    //             .ready1_o(),
     //
-    //     .data1_i(),
-    //     .valid1_i(),
-    //     .last1_i(),
-    //     .ready1_o(),
+    //             .data2_i(),
+    //             .valid2_i(),
+    //             .last2_i(),
+    //             .ready2_o(),
     //
-    //     .data2_i(),
-    //     .valid2_i(),
-    //     .last2_i(),
-    //     .ready2_o(),
-    //
-    //     .data_o(),
-    //     .valid_o(),
-    //     .last_o(),
-    //     .ready_i()
-    // );
+    //             .data_o(),
+    //             .valid_o(),
+    //             .last_o(),
+    //             .ready_i()
+    //         );
+    //     end
     // endgenerate
 
     // SIMD Addition
@@ -193,12 +199,17 @@ module conv1d #(
 
     // Quantization Scaling
 
+    // Output Assignment
+    assign data_o  = fifo_out_sr[FILTER_SIZE - 1];
+    assign valid_o = sr_valid_q;
+    assign ready_o = ready_i;
+    assign last_o  = last_i;
+    
     // Simulation Only Waveform Dump (.vcd export)
     `ifdef COCOTB_SIM
     initial begin
       $dumpfile ("conv1d.vcd");
-      // $dumpvars (0, conv1d);
-      $dumpvars;
+      $dumpvars (0, conv1d);
       #1;
     end
     `endif
