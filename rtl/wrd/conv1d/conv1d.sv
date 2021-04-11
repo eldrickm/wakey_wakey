@@ -3,40 +3,45 @@
  * Design: Eldrick Millares
  * Verification: Matthew Pauly
  * Notes:
- *  FRAME_SIZE > FILTER_SIZE
- *  FILTER_SIZE > 1
+ *  FRAME_LEN > FILTER_LEN
+ *  FILTER_LEN == 3
+ *  In order to change filter size, you'll have to parameterize the vec_add
+ *  unit.
  */
 
 module conv1d #(
-    parameter FRAME_SIZE  = 50,
-    parameter VECTOR_SIZE = 1,
-    parameter NUM_FILTERS = 8
+    parameter FRAME_LEN   = 50,
+    parameter COLUMN_LEN  = 1,
+    parameter NUM_FILTERS  = 8
 ) (
     input                                      clk_i,
-    input                                      rst_i_n,
+    input                                      rst_n_i,
 
-    input  signed [(VECTOR_SIZE * BW) - 1 : 0] data_i,
+    input  signed [(COLUMN_LEN  * BW) - 1 : 0] data_i,
     input                                      valid_i,
     input                                      last_i,
     output                                     ready_o,
 
-    output signed [(VECTOR_SIZE * BW) - 1 : 0] data_o,
+    output signed [(COLUMN_LEN  * BW) - 1 : 0] data_o,
     output                                     valid_o,
     output                                     last_o,
     input                                      ready_i
 );
 
+    // Bitwidth Definitions
     localparam BW             = 8;
-    localparam MUL_OUT_BW     = 32;
-    localparam ADD_OUT_BW     = 33;
-    localparam FILTER_SIZE    = 3;
-    localparam VECTOR_BW      = VECTOR_SIZE * BW;
-    localparam MAX_CYCLES     = NUM_FILTERS * FRAME_SIZE;
+    localparam MUL_OUT_BW     = 16;
+    localparam ADD_OUT_BW     = 18;
+    localparam VECTOR_BW      = COLUMN_LEN  * BW;
+
+    localparam FILTER_LEN    = 3;
+    localparam MAX_CYCLES     = NUM_FILTERS * FRAME_LEN;
     localparam CYCLE_COUNT_BW = $clog2(MAX_CYCLES);
 
     genvar i;
 
     // === Start Conv1D FSM Logic ===
+    // TODO: Fix initial deque errors
     // Define FIFO States
     localparam STATE_IDLE     = 2'd0,
                STATE_PRELOAD  = 2'd1,
@@ -48,7 +53,7 @@ module conv1d #(
 
     // TODO: Handle deassertions of valid midstream
     always @(posedge clk_i) begin
-        if (!rst_i_n) begin
+        if (!rst_n_i) begin
             state_counter <= 'd0;
             fifo_state <= STATE_IDLE;
         end else begin
@@ -59,11 +64,11 @@ module conv1d #(
                     fifo_state    <= (valid_i) ? STATE_PRELOAD : STATE_IDLE;
                 end
                 STATE_PRELOAD: begin
-                    // In PRELOAD, we're shifting the first FILTER_SIZE - 1
+                    // In PRELOAD, we're shifting the first FILTER_LEN - 1
                     // elements into our shift register, then transition
                     // to regular LOAD where the shift register is not active
                     state_counter <= state_counter + 'd1;
-                    fifo_state    <= (state_counter == FILTER_SIZE) ?
+                    fifo_state    <= (state_counter == FILTER_LEN) ?
                                       STATE_LOAD: STATE_PRELOAD;
                 end
                 STATE_LOAD: begin
@@ -109,27 +114,27 @@ module conv1d #(
 
     // Assign din to input if loading, otherwise feedback output to recycle
     wire [VECTOR_BW - 1 : 0] fifo_din;
-    assign fifo_din = fifo_recycle ? fifo_out_sr[FILTER_SIZE - 1] : data_i_q;
+    assign fifo_din = fifo_recycle ? fifo_out_sr[FILTER_LEN - 1] : data_i_q;
 
     // Always enqueue if FIFO is not idle
     wire fifo_enq;
     assign fifo_enq = !(fifo_state == STATE_IDLE);
 
     // Dequeue the FIFO when we begin recycling
-    // or dequeue the FIFO exactly FILTER_SIZE - 1 times when Preloading
+    // or dequeue the FIFO exactly FILTER_LEN - 1 times when Preloading
     wire fifo_deq;
     assign fifo_deq = ((fifo_state == STATE_CYCLE) |
                        ((fifo_state == STATE_PRELOAD) &
-                        (state_counter < FILTER_SIZE - 1)));
+                        (state_counter < FILTER_LEN - 1)));
 
     wire [VECTOR_BW - 1 : 0] fifo_dout;
 
     fifo #(
         .DATA_WIDTH(VECTOR_BW),
-        .FIFO_DEPTH(FRAME_SIZE)
-    ) conv1d_input_fifo_inst (
+        .FIFO_DEPTH(FRAME_LEN)
+    ) fifo_inst (
         .clk_i(clk_i),
-        .rst_i_n(rst_i_n),
+        .rst_n_i(rst_n_i),
 
         .enq_i(fifo_enq),
         .deq_i(fifo_deq),
@@ -142,32 +147,29 @@ module conv1d #(
         .empty_o_n()
     );
 
-    // FIFO Output Shift Register
-    assign sr_enq = (fifo_recycle | (fifo_state == STATE_PRELOAD));
+    // FIFO Output Shift Register Enable
+    wire sr_en;
+    assign sr_en = (fifo_recycle | (fifo_state == STATE_PRELOAD));
 
-    reg [VECTOR_BW - 1 : 0] fifo_out_sr [FILTER_SIZE - 1 : 0];
+    // FIFO Output Shift Register
+    reg [VECTOR_BW - 1 : 0] fifo_out_sr [FILTER_LEN - 1 : 0];
     always @(posedge clk_i) begin
-        if (sr_enq) begin
+        if (sr_en) begin
             fifo_out_sr[0] <= fifo_dout;
         end
     end
-    for (i = 1; i < FILTER_SIZE; i = i + 1) begin: create_fifo_out_sr
+    for (i = 1; i < FILTER_LEN; i = i + 1) begin: create_fifo_out_sr
         always @(posedge clk_i) begin
-            if (sr_enq) begin
+            if (sr_en) begin
                 fifo_out_sr[i] <= fifo_out_sr[i-1];
             end
         end
     end
 
     // FIFO Output Valid Shift Register
-    reg [FILTER_SIZE - 1 : 0]sr_valid_q;
+    reg fifo_out_valid;
     always @(posedge clk_i) begin
-        sr_valid_q[0] <= (fifo_state == STATE_CYCLE);
-    end
-    for (i = 1; i < FILTER_SIZE; i = i + 1) begin: create_sr_valid_sr
-        always @(posedge clk_i) begin
-            sr_valid_q[i] <= sr_valid_q[i-1];
-        end
+        fifo_out_valid <= (fifo_state == STATE_CYCLE);
     end
     // === End Input FIFO Logic ===
 
@@ -175,51 +177,91 @@ module conv1d #(
 
     // Weight Bank Registers
 
-    // SIMD Multiplication
-    // generate
-    //     for (i = 0; i < FILTER_SIZE; i = i + 1) begin: unpack_inputs
-    //         vec_mul #(
-    //             .BW_I(BW),
-    //             .BW_O(MUL_OUT_BW),
-    //             .FILTER_SIZE(FILTER_SIZE)
-    //         ) vec_mul_inst_1 (
-    //             .clk_i(clk_i),
-    //             .rst_ni(rst_ni),
-    //
-    //             .data1_i(),
-    //             .valid1_i(),
-    //             .last1_i(),
-    //             .ready1_o(),
-    //
-    //             .data2_i(),
-    //             .valid2_i(),
-    //             .last2_i(),
-    //             .ready2_o(),
-    //
-    //             .data_o(),
-    //             .valid_o(),
-    //             .last_o(),
-    //             .ready_i()
-    //         );
-    //     end
-    // endgenerate
+    // Vector Multiplication
+    wire [MUL_OUT_BW - 1 : 0] vec_mul_data_out  [FILTER_LEN - 1 : 0];
+    wire                      vec_mul_valid_out [FILTER_LEN - 1 : 0];
+    wire                      vec_mul_last_out  [FILTER_LEN - 1 : 0];
+    wire                      vec_mul_ready1_out  [FILTER_LEN - 1 : 0];
+    wire                      vec_mul_ready2_out  [FILTER_LEN - 1 : 0];
 
-    // SIMD Addition
+    for (i = 0; i < FILTER_LEN; i = i + 1) begin: vector_multiply
+        vec_mul #(
+            .BW_I(BW),
+            .BW_O(MUL_OUT_BW),
+            .VECTOR_LEN(COLUMN_LEN)
+        ) vec_mul_inst (
+            .clk_i(clk_i),
+            .rst_n_i(rst_n_i),
+
+            .data1_i(fifo_out_sr[i]),
+            .valid1_i(fifo_out_valid),
+            // TODO: Deal with ready
+            .last1_i(1'b0),
+            .ready1_o(vec_mul_ready1_out[i]),
+
+            // TODO: Hook up to memory
+            .data2_i(8'd1),
+            .valid2_i(1'b1),
+            .last2_i(1'b0),
+            .ready2_o(vec_mul_ready2_out[i]),
+
+            .data_o(vec_mul_data_out[i]),
+            .valid_o(vec_mul_valid_out[i]),
+            .last_o(vec_mul_last_out[i]),
+            // TODO: Deal with Ready
+            .ready_i(1'b1)
+        );
+    end
+
+    // Vector Addition
+    wire [ADD_OUT_BW - 1 : 0] vec_add_data_out;
+    wire                      vec_add_valid_out;
+    wire                      vec_add_last_out;
+    wire                      vec_add_ready_out [FILTER_LEN - 1 : 0];
+
+    vec_add #(
+        .BW_I(MUL_OUT_BW),        // input bitwidth
+        .BW_O(ADD_OUT_BW),        // output bitwidth
+        .VECTOR_LEN(COLUMN_LEN)   // number of vector elements
+    ) vec_add_inst (
+        .clk_i(clk_i),
+        .rst_n_i(rst_n_i),
+
+        .data1_i(vec_mul_data_out[0]),
+        .valid1_i(vec_mul_valid_out[0]),
+        .last1_i(vec_mul_last_out[0]),
+        .ready1_o(vec_add_ready_out[0]),
+
+        .data2_i(vec_mul_data_out[1]),
+        .valid2_i(vec_mul_valid_out[1]),
+        .last2_i(vec_mul_last_out[1]),
+        .ready2_o(vec_add_ready_out[0]),
+
+        .data3_i(vec_mul_data_out[2]),
+        .valid3_i(vec_mul_valid_out[2]),
+        .last3_i(vec_mul_last_out[2]),
+        .ready3_o(vec_add_ready_out[0]),
+
+        .data_o(vec_add_data_out),
+        .valid_o(vec_add_valid_out),
+        .last_o(vec_add_last_out),
+        .ready_i(1'b1)
+    );
 
     // Bias Register
 
     // Quantization Scaling
 
     // Output Assignment
-    assign data_o  = fifo_out_sr[FILTER_SIZE - 1];
-    assign valid_o = sr_valid_q;
+    assign data_o  = fifo_out_sr[FILTER_LEN - 1];
+    assign valid_o = fifo_out_valid;
     assign ready_o = ready_i;
     assign last_o  = last_i;
 
     // Simulation Only Waveform Dump (.vcd export)
     `ifdef COCOTB_SIM
     initial begin
-      $dumpfile ("conv1d.vcd");
+      $dumpfile ("wave.vcd");
       $dumpvars (0, conv1d);
       #1;
     end

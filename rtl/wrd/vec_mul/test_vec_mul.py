@@ -37,7 +37,7 @@ async def test_vec_mul(dut):
 
     # Reset system
     await RisingEdge(dut.clk_i)
-    dut.rst_ni <= 0
+    dut.rst_n_i <= 0
     dut.data1_i <= np2bv(np.zeros(shape=DUT_VECTOR_SIZE, dtype=np.int8))
     dut.data2_i <= np2bv(np.zeros(shape=DUT_VECTOR_SIZE, dtype=np.int8))
     dut.last1_i <= 0
@@ -47,7 +47,7 @@ async def test_vec_mul(dut):
     dut.ready_i <= 0
 
     await RisingEdge(dut.clk_i)
-    dut.rst_ni <= 1
+    dut.rst_n_i <= 1
     dut.data1_i <= np2bv(np.zeros(shape=DUT_VECTOR_SIZE, dtype=np.int8))
     dut.data2_i <= np2bv(np.zeros(shape=DUT_VECTOR_SIZE, dtype=np.int8))
     dut.ready_i <= 1

@@ -29,7 +29,7 @@ async def test_conv1d(dut):
 
     # Reset DUT
     await FallingEdge(dut.clk_i)
-    dut.rst_i_n <= 0
+    dut.rst_n_i <= 0
     dut.data_i <= 0
     dut.valid_i <= 0
     dut.last_i <= 0
@@ -37,7 +37,7 @@ async def test_conv1d(dut):
 
     for _ in range(20):
         await FallingEdge(dut.clk_i)
-        dut.rst_i_n <= 1
+        dut.rst_n_i <= 1
         dut.ready_i <= 1
 
     # Load MFCC Data

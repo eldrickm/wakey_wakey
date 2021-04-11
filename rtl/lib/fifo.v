@@ -5,7 +5,7 @@ module fifo #(
   parameter FIFO_DEPTH = 3
 )(
   input                       clk_i,
-  input                       rst_i_n,
+  input                       rst_n_i,
 
   input                       enq_i,
   input                       deq_i,
@@ -23,7 +23,7 @@ module fifo #(
     .p3cntr_width($clog2(FIFO_DEPTH))   // defined in SizedFIFO comments
   ) fifo_inst (
     .CLK(clk_i),
-    .RST(rst_i_n),                      // active low, can toggle in SizedFIFO
+    .RST(rst_n_i),                      // active low, can toggle in SizedFIFO
     .D_IN(din_i),
     .ENQ(enq_i),
     .FULL_N(full_o_n),

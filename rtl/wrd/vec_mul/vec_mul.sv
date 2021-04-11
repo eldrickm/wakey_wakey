@@ -6,11 +6,11 @@
 
 module vec_mul #(
     parameter BW_I = 8,         // input bitwidth
-    parameter BW_O = 32,        // output bitwidth
+    parameter BW_O = 16,        // output bitwidth
     parameter VECTOR_LEN = 13   // number of vector elements
 ) (
     input                                       clk_i,
-    input                                       rst_ni,
+    input                                       rst_n_i,
 
     input  signed [(VECTOR_LEN * BW_I) - 1 : 0] data1_i,
     input                                       valid1_i,
@@ -44,7 +44,7 @@ module vec_mul #(
     // registered multiplication of data elements
     for (i = 0; i < VECTOR_LEN; i = i + 1) begin: vector_multiply
         always @(posedge clk_i) begin
-            if (!rst_ni) begin
+            if (!rst_n_i) begin
                 out_arr[i] <= 'd0;
             end else begin
                 out_arr[i] <= data1_arr[i] * data2_arr[i];
@@ -60,7 +60,7 @@ module vec_mul #(
     // register all outputs
     reg valid_q, last_q, ready_q;
     always @(posedge clk_i) begin
-        if (!rst_ni) begin
+        if (!rst_n_i) begin
             valid_q <= 'b0;
             last_q  <= 'b0;
             ready_q <= 'b0;
@@ -78,7 +78,7 @@ module vec_mul #(
 
     `ifdef COCOTB_SIM
     initial begin
-        $dumpfile ("vec_mul.vcd");
+        $dumpfile ("wave.vcd");
         $dumpvars (0, vec_mul);
         // Uncomment below to dump array variables
         // for(int i = 0; i < VECTOR_LEN; i = i + 1)
