@@ -34,4 +34,17 @@ module dffram #(
     end
 
     assign data_o = read_data;
+
+    // ========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // ========================================================================
+    `ifdef COCOTB_SIM
+    initial begin
+        $dumpfile ("wave.vcd");
+        $dumpvars (0, dffram);
+        #1;
+    end
+    `endif
+    // ========================================================================
+
 endmodule

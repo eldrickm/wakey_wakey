@@ -1,0 +1,54 @@
+# This file is public domain, it can be freely copied without restrictions.
+# SPDX-License-Identifier: CC0-1.0
+
+import numpy as np
+
+import cocotb
+from cocotb.clock import Clock
+from cocotb.triggers import FallingEdge 
+from cocotb.binary import BinaryValue
+
+DUT_VECTOR_SIZE = 13
+
+
+def np2bv(int_arr):
+    """ Convert a 8b integer numpy array in cocotb BinaryValue """
+    int_list = int_arr.tolist()
+    binarized = [format(x & 0xFF, '08b') if x < 0 else format(x, '08b')
+                 for x in int_list]
+    bin_string = ''.join(binarized)
+    return BinaryValue(bin_string)
+
+
+@cocotb.test()
+async def test_dffram(dut):
+    # Create a 10us period clock on port clk
+    clock = Clock(dut.clk_i, 10, units="us")
+    cocotb.fork(clock.start())
+
+    await FallingEdge(dut.clk_i)
+    dut.data_i <= 0
+    dut.addr_i <= 0
+    dut.wr_en_i <= 0
+    dut.en_i <= 0
+    await FallingEdge(dut.clk_i)
+
+    # Sequential Write
+    for i in range(256):
+        dut.en_i <= 1
+        dut.wr_en_i <= 1
+        dut.addr_i = i
+        dut.data_i = i
+        await FallingEdge(dut.clk_i)
+
+    # Sequential Read
+    for i in range(256):
+        dut.en_i <= 1
+        dut.wr_en_i <= 0
+        dut.addr_i = i
+        dut.data_i = 0
+        await FallingEdge(dut.clk_i)
+        observed = dut.data_o.value
+        expected = i
+        assert observed == expected, "observed = %d, expected = %d," %\
+                                     (observed, expected)
