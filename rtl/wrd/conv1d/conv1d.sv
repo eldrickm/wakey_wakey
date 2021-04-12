@@ -1,31 +1,44 @@
-/*
- * 1D Convolution
- * Design: Eldrick Millares
- * Verification: Matthew Pauly
- * Notes:
- *  FRAME_LEN > FILTER_LEN
- *  FILTER_LEN == 3
- *  In order to change filter size, you'll have to parameterize the vec_add
- *  unit.
- */
+// ============================================================================
+// 1D Convolution
+// Design: Eldrick Millares
+// Verification: Matthew Pauly
+// Notes:
+// Constraint: FRAME_LEN > FILTER_LEN
+// Constraint: FILTER_LEN == 3
+// In order to change filter size, you'll have to modify or parametrize the
+// following modules:
+//  * vec_add (supports 3 output data ports)
+//  * conv_mem (supports 3 output data ports + 1 bias port)
+// TODO: Deal with ready's / backpressur
+// ============================================================================
 
 module conv1d #(
     parameter FRAME_LEN   = 50,
-    parameter COLUMN_LEN  = 1,
-    parameter NUM_FILTERS  = 8
+    parameter COLUMN_LEN  = 2,
+    parameter NUM_FILTERS = 8
 ) (
     input                             clk_i,
     input                             rst_n_i,
 
+    // Input Features
     input  signed [VECTOR_BW - 1 : 0] data_i,
     input                             valid_i,
     input                             last_i,
     output                            ready_o,
 
+    // Output Features
     output signed [VECTOR_BW - 1 : 0] data_o,
     output                            valid_o,
     output                            last_o,
-    input                             ready_i
+    input                             ready_i,
+
+    // Memory Configuration Ports
+    input                             rd_en_i,
+    input                             wr_en_i,
+    input         [BANK_BW - 1 : 0]   rd_wr_bank_i,
+    input         [ADDR_BW - 1 : 0]   rd_wr_addr_i,
+    input  signed [VECTOR_BW - 1 : 0] wr_data_i,
+    output signed [VECTOR_BW - 1 : 0] rd_data_o
 );
 
     // ========================================================================
@@ -36,9 +49,16 @@ module conv1d #(
 
     // Bitwidth Definitions
     localparam BW         = 8;
+    localparam BIAS_BW    = BW * 2;
     localparam MUL_OUT_BW = 16;
     localparam ADD_OUT_BW = 18;
     localparam VECTOR_BW  = COLUMN_LEN  * BW;
+
+    localparam ADDR_BW   = $clog2(NUM_FILTERS);
+    // Number of weight banks + bias bank
+    localparam BANK_BW   = $clog2(FILTER_LEN + 1);
+    localparam FRAME_COUNTER_BW = $clog2(FRAME_LEN);
+    localparam FILTER_COUNTER_BW = $clog2(NUM_FILTERS);
     // ========================================================================
 
     genvar i;
@@ -46,12 +66,11 @@ module conv1d #(
     // ========================================================================
     // Recycler
     // ========================================================================
-    wire [VECTOR_BW - 1 : 0] sr0;
-    wire [VECTOR_BW - 1 : 0] sr1;
-    wire [VECTOR_BW - 1 : 0] sr2;
-    wire sr_valid;
-    wire sr_last;
-    wire sr_ready_i;
+    wire [VECTOR_BW - 1 : 0] recycler_data0_out;
+    wire [VECTOR_BW - 1 : 0] recycler_data1_out;
+    wire [VECTOR_BW - 1 : 0] recycler_data2_out;
+    wire recycler_valid_out;
+    wire recycler_last_out;
 
     recycler #(
         .BW(BW),
@@ -67,24 +86,60 @@ module conv1d #(
         .last_i(last_i),
         .ready_o(ready_o),
 
-        .data0_o(sr0),
-        .data1_o(sr1),
-        .data2_o(sr2),
-        .valid_o(sr_valid),
-        .last_o(st_last),
-        // TODO: Deal with sr_ready_i
-        .ready_i(sr_ready_i)
+        .data0_o(recycler_data0_out),
+        .data1_o(recycler_data1_out),
+        .data2_o(recycler_data2_out),
+        .valid_o(recycler_valid_out),
+        .last_o(recycler_last_out),
+        // TODO: Use all vec_mul ready outs in the array
+        .ready_i(vec_mul_ready0_out[0])
     );
 
-    wire [VECTOR_BW - 1 : 0] sr_data_arr [FILTER_LEN - 1 : 0];
-    assign sr_data_arr[0] = sr0;
-    assign sr_data_arr[1] = sr1;
-    assign sr_data_arr[2] = sr2;
+    wire [VECTOR_BW - 1 : 0] recycler_data_out [FILTER_LEN - 1 : 0];
+    assign recycler_data_out[0] = recycler_data0_out;
+    assign recycler_data_out[1] = recycler_data1_out;
+    assign recycler_data_out[2] = recycler_data2_out;
 
     // ========================================================================
     // Parameter Memory
-    // TODO: Add Parameter Memory
     // ========================================================================
+    wire [VECTOR_BW - 1 : 0] conv_mem_weight_out [FILTER_LEN - 1 : 0];
+    wire [BIAS_BW - 1 : 0]   conv_mem_bias_out;
+    wire conv_mem_valid_out;
+    wire conv_mem_last_out;
+
+    conv_mem #(
+        .BW(BW),
+        .BIAS_BW(BIAS_BW),
+        .FRAME_LEN(FRAME_LEN),
+        .COLUMN_LEN(COLUMN_LEN),
+        .NUM_FILTERS(NUM_FILTERS)
+    ) conv_mem_inst (
+        .clk_i(clk_i),
+        .rst_n_i(rst_n_i),
+
+        // Control Ports
+        // TODO: Hook up cycle_en
+        .cycle_en_i(recycler_valid_out),
+
+        // Manual Read/Write Ports
+        .rd_en_i(rd_en_i),
+        .wr_en_i(wr_en_i),
+        .rd_wr_bank_i(rd_wr_bank_i),
+        .rd_wr_addr_i(rd_wr_addr_i),
+        .wr_data_i(wr_data_i),
+        .rd_data_o(rd_data_o),
+
+        // Streaming Interace Ports
+        .data0_o(conv_mem_weight_out[0]),
+        .data1_o(conv_mem_weight_out[1]),
+        .data2_o(conv_mem_weight_out[2]),
+        .bias_o(conv_mem_bias_out),
+        .valid_o(conv_mem_valid_out),
+        .last_o(conv_mem_last_out),
+        // TODO: Use all ready outs in the array
+        .ready_i(vec_mul_ready1_out[0])
+    );
     // ========================================================================
 
 
@@ -106,23 +161,23 @@ module conv1d #(
             .clk_i(clk_i),
             .rst_n_i(rst_n_i),
 
-            .data0_i(sr_data_arr[i]),
-            .valid0_i(sr_valid),
-            // TODO: Deal with ready
-            .last0_i(1'b0),
+            // recycler ports
+            .data0_i(recycler_data_out[i]),
+            .valid0_i(recycler_valid_out),
+            .last0_i(recycler_last_out),
             .ready0_o(vec_mul_ready0_out[i]),
 
-            // TODO: Hook up to memory
-            .data1_i(8'd1),
-            .valid1_i(1'b1),
-            .last1_i(1'b0),
+            // conv_mem ports
+            .data1_i(conv_mem_weight_out[i]),
+            .valid1_i(conv_mem_valid_out),
+            .last1_i(conv_mem_last_out),
             .ready1_o(vec_mul_ready1_out[i]),
 
+            // output ports to vec_add
             .data_o(vec_mul_data_out[i]),
             .valid_o(vec_mul_valid_out[i]),
             .last_o(vec_mul_last_out[i]),
-            // TODO: Deal with Ready
-            .ready_i(1'b1)
+            .ready_i(vec_add_ready_out[i])
         );
     end
     // ========================================================================
@@ -184,8 +239,8 @@ module conv1d #(
     // Output Assignment
     // ========================================================================
     // ========================================================================
-    assign data_o  = sr2;
-    assign valid_o = sr_valid;
+    assign data_o  = recycler_data2_out;
+    assign valid_o = recycler_valid_out;
     assign ready_o = ready_i;
     assign last_o  = last_i;
 

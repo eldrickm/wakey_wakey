@@ -8,7 +8,7 @@ from cocotb.clock import Clock
 from cocotb.triggers import FallingEdge, RisingEdge
 from cocotb.binary import BinaryValue
 
-DUT_VECTOR_SIZE = 13
+DUT_VECTOR_SIZE = 2
 
 
 def np2bv(int_arr):
@@ -35,14 +35,32 @@ async def test_conv1d(dut):
     dut.last_i <= 0
     dut.ready_i <= 0
 
+    dut.wr_en_i <= 0
+    dut.rd_en_i <= 0
+    dut.rd_wr_bank_i <= 0
+    dut.rd_wr_addr_i <= 0
+    dut.wr_data_i <= 0
+
     for _ in range(20):
         await FallingEdge(dut.clk_i)
         dut.rst_n_i <= 1
         dut.ready_i <= 1
 
+    await FallingEdge(dut.clk_i)
+
+    # Sequential Write to conv_mem
+    for i in range(32):
+        dut.wr_en_i <= 1
+        dut.rd_en_i <= 0
+        dut.rd_wr_bank_i <= i // 8
+        dut.rd_wr_addr_i <= i
+        dut.wr_data_i <= i
+        await FallingEdge(dut.clk_i)
+
     # Load MFCC Data
     for i in range(50):
         await FallingEdge(dut.clk_i)
+        dut.wr_en_i <= 0
         dut.data_i <= i
         dut.valid_i <= 1
         if i == 49:

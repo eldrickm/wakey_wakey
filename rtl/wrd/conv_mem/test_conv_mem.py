@@ -19,6 +19,7 @@ async def test_conv_mem(dut):
     dut.rst_n_i <= 0
     dut.cycle_en_i <= 0
     dut.wr_en_i <= 0
+    dut.rd_en_i <= 0
     dut.rd_wr_bank_i <= 0
     dut.rd_wr_addr_i <= 0
     dut.wr_data_i <= 0
@@ -27,6 +28,7 @@ async def test_conv_mem(dut):
     dut.rst_n_i <= 1
     dut.cycle_en_i <= 0
     dut.wr_en_i <= 0
+    dut.rd_en_i <= 0
     dut.rd_wr_bank_i <= 0
     dut.rd_wr_addr_i <= 0
     dut.wr_data_i <= 0
@@ -37,6 +39,7 @@ async def test_conv_mem(dut):
     for i in range(32):
         dut.cycle_en_i <= 0
         dut.wr_en_i <= 1
+        dut.rd_en_i <= 0
         dut.rd_wr_bank_i <= i // 8
         dut.rd_wr_addr_i <= i
         dut.wr_data_i <= i
