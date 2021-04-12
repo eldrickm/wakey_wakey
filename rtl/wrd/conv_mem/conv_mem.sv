@@ -7,26 +7,29 @@
 
 module conv_mem #(
     parameter BW          = 8,
+    parameter BIAS_BW     = BW * 2,
     parameter FRAME_LEN   = 50,
-    parameter COLUMN_LEN  = 1,
+    parameter COLUMN_LEN  = 2,
     parameter NUM_FILTERS = 8
 ) (
     input                             clk_i,
     input                             rst_n_i,
 
-    input                             enable_cycle_i,
-    input                             switch_filter_i,
+    // Control Ports
+    input                             cycle_en_i,
 
+    // Manual Read/Write Ports
     input                             rd_en_i,
     input                             wr_en_i,
     input         [BANK_BW - 1 : 0]   rd_wr_bank_i,
     input         [ADDR_BW - 1 : 0]   rd_wr_addr_i,
     input  signed [VECTOR_BW - 1 : 0] wr_data_i,
 
-
+    // Streaming Interace Ports
     output signed [VECTOR_BW - 1 : 0] data0_o,
     output signed [VECTOR_BW - 1 : 0] data1_o,
     output signed [VECTOR_BW - 1 : 0] data2_o,
+    output signed [BIAS_BW - 1 : 0]   bias_o,
     output                            valid_o,
     output                            last_o,
     input                             ready_i
@@ -46,44 +49,32 @@ module conv_mem #(
     // Number of weight banks + bias bank
     localparam BANK_BW   = $clog2(FILTER_LEN + 1);
     // Higher dynamic range for bias
-    localparam BIAS_BW   = BW * 2;
     // ========================================================================
 
     // ========================================================================
     // Parameter Memory Controller
     // ========================================================================
     // Define States
-    localparam STATE_IDLE    = 3'd0,
-               STATE_WRITE   = 3'd1,
-               STATE_READ    = 3'd2,
-               STATE_CYCLE   = 3'd3;
+    reg [FRAME_LEN - 1 : 0] frame_counter;
+    reg [NUM_FILTERS - 1 : 0] filter_counter;
 
-    reg [2:0] state;
-
-    always @(posedge clk_i) begin
+    // TODO: Add frame counter limit and reset
+    // TODO: Add filter counter increment and limit and reset
+    // TODO: Sensitize read_addr to filter_counter
+    always @(posedge clk) begin
         if (!rst_n_i) begin
-            state <= STATE_IDLE;
+            frame_counter <= 0;
+            filter_counter <= 0;
         end else begin
-            case (state)
-                STATE_IDLE: begin
-                    state <= STATE_IDLE;
-                end
-
-                STATE_CYCLE: begin
-                    state <= STATE_CYCLE;
-
-                end
-                default: begin
-                    state <= STATE_IDLE;
-                end
-            endcase
+            if (cycle_en_i) begin
+                frame_counter <= frame_counter + 'd1;
+                filter_counter <= 0;
+            end else begin
+                frame_counter <= 0;
+                filter_counter <= 0;
+            end
         end
     end
-    // 4 States:
-    // Idle
-    // Memory Write
-    // Memory Read
-    // Cycling
     // ========================================================================
 
     // ========================================================================
@@ -100,7 +91,7 @@ module conv_mem #(
     wire [ADDR_BW - 1 : 0] read_addr = 'd5;
 
     assign weight_data_in = (wr_en_i) ? wr_data_i : 'd0;
-    assign weight_addr = (rd_en_i | wr_en_i) ? rd_wr_addr_i : read_addr;
+    assign weight_addr    = (rd_en_i | wr_en_i) ? rd_wr_addr_i : read_addr;
     for (i = 0; i < FILTER_LEN; i = i + 1) begin: weight_banks_wr_en
         assign weight_wr_en[i] = wr_en_i & (rd_wr_bank_i == i);
     end
@@ -131,6 +122,13 @@ module conv_mem #(
     wire                   bias_wr_en;
     wire [BIAS_BW - 1 : 0] bias_data_out;
 
+    // TODO: Remove
+    assign bias_en = 'd1;
+
+    assign bias_data_in = (wr_en_i) ? wr_data_i[BIAS_BW - 1 : 0] : 'd0;
+    assign bias_addr    = (rd_en_i | wr_en_i) ? rd_wr_addr_i : read_addr;
+    assign bias_wr_en   = wr_en_i & (rd_wr_bank_i == FILTER_LEN);
+
     dffram #(
         .WIDTH(BIAS_BW),
         .DEPTH(NUM_FILTERS)
@@ -152,6 +150,7 @@ module conv_mem #(
     assign data0_o = weight_data_out[0];
     assign data1_o = weight_data_out[1];
     assign data2_o = weight_data_out[2];
+    assign bias_o  = bias_data_out;
     assign valid_o = 0;
     assign last_o  = 0;
     // ========================================================================

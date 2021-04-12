@@ -32,7 +32,7 @@ async def test_conv_mem(dut):
     await FallingEdge(dut.clk_i)
 
     # Sequential Write
-    for i in range(24):
+    for i in range(32):
         dut.wr_en_i <= 1
         dut.rd_wr_bank_i <= i // 8
         dut.rd_wr_addr_i <= i
@@ -40,7 +40,7 @@ async def test_conv_mem(dut):
         await FallingEdge(dut.clk_i)
 
     # Sequential Read
-    for i in range(24):
+    for i in range(32):
         dut.wr_en_i <= 0
         dut.rd_en_i <= 1
         dut.rd_wr_bank_i <= i // 8
@@ -53,6 +53,8 @@ async def test_conv_mem(dut):
             observed = dut.data1_o.value
         elif i // 8 == 2:
             observed = dut.data2_o.value
+        else:
+            observed = dut.bias_o.value
 
         expected = i
         assert observed == expected, "observed = %d, expected = %d," %\
