@@ -17,6 +17,7 @@ async def test_conv_mem(dut):
     # Reset system
     await FallingEdge(dut.clk_i)
     dut.rst_n_i <= 0
+    dut.cycle_en_i <= 0
     dut.wr_en_i <= 0
     dut.rd_wr_bank_i <= 0
     dut.rd_wr_addr_i <= 0
@@ -24,6 +25,7 @@ async def test_conv_mem(dut):
 
     await FallingEdge(dut.clk_i)
     dut.rst_n_i <= 1
+    dut.cycle_en_i <= 0
     dut.wr_en_i <= 0
     dut.rd_wr_bank_i <= 0
     dut.rd_wr_addr_i <= 0
@@ -33,6 +35,7 @@ async def test_conv_mem(dut):
 
     # Sequential Write
     for i in range(32):
+        dut.cycle_en_i <= 0
         dut.wr_en_i <= 1
         dut.rd_wr_bank_i <= i // 8
         dut.rd_wr_addr_i <= i
@@ -41,6 +44,7 @@ async def test_conv_mem(dut):
 
     # Sequential Read
     for i in range(32):
+        dut.cycle_en_i <= 0
         dut.wr_en_i <= 0
         dut.rd_en_i <= 1
         dut.rd_wr_bank_i <= i // 8
@@ -59,3 +63,32 @@ async def test_conv_mem(dut):
         expected = i
         assert observed == expected, "observed = %d, expected = %d," %\
                                      (observed, expected)
+    await FallingEdge(dut.clk_i)
+
+    # Check Cycling
+    for i in range(8 * 50):
+        dut.cycle_en_i <= 1
+        dut.wr_en_i <= 0
+        dut.rd_en_i <= 0
+        dut.rd_wr_bank_i <= 0
+        dut.rd_wr_addr_i <= 0
+        dut.wr_data_i <= 0
+        await FallingEdge(dut.clk_i)
+        observed0 = dut.data0_o.value
+        observed1 = dut.data1_o.value
+        observed2 = dut.data2_o.value
+        observed_bias = dut.bias_o.value
+
+        expected0 = i // 50
+        expected1 = (i // 50) + 8
+        expected2 = (i // 50) + 16
+        expected_bias = (i // 50) + 24
+
+        assert observed0 == expected0, "observed0 = %d, expected0 = %d," %\
+                                       (observed0, expected0)
+        assert observed1 == expected1, "observed1 = %d, expected1 = %d," %\
+                                       (observed1, expected1)
+        assert observed2 == expected2, "observed2 = %d, expected2 = %d," %\
+                                       (observed2, expected2)
+        assert observed_bias == expected_bias, "observed_bias = %d, expected_bias = %d," %\
+                                       (observed_bias, expected_bias)

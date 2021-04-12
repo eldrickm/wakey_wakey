@@ -1,8 +1,9 @@
 // ============================================================================
-// Parameter Memory
+// Convolution Memory
 // Design: Eldrick Millares
 // Verification: Matthew Pauly
 // Notes:
+// TODO: Implement rd_data_o for reading memories
 // ============================================================================
 
 module conv_mem #(
@@ -24,6 +25,7 @@ module conv_mem #(
     input         [BANK_BW - 1 : 0]   rd_wr_bank_i,
     input         [ADDR_BW - 1 : 0]   rd_wr_addr_i,
     input  signed [VECTOR_BW - 1 : 0] wr_data_i,
+    output signed [VECTOR_BW - 1 : 0] rd_data_o,
 
     // Streaming Interace Ports
     output signed [VECTOR_BW - 1 : 0] data0_o,
@@ -48,27 +50,29 @@ module conv_mem #(
     localparam ADDR_BW   = $clog2(NUM_FILTERS);
     // Number of weight banks + bias bank
     localparam BANK_BW   = $clog2(FILTER_LEN + 1);
-    // Higher dynamic range for bias
+    localparam FRAME_COUNTER_BW = $clog2(FRAME_LEN);
+    localparam FILTER_COUNTER_BW = $clog2(NUM_FILTERS);
     // ========================================================================
 
     // ========================================================================
-    // Parameter Memory Controller
+    // Convolution Memory Controller
     // ========================================================================
     // Define States
-    reg [FRAME_LEN - 1 : 0] frame_counter;
-    reg [NUM_FILTERS - 1 : 0] filter_counter;
+    reg [FRAME_COUNTER_BW - 1 : 0] frame_counter;
+    reg [FILTER_COUNTER_BW - 1 : 0] filter_counter;
 
-    // TODO: Add frame counter limit and reset
-    // TODO: Add filter counter increment and limit and reset
-    // TODO: Sensitize read_addr to filter_counter
-    always @(posedge clk) begin
+    always @(posedge clk_i) begin
         if (!rst_n_i) begin
             frame_counter <= 0;
             filter_counter <= 0;
         end else begin
             if (cycle_en_i) begin
-                frame_counter <= frame_counter + 'd1;
-                filter_counter <= 0;
+                frame_counter <= (frame_counter < FRAME_LEN - 1) ?
+                                  frame_counter + 'd1 : 'd0;
+                filter_counter <= (frame_counter == FRAME_LEN - 1) ?
+                                    ((filter_counter < NUM_FILTERS - 1) ?
+                                     filter_counter + 1 : 'd0)
+                                  : filter_counter;
             end else begin
                 frame_counter <= 0;
                 filter_counter <= 0;
@@ -81,20 +85,17 @@ module conv_mem #(
     // Weight Memories
     // ========================================================================
     wire weight_en;
+    wire                     weight_wr_en    [NUM_FILTERS - 1 : 0];
     wire [VECTOR_BW - 1 : 0] weight_data_in;
     wire [ADDR_BW - 1 : 0]   weight_addr;
-    wire                     weight_wr_en    [NUM_FILTERS - 1 : 0];
     wire [VECTOR_BW - 1 : 0] weight_data_out [NUM_FILTERS - 1 : 0];
 
-    // TODO: Remove
-    assign weight_en = 'd1;
-    wire [ADDR_BW - 1 : 0] read_addr = 'd5;
-
-    assign weight_data_in = (wr_en_i) ? wr_data_i : 'd0;
-    assign weight_addr    = (rd_en_i | wr_en_i) ? rd_wr_addr_i : read_addr;
+    assign weight_en      = (wr_en_i | rd_en_i | cycle_en_i);
     for (i = 0; i < FILTER_LEN; i = i + 1) begin: weight_banks_wr_en
-        assign weight_wr_en[i] = wr_en_i & (rd_wr_bank_i == i);
+        assign weight_wr_en[i] = (wr_en_i) & (rd_wr_bank_i == i);
     end
+    assign weight_data_in = (wr_en_i) ? wr_data_i : 'd0;
+    assign weight_addr    = (wr_en_i | rd_en_i) ? rd_wr_addr_i : filter_counter;
 
     for (i = 0; i < FILTER_LEN; i = i + 1) begin: weight_banks
         dffram #(
@@ -117,17 +118,15 @@ module conv_mem #(
     // Bias Memory
     // ========================================================================
     wire bias_en;
+    wire                   bias_wr_en;
     wire [BIAS_BW - 1 : 0] bias_data_in;
     wire [ADDR_BW - 1 : 0] bias_addr;
-    wire                   bias_wr_en;
     wire [BIAS_BW - 1 : 0] bias_data_out;
 
-    // TODO: Remove
-    assign bias_en = 'd1;
-
+    assign bias_en      = (wr_en_i | rd_en_i | cycle_en_i);
+    assign bias_wr_en   = (wr_en_i) & (rd_wr_bank_i == FILTER_LEN);
     assign bias_data_in = (wr_en_i) ? wr_data_i[BIAS_BW - 1 : 0] : 'd0;
-    assign bias_addr    = (rd_en_i | wr_en_i) ? rd_wr_addr_i : read_addr;
-    assign bias_wr_en   = wr_en_i & (rd_wr_bank_i == FILTER_LEN);
+    assign bias_addr    = (wr_en_i | rd_en_i) ? rd_wr_addr_i : filter_counter;
 
     dffram #(
         .WIDTH(BIAS_BW),
@@ -147,12 +146,22 @@ module conv_mem #(
     // ========================================================================
     // Output Assignment
     // ========================================================================
+    reg cycle_en_i_q;
+    always @(posedge clk_i) begin
+        cycle_en_i_q <= cycle_en_i;
+    end
+
+    reg frame_last;
+    always @(posedge clk_i) begin
+        frame_last <= (frame_counter == FRAME_LEN - 1);
+    end
+
     assign data0_o = weight_data_out[0];
     assign data1_o = weight_data_out[1];
     assign data2_o = weight_data_out[2];
     assign bias_o  = bias_data_out;
-    assign valid_o = 0;
-    assign last_o  = 0;
+    assign valid_o = cycle_en_i_q;
+    assign last_o  = valid_o & frame_last;
     // ========================================================================
 
     // ========================================================================
