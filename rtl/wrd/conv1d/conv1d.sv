@@ -94,8 +94,8 @@ module conv1d #(
     wire [MUL_OUT_BW - 1 : 0] vec_mul_data_out  [FILTER_LEN - 1 : 0];
     wire                      vec_mul_valid_out [FILTER_LEN - 1 : 0];
     wire                      vec_mul_last_out  [FILTER_LEN - 1 : 0];
+    wire                      vec_mul_ready0_out  [FILTER_LEN - 1 : 0];
     wire                      vec_mul_ready1_out  [FILTER_LEN - 1 : 0];
-    wire                      vec_mul_ready2_out  [FILTER_LEN - 1 : 0];
 
     for (i = 0; i < FILTER_LEN; i = i + 1) begin: vector_multiply
         vec_mul #(
@@ -106,17 +106,17 @@ module conv1d #(
             .clk_i(clk_i),
             .rst_n_i(rst_n_i),
 
-            .data1_i(sr_data_arr[i]),
-            .valid1_i(sr_valid),
+            .data0_i(sr_data_arr[i]),
+            .valid0_i(sr_valid),
             // TODO: Deal with ready
-            .last1_i(1'b0),
-            .ready1_o(vec_mul_ready1_out[i]),
+            .last0_i(1'b0),
+            .ready0_o(vec_mul_ready0_out[i]),
 
             // TODO: Hook up to memory
-            .data2_i(8'd1),
-            .valid2_i(1'b1),
-            .last2_i(1'b0),
-            .ready2_o(vec_mul_ready2_out[i]),
+            .data1_i(8'd1),
+            .valid1_i(1'b1),
+            .last1_i(1'b0),
+            .ready1_o(vec_mul_ready1_out[i]),
 
             .data_o(vec_mul_data_out[i]),
             .valid_o(vec_mul_valid_out[i]),
@@ -143,20 +143,20 @@ module conv1d #(
         .clk_i(clk_i),
         .rst_n_i(rst_n_i),
 
-        .data1_i(vec_mul_data_out[0]),
-        .valid1_i(vec_mul_valid_out[0]),
-        .last1_i(vec_mul_last_out[0]),
+        .data0_i(vec_mul_data_out[0]),
+        .valid0_i(vec_mul_valid_out[0]),
+        .last0_i(vec_mul_last_out[0]),
+        .ready0_o(vec_add_ready_out[0]),
+
+        .data1_i(vec_mul_data_out[1]),
+        .valid1_i(vec_mul_valid_out[1]),
+        .last1_i(vec_mul_last_out[1]),
         .ready1_o(vec_add_ready_out[0]),
 
-        .data2_i(vec_mul_data_out[1]),
-        .valid2_i(vec_mul_valid_out[1]),
-        .last2_i(vec_mul_last_out[1]),
+        .data2_i(vec_mul_data_out[2]),
+        .valid2_i(vec_mul_valid_out[2]),
+        .last2_i(vec_mul_last_out[2]),
         .ready2_o(vec_add_ready_out[0]),
-
-        .data3_i(vec_mul_data_out[2]),
-        .valid3_i(vec_mul_valid_out[2]),
-        .last3_i(vec_mul_last_out[2]),
-        .ready3_o(vec_add_ready_out[0]),
 
         .data_o(vec_add_data_out),
         .valid_o(vec_add_valid_out),

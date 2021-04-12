@@ -37,39 +37,47 @@ async def test_vec_add(dut):
     # Reset system
     await FallingEdge(dut.clk_i)
     dut.rst_n_i <= 0
-    dut.data1_i <= np2bv(np.zeros(shape=DUT_VECTOR_SIZE, dtype=np.int32), 32)
-    dut.data2_i <= np2bv(np.zeros(shape=DUT_VECTOR_SIZE, dtype=np.int32), 32)
+    dut.data0_i <= np2bv(np.zeros(shape=DUT_VECTOR_SIZE, dtype=np.int16), 16)
+    dut.data1_i <= np2bv(np.zeros(shape=DUT_VECTOR_SIZE, dtype=np.int16), 16)
+    dut.data2_i <= np2bv(np.zeros(shape=DUT_VECTOR_SIZE, dtype=np.int16), 16)
+    dut.last0_i <= 0
     dut.last1_i <= 0
     dut.last2_i <= 0
+    dut.valid0_i <= 0
     dut.valid1_i <= 0
     dut.valid2_i <= 0
     dut.ready_i <= 0
 
     await FallingEdge(dut.clk_i)
     dut.rst_n_i <= 1
-    dut.data1_i <= np2bv(np.zeros(shape=DUT_VECTOR_SIZE, dtype=np.int32), 32)
-    dut.data2_i <= np2bv(np.zeros(shape=DUT_VECTOR_SIZE, dtype=np.int32), 32)
+    dut.data0_i <= np2bv(np.zeros(shape=DUT_VECTOR_SIZE, dtype=np.int16), 16)
+    dut.data1_i <= np2bv(np.zeros(shape=DUT_VECTOR_SIZE, dtype=np.int16), 16)
+    dut.data2_i <= np2bv(np.zeros(shape=DUT_VECTOR_SIZE, dtype=np.int16), 16)
     dut.ready_i <= 1
 
     # Generate random values and compare results
     await FallingEdge(dut.clk_i)
     for _ in range(10):
-        val1 = np.random.randint(-2 ** 31, 2 ** 31 - 1, size=DUT_VECTOR_SIZE,
-                                 dtype=np.int32)
-        val2 = np.random.randint(-2 ** 31, 2 ** 31 - 1, size=DUT_VECTOR_SIZE,
-                                 dtype=np.int32)
+        val0 = np.random.randint(-2 ** 15, 2 ** 15 - 1, size=DUT_VECTOR_SIZE,
+                                 dtype=np.int16)
+        val1 = np.random.randint(-2 ** 15, 2 ** 15 - 1, size=DUT_VECTOR_SIZE,
+                                 dtype=np.int16)
+        val2 = np.random.randint(-2 ** 15, 2 ** 15 - 1, size=DUT_VECTOR_SIZE,
+                                 dtype=np.int16)
+        dut.valid0_i <= 1
         dut.valid1_i <= 1
         dut.valid2_i <= 1
 
-        dut.data1_i <= np2bv(val1, 32)
-        dut.data2_i <= np2bv(val2, 32)
+        dut.data0_i <= np2bv(val0, 16)
+        dut.data1_i <= np2bv(val1, 16)
+        dut.data2_i <= np2bv(val2, 16)
 
-        add = val1.astype(np.int64) + val2.astype(np.int64)
-        expected = np2bv(add, n_bits=33)
+        add = val0.astype(np.int64) + val1.astype(np.int64) + val2.astype(np.int64)
+        expected = np2bv(add, n_bits=18)
 
         await FallingEdge(dut.clk_i)
         for j in range(DUT_VECTOR_SIZE):
             observed = dut.data_o.value
             assert observed == expected,\
-                   "data1_i = %d, data2_i = %d, expected = %d, observed = %d" %\
-                   (val1[j], val2[j], expected.value, observed)
+                   "data0_i = %d, data1_i = %d, data2_i = %d, expected = %d, observed = %d" %\
+                   (val0[j], val1[j], val2[j], expected.value, observed)
