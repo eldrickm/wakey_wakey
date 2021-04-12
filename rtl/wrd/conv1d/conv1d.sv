@@ -14,18 +14,18 @@ module conv1d #(
     parameter COLUMN_LEN  = 1,
     parameter NUM_FILTERS  = 8
 ) (
-    input                                      clk_i,
-    input                                      rst_n_i,
+    input                             clk_i,
+    input                             rst_n_i,
 
-    input  signed [(COLUMN_LEN  * BW) - 1 : 0] data_i,
-    input                                      valid_i,
-    input                                      last_i,
-    output                                     ready_o,
+    input  signed [VECTOR_BW - 1 : 0] data_i,
+    input                             valid_i,
+    input                             last_i,
+    output                            ready_o,
 
-    output signed [(COLUMN_LEN  * BW) - 1 : 0] data_o,
-    output                                     valid_o,
-    output                                     last_o,
-    input                                      ready_i
+    output signed [VECTOR_BW - 1 : 0] data_o,
+    output                            valid_o,
+    output                            last_o,
+    input                             ready_i
 );
 
     // ========================================================================
@@ -39,150 +39,47 @@ module conv1d #(
     localparam MUL_OUT_BW = 16;
     localparam ADD_OUT_BW = 18;
     localparam VECTOR_BW  = COLUMN_LEN  * BW;
-
-    localparam FILTER_COUNT_BW = $clog2(FILTER_LEN);
-    localparam STATE_COUNT_BW  = $clog2(MAX_CYCLES);
     // ========================================================================
 
     genvar i;
 
     // ========================================================================
-    // Convolution Controller
-    // TODO: Fix initial deque errors
+    // Recycler
     // ========================================================================
-    // Define FIFO States
-    localparam STATE_IDLE     = 2'd0,
-               STATE_PRELOAD  = 2'd1,
-               STATE_LOAD     = 2'd2,
-               STATE_CYCLE    = 2'd3;
+    wire [VECTOR_BW - 1 : 0] sr0;
+    wire [VECTOR_BW - 1 : 0] sr1;
+    wire [VECTOR_BW - 1 : 0] sr2;
+    wire sr_valid;
+    wire sr_last;
+    wire sr_ready_i;
 
-    reg [1:0] fifo_state;
-    reg [STATE_COUNT_BW - 1 : 0] state_counter;
-
-    // TODO: Handle deassertions of valid midstream
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            state_counter <= 'd0;
-            fifo_state <= STATE_IDLE;
-        end else begin
-            case (fifo_state)
-                STATE_IDLE: begin
-                    // FIFO State only transitions to PRELOAD on valid input
-                    state_counter <= 'd0;
-                    fifo_state    <= (valid_i) ? STATE_PRELOAD : STATE_IDLE;
-                end
-                STATE_PRELOAD: begin
-                    // In PRELOAD, we're shifting the first FILTER_LEN - 1
-                    // elements into our shift register, then transition
-                    // to regular LOAD where the shift register is not active
-                    state_counter <= state_counter + 'd1;
-                    fifo_state    <= (state_counter == FILTER_LEN) ?
-                                      STATE_LOAD: STATE_PRELOAD;
-                end
-                STATE_LOAD: begin
-                    // In LOAD we're just shifting enough elements until
-                    // last_i is asserted
-                    state_counter <= 'd0;
-                    fifo_state    <= (last_i) ? STATE_CYCLE: STATE_LOAD;
-                end
-                STATE_CYCLE: begin
-                    // In CYCLE, we begin cycling MAX_CYCLE times.
-                    // If valid_i is high, we transition straight into
-                    // PRELOAD again since a new frame is immediately
-                    // available.
-                    // If valid_i is deasserted, we transition into IDLE
-                    // and wait on the next input blocks to come in
-                    state_counter <= state_counter + 'd1;
-                    fifo_state    <= (state_counter < MAX_CYCLES - 1) ?
-                                      STATE_CYCLE :
-                                      ((valid_i) ? STATE_PRELOAD : STATE_IDLE);
-                end
-                default: begin
-                    state_counter <= 'd0;
-                    fifo_state <= STATE_IDLE;
-                end
-            endcase
-        end
-    end
-    // ========================================================================
-
-    // ========================================================================
-    // Recycling FIFO
-    // TODO: Fix initial deque errors
-    // ========================================================================
-    // Needed to ensure we do not drop data_i the first cycle "valid"
-    // is asserted
-    reg [VECTOR_BW - 1: 0] data_i_q;
-    always @(posedge clk_i) begin
-        data_i_q <= data_i;
-    end
-
-    // Delayed by 1 cycle since data_i_q is delayed by one cycle
-    reg fifo_recycle;
-    always @(posedge clk_i) begin
-        fifo_recycle <= (fifo_state == STATE_CYCLE);
-    end
-
-    // Assign din to input if loading, otherwise feedback output to recycle
-    wire [VECTOR_BW - 1 : 0] fifo_din;
-    assign fifo_din = fifo_recycle ? fifo_out_sr[FILTER_LEN - 1] : data_i_q;
-
-    // Always enqueue if FIFO is not idle
-    wire fifo_enq;
-    assign fifo_enq = !(fifo_state == STATE_IDLE);
-
-    // Dequeue the FIFO when we begin recycling
-    // or dequeue the FIFO exactly FILTER_LEN - 1 times when Preloading
-    wire fifo_deq;
-    assign fifo_deq = ((fifo_state == STATE_CYCLE) |
-                       ((fifo_state == STATE_PRELOAD) &
-                        (state_counter < FILTER_LEN - 1)));
-
-    wire [VECTOR_BW - 1 : 0] fifo_dout;
-
-    fifo #(
-        .DATA_WIDTH(VECTOR_BW),
-        .FIFO_DEPTH(FRAME_LEN)
-    ) fifo_inst (
+    recycler #(
+        .BW(BW),
+        .FRAME_LEN(FRAME_LEN),
+        .COLUMN_LEN(COLUMN_LEN),
+        .NUM_FILTERS(NUM_FILTERS)
+    ) recycler_inst (
         .clk_i(clk_i),
         .rst_n_i(rst_n_i),
 
-        .enq_i(fifo_enq),
-        .deq_i(fifo_deq),
+        .data_i(data_i),
+        .valid_i(valid_i),
+        .last_i(last_i),
+        .ready_o(ready_o),
 
-        .din_i(fifo_din),
-        .dout_o(fifo_dout),
-
-        // TODO: Handle Full and Empty
-        .full_o_n(),
-        .empty_o_n()
+        .data0_o(sr0),
+        .data1_o(sr1),
+        .data2_o(sr2),
+        .valid_o(sr_valid),
+        .last_o(st_last),
+        // TODO: Deal with sr_ready_i
+        .ready_i(sr_ready_i)
     );
 
-    // FIFO Output Shift Register Enable
-    wire sr_en;
-    assign sr_en = (fifo_recycle | (fifo_state == STATE_PRELOAD));
-
-    // FIFO Output Shift Register
-    reg [VECTOR_BW - 1 : 0] fifo_out_sr [FILTER_LEN - 1 : 0];
-    always @(posedge clk_i) begin
-        if (sr_en) begin
-            fifo_out_sr[0] <= fifo_dout;
-        end
-    end
-    for (i = 1; i < FILTER_LEN; i = i + 1) begin: create_fifo_out_sr
-        always @(posedge clk_i) begin
-            if (sr_en) begin
-                fifo_out_sr[i] <= fifo_out_sr[i-1];
-            end
-        end
-    end
-
-    // FIFO Output Valid Shift Register
-    reg fifo_out_valid;
-    always @(posedge clk_i) begin
-        fifo_out_valid <= (fifo_state == STATE_CYCLE);
-    end
-    // ========================================================================
+    wire [VECTOR_BW - 1 : 0] sr_data_arr [FILTER_LEN - 1 : 0];
+    assign sr_data_arr[0] = sr0;
+    assign sr_data_arr[1] = sr1;
+    assign sr_data_arr[2] = sr2;
 
     // ========================================================================
     // Weight Memory
@@ -209,8 +106,8 @@ module conv1d #(
             .clk_i(clk_i),
             .rst_n_i(rst_n_i),
 
-            .data1_i(fifo_out_sr[i]),
-            .valid1_i(fifo_out_valid),
+            .data1_i(sr_data_arr[i]),
+            .valid1_i(sr_valid),
             // TODO: Deal with ready
             .last1_i(1'b0),
             .ready1_o(vec_mul_ready1_out[i]),
@@ -287,8 +184,8 @@ module conv1d #(
     // Output Assignment
     // ========================================================================
     // ========================================================================
-    assign data_o  = fifo_out_sr[FILTER_LEN - 1];
-    assign valid_o = fifo_out_valid;
+    assign data_o  = sr2;
+    assign valid_o = sr_valid;
     assign ready_o = ready_i;
     assign last_o  = last_i;
 
