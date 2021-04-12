@@ -11,7 +11,7 @@ VERILOG_SOURCES += $(RTL_DIR)/*.sv
 VERILOG_SOURCES += ../vec_mul/*.sv
 VERILOG_SOURCES += ../vec_add/*.sv
 VERILOG_SOURCES += ../recycler/*.sv
-VERILOG_SOURCES += ../../lib/*.v
+VERILOG_SOURCES += ../../lib/fifo/*.v
 MODULE			 = test_conv1d		# Python cocotb tests
 TOPLEVEL         = conv1d			# Top level RTL module
 # ===
