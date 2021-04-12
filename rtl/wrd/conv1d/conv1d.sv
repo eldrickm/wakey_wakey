@@ -28,20 +28,28 @@ module conv1d #(
     input                                      ready_i
 );
 
-    // Bitwidth Definitions
-    localparam BW             = 8;
-    localparam MUL_OUT_BW     = 16;
-    localparam ADD_OUT_BW     = 18;
-    localparam VECTOR_BW      = COLUMN_LEN  * BW;
+    // ========================================================================
+    // Local Parameters
+    // ========================================================================
+    localparam FILTER_LEN = 3;
+    localparam MAX_CYCLES = NUM_FILTERS * FRAME_LEN;
 
-    localparam FILTER_LEN    = 3;
-    localparam MAX_CYCLES     = NUM_FILTERS * FRAME_LEN;
-    localparam CYCLE_COUNT_BW = $clog2(MAX_CYCLES);
+    // Bitwidth Definitions
+    localparam BW         = 8;
+    localparam MUL_OUT_BW = 16;
+    localparam ADD_OUT_BW = 18;
+    localparam VECTOR_BW  = COLUMN_LEN  * BW;
+
+    localparam FILTER_COUNT_BW = $clog2(FILTER_LEN);
+    localparam STATE_COUNT_BW  = $clog2(MAX_CYCLES);
+    // ========================================================================
 
     genvar i;
 
-    // === Start Conv1D FSM Logic ===
+    // ========================================================================
+    // Convolution Controller
     // TODO: Fix initial deque errors
+    // ========================================================================
     // Define FIFO States
     localparam STATE_IDLE     = 2'd0,
                STATE_PRELOAD  = 2'd1,
@@ -49,7 +57,7 @@ module conv1d #(
                STATE_CYCLE    = 2'd3;
 
     reg [1:0] fifo_state;
-    reg [CYCLE_COUNT_BW - 1 :0] state_counter;
+    reg [STATE_COUNT_BW - 1 : 0] state_counter;
 
     // TODO: Handle deassertions of valid midstream
     always @(posedge clk_i) begin
@@ -96,9 +104,12 @@ module conv1d #(
             endcase
         end
     end
-    // === End Conv1D FSM Logic ===
+    // ========================================================================
 
-    // === Start Input FIFO Logic ===
+    // ========================================================================
+    // Recycling FIFO
+    // TODO: Fix initial deque errors
+    // ========================================================================
     // Needed to ensure we do not drop data_i the first cycle "valid"
     // is asserted
     reg [VECTOR_BW - 1: 0] data_i_q;
@@ -171,13 +182,18 @@ module conv1d #(
     always @(posedge clk_i) begin
         fifo_out_valid <= (fifo_state == STATE_CYCLE);
     end
-    // === End Input FIFO Logic ===
+    // ========================================================================
 
-    // Weight Bank
+    // ========================================================================
+    // Weight Memory
+    // TODO: Add Weight Memory
+    // ========================================================================
+    // ========================================================================
 
-    // Weight Bank Registers
 
+    // ========================================================================
     // Vector Multiplication
+    // ========================================================================
     wire [MUL_OUT_BW - 1 : 0] vec_mul_data_out  [FILTER_LEN - 1 : 0];
     wire                      vec_mul_valid_out [FILTER_LEN - 1 : 0];
     wire                      vec_mul_last_out  [FILTER_LEN - 1 : 0];
@@ -212,8 +228,11 @@ module conv1d #(
             .ready_i(1'b1)
         );
     end
+    // ========================================================================
 
+    // ========================================================================
     // Vector Addition
+    // ========================================================================
     wire [ADD_OUT_BW - 1 : 0] vec_add_data_out;
     wire                      vec_add_valid_out;
     wire                      vec_add_last_out;
@@ -247,18 +266,35 @@ module conv1d #(
         .last_o(vec_add_last_out),
         .ready_i(1'b1)
     );
+    // ========================================================================
 
-    // Bias Register
+    // ========================================================================
+    // Bias Addition
+    // ========================================================================
+    // ========================================================================
 
-    // Quantization Scaling
+    // ========================================================================
+    // ReLU Layer
+    // ========================================================================
+    // ========================================================================
 
+    // ========================================================================
+    // Quantization Layer
+    // ========================================================================
+    // ========================================================================
+
+    // ========================================================================
     // Output Assignment
+    // ========================================================================
+    // ========================================================================
     assign data_o  = fifo_out_sr[FILTER_LEN - 1];
     assign valid_o = fifo_out_valid;
     assign ready_o = ready_i;
     assign last_o  = last_i;
 
+    // ========================================================================
     // Simulation Only Waveform Dump (.vcd export)
+    // ========================================================================
     `ifdef COCOTB_SIM
     initial begin
       $dumpfile ("wave.vcd");
@@ -266,5 +302,6 @@ module conv1d #(
       #1;
     end
     `endif
+    // ========================================================================
 
 endmodule
