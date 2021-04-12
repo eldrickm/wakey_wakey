@@ -1,23 +1,10 @@
 # This file is public domain, it can be freely copied without restrictions.
 # SPDX-License-Identifier: CC0-1.0
 
-import numpy as np
-
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import FallingEdge 
+from cocotb.triggers import FallingEdge
 from cocotb.binary import BinaryValue
-
-DUT_VECTOR_SIZE = 13
-
-
-def np2bv(int_arr):
-    """ Convert a 8b integer numpy array in cocotb BinaryValue """
-    int_list = int_arr.tolist()
-    binarized = [format(x & 0xFF, '08b') if x < 0 else format(x, '08b')
-                 for x in int_list]
-    bin_string = ''.join(binarized)
-    return BinaryValue(bin_string)
 
 
 @cocotb.test()

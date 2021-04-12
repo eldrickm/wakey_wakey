@@ -51,7 +51,7 @@ module recycler #(
     // Recycler Controller
     // TODO: Fix initial deque errors
     // ========================================================================
-    // Define FIFO States
+    // Define States
     localparam STATE_IDLE    = 2'd0,
                STATE_PRELOAD = 2'd1,
                STATE_LOAD    = 2'd2,
