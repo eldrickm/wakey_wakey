@@ -5,7 +5,7 @@ import numpy as np
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge
+from cocotb.triggers import FallingEdge
 from cocotb.binary import BinaryValue
 
 DUT_VECTOR_SIZE = 13
@@ -36,39 +36,39 @@ async def test_vec_mul(dut):
     cocotb.fork(clock.start())
 
     # Reset system
-    await RisingEdge(dut.clk_i)
+    await FallingEdge(dut.clk_i)
     dut.rst_n_i <= 0
+    dut.data0_i <= np2bv(np.zeros(shape=DUT_VECTOR_SIZE, dtype=np.int8))
     dut.data1_i <= np2bv(np.zeros(shape=DUT_VECTOR_SIZE, dtype=np.int8))
-    dut.data2_i <= np2bv(np.zeros(shape=DUT_VECTOR_SIZE, dtype=np.int8))
+    dut.last0_i <= 0
     dut.last1_i <= 0
-    dut.last2_i <= 0
+    dut.valid0_i <= 0
     dut.valid1_i <= 0
-    dut.valid2_i <= 0
     dut.ready_i <= 0
 
-    await RisingEdge(dut.clk_i)
+    await FallingEdge(dut.clk_i)
     dut.rst_n_i <= 1
+    dut.data0_i <= np2bv(np.zeros(shape=DUT_VECTOR_SIZE, dtype=np.int8))
     dut.data1_i <= np2bv(np.zeros(shape=DUT_VECTOR_SIZE, dtype=np.int8))
-    dut.data2_i <= np2bv(np.zeros(shape=DUT_VECTOR_SIZE, dtype=np.int8))
     dut.ready_i <= 1
 
     # Generate random values and compare results
-    await RisingEdge(dut.clk_i)
+    await FallingEdge(dut.clk_i)
     for _ in range(10):
         val1 = np.random.randint(-128, 128, size=DUT_VECTOR_SIZE, dtype=np.int8)
         val2 = np.random.randint(-128, 128, size=DUT_VECTOR_SIZE, dtype=np.int8)
+        dut.valid0_i <= 1
         dut.valid1_i <= 1
-        dut.valid2_i <= 1
 
-        dut.data1_i <= np2bv(val1)
-        dut.data2_i <= np2bv(val2)
+        dut.data0_i <= np2bv(val1)
+        dut.data1_i <= np2bv(val2)
 
-        mult = val1.astype(np.int32) * val2.astype(np.int32)
-        expected = np2bv(mult, n_bits=32)
+        mult = val1.astype(np.int16) * val2.astype(np.int16)
+        expected = np2bv(mult, n_bits=16)
 
-        await RisingEdge(dut.clk_i)
+        await FallingEdge(dut.clk_i)
         for j in range(DUT_VECTOR_SIZE):
             observed = dut.data_o.value
             assert observed == expected,\
-                   "data1_i = %d, data2_i = %d, expected = %d, observed = %d" %\
+                   "data0_i = %d, data1_i = %d, expected = %d, observed = %d" %\
                    (val1[j], val2[j], expected.value, observed)
