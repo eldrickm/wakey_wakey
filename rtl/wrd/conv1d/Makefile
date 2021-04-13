@@ -13,6 +13,7 @@ VERILOG_SOURCES += ../vec_add/*.sv
 VERILOG_SOURCES += ../red_add/*.sv
 VERILOG_SOURCES += ../recycler/*.sv
 VERILOG_SOURCES += ../conv_mem/*.sv
+VERILOG_SOURCES += ../relu/*.sv
 VERILOG_SOURCES += ../../lib/fifo/*.v
 VERILOG_SOURCES += ../../lib/dffram/*.sv
 MODULE			 = test_conv1d		# Python cocotb tests

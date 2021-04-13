@@ -263,7 +263,6 @@ module conv1d #(
     wire [BIAS_BW - 1 : 0] bias_add_data_out;
     wire                   bias_add_valid_out;
     wire                   bias_add_last_out;
-    wire                   bias_add_ready_out [FILTER_LEN - 1 : 0];
 
     // Delay the bias term to align with the output of the multipliers,
     // vector addition, and reduction addition
@@ -286,6 +285,8 @@ module conv1d #(
         conv_mem_last_out_q2 <= conv_mem_last_out_q;
         conv_mem_last_out_q3 <= conv_mem_last_out_q2;
     end
+
+    wire                   relu_ready_out;
 
     vec_add #(
         .BW_I(BIAS_BW),        // input bitwidth
@@ -319,13 +320,33 @@ module conv1d #(
         .data_o(bias_add_data_out),
         .valid_o(bias_add_valid_out),
         .last_o(bias_add_last_out),
-        .ready_i(1'b1)
+        .ready_i(relu_ready_out)
     );
     // ========================================================================
 
     // ========================================================================
     // ReLU Layer
     // ========================================================================
+    wire [BIAS_BW - 1 : 0] relu_data_out;
+    wire                   relu_valid_out;
+    wire                   relu_last_out;
+
+    relu #(
+        .BW(BIAS_BW)
+    ) relu_inst (
+        .clk_i(clk_i),
+        .rst_n_i(rst_n_i),
+
+        .data_i(bias_add_data_out),
+        .valid_i(bias_add_valid_out),
+        .last_i(bias_add_last_out),
+        .ready_o(relu_ready_out),
+
+        .data_o(relu_data_out),
+        .valid_o(relu_valid_out),
+        .last_o(relu_last_out),
+        .ready_i(1'b1)
+    );
     // ========================================================================
 
     // ========================================================================

@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
-[*] Tue Apr 13 06:37:41 2021
+[*] Tue Apr 13 06:58:02 2021
 [*]
 [dumpfile] "/home/eldrick/wakey_wakey/rtl/wrd/conv1d/wave.vcd"
-[dumpfile_mtime] "Tue Apr 13 06:36:17 2021"
-[dumpfile_size] 230899
+[dumpfile_mtime] "Tue Apr 13 06:56:23 2021"
+[dumpfile_size] 255464
 [savefile] "/home/eldrick/wakey_wakey/rtl/wrd/conv1d/conv1d_wave.gtkw"
 [timestart] 0
 [size] 3696 2032
-[pos] -1 -1
-*-29.608625 1590000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[pos] -77 -77
+*-27.608625 1479000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] conv1d.
 [sst_width] 778
 [signals_width] 747
@@ -162,7 +162,7 @@ conv1d.red_add_inst.valid_o
 conv1d.red_add_inst.last_o
 @200
 -Bias Addition
-@23
+@22
 conv1d.bias_add_inst.data0_i[31:0]
 @28
 conv1d.bias_add_inst.valid0_i
@@ -189,6 +189,21 @@ conv1d.bias_add_inst.data_o[31:0]
 conv1d.bias_add_inst.last_o
 conv1d.bias_add_inst.valid_o
 @200
+-ReLU
+@420
+conv1d.relu_inst.data_i[31:0]
+@28
+conv1d.relu_inst.valid_i
+@200
+-
+@28
+conv1d.relu_inst.last_i
+@420
+conv1d.relu_inst.data_o[31:0]
+@28
+conv1d.relu_inst.valid_o
+conv1d.relu_inst.last_o
+@201
 -Streaming Output
 @24
 conv1d.data_o[103:0]
