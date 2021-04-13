@@ -5,10 +5,6 @@
 // Notes:
 // Constraint: FRAME_LEN > FILTER_LEN
 // Constraint: FILTER_LEN == 3
-// In order to change filter size, you'll have to modify or parametrize the
-// following modules:
-//  * vec_add (supports 3 output data ports)
-//  * conv_mem (supports 3 output data ports + 1 bias port)
 // TODO: Deal with ready's / backpressur
 // ============================================================================
 
@@ -200,6 +196,10 @@ module conv1d #(
     wire                             vec_add_last_out;
     wire                             vec_add_ready_out [FILTER_LEN - 1 : 0];
 
+    // needed to be declared up here due to weird error with
+    // signal declaration before usage in port assignment
+    wire red_add_ready_out;
+
     vec_add #(
         .BW_I(MUL_OUT_BW),        // input bitwidth
         .BW_O(ADD_OUT_BW),        // output bitwidth
@@ -233,7 +233,9 @@ module conv1d #(
     // ========================================================================
     // Reduction Addition
     // ========================================================================
-    wire red_add_ready_out;
+    wire [BIAS_BW - 1 : 0] red_add_data_out;
+    wire red_add_valid_out;
+    wire red_add_last_out;
 
     red_add #(
         .BW_I(ADD_OUT_BW),        // input bitwidth
@@ -248,16 +250,77 @@ module conv1d #(
         .last_i(vec_add_last_out),
         .ready_o(red_add_ready_out),
 
-        .data_o(),
-        .valid_o(),
-        .last_o(),
-        .ready_i()
+        .data_o(red_add_data_out),
+        .valid_o(red_add_valid_out),
+        .last_o(red_add_last_out),
+        .ready_i(1'b0)
     );
     // ========================================================================
 
     // ========================================================================
     // Bias Addition
     // ========================================================================
+    wire [BIAS_BW - 1 : 0] bias_add_data_out;
+    wire                   bias_add_valid_out;
+    wire                   bias_add_last_out;
+    wire                   bias_add_ready_out [FILTER_LEN - 1 : 0];
+
+    // Delay the bias term to align with the output of the multipliers,
+    // vector addition, and reduction addition
+    reg [BIAS_BW - 1 : 0] conv_mem_bias_out_q, conv_mem_bias_out_q2,
+                          conv_mem_bias_out_q3;
+    reg                   conv_mem_valid_out_q,
+                          conv_mem_valid_out_q2, conv_mem_valid_out_q3;
+    reg                   conv_mem_last_out_q, conv_mem_last_out_q2,
+                          conv_mem_last_out_q3;
+    always @(posedge clk_i) begin
+        conv_mem_bias_out_q  <= conv_mem_bias_out;
+        conv_mem_bias_out_q2 <= conv_mem_bias_out_q;
+        conv_mem_bias_out_q3 <= conv_mem_bias_out_q2;
+
+        conv_mem_valid_out_q  <= conv_mem_valid_out;
+        conv_mem_valid_out_q2 <= conv_mem_valid_out_q;
+        conv_mem_valid_out_q3 <= conv_mem_valid_out_q2;
+
+        conv_mem_last_out_q  <= conv_mem_last_out;
+        conv_mem_last_out_q2 <= conv_mem_last_out_q;
+        conv_mem_last_out_q3 <= conv_mem_last_out_q2;
+    end
+
+    vec_add #(
+        .BW_I(BIAS_BW),        // input bitwidth
+        .BW_O(BIAS_BW),        // output bitwidth
+        .VECTOR_LEN(1)         // number of vector elements
+    ) bias_add_inst (
+        .clk_i(clk_i),
+        .rst_n_i(rst_n_i),
+
+        // bias term
+        .data0_i(conv_mem_bias_out_q3),
+        .valid0_i(conv_mem_valid_out_q3),
+        .last0_i(conv_mem_last_out_q3),
+        // TODO
+        .ready0_o(),
+
+        // reduced sum
+        .data1_i(red_add_data_out),
+        .valid1_i(red_add_valid_out),
+        .last1_i(red_add_last_out),
+        // TODO
+        .ready1_o(),
+
+        // Unused
+        .data2_i({BIAS_BW{1'b0}}),
+        .valid2_i(1'd1),
+        .last2_i(1'd0),
+        // TODO
+        .ready2_o(),
+
+        .data_o(bias_add_data_out),
+        .valid_o(bias_add_valid_out),
+        .last_o(bias_add_last_out),
+        .ready_i(1'b1)
+    );
     // ========================================================================
 
     // ========================================================================

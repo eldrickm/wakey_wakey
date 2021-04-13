@@ -10,6 +10,7 @@ RTL_DIR			 = $(shell pwd)
 VERILOG_SOURCES += $(RTL_DIR)/*.sv
 VERILOG_SOURCES += ../vec_mul/*.sv
 VERILOG_SOURCES += ../vec_add/*.sv
+VERILOG_SOURCES += ../red_add/*.sv
 VERILOG_SOURCES += ../recycler/*.sv
 VERILOG_SOURCES += ../conv_mem/*.sv
 VERILOG_SOURCES += ../../lib/fifo/*.v

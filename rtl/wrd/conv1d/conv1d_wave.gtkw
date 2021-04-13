@@ -1,22 +1,18 @@
 [*]
 [*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
-[*] Tue Apr 13 00:05:26 2021
+[*] Tue Apr 13 06:37:41 2021
 [*]
 [dumpfile] "/home/eldrick/wakey_wakey/rtl/wrd/conv1d/wave.vcd"
-[dumpfile_mtime] "Mon Apr 12 23:58:18 2021"
-[dumpfile_size] 182639
+[dumpfile_mtime] "Tue Apr 13 06:36:17 2021"
+[dumpfile_size] 230899
 [savefile] "/home/eldrick/wakey_wakey/rtl/wrd/conv1d/conv1d_wave.gtkw"
-[timestart] 1014200000
+[timestart] 0
 [size] 3696 2032
-[pos] -91 -91
-*-24.608625 1085300000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[pos] -1 -1
+*-29.608625 1590000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] conv1d.
-[treeopen] conv1d.conv_mem_inst.
-[treeopen] conv1d.vector_multiply[0].
-[treeopen] conv1d.vector_multiply[1].
-[treeopen] conv1d.vector_multiply[2].
 [sst_width] 778
-[signals_width] 739
+[signals_width] 747
 [sst_expanded] 1
 [sst_vpaned_height] 617
 @200
@@ -151,8 +147,47 @@ conv1d.vec_add_inst.last2_i
 conv1d.vec_add_inst.data_o[233:0]
 @28
 conv1d.vec_add_valid_out
-@29
 conv1d.vec_add_last_out
+@200
+-Reduction Addition
+@22
+conv1d.red_add_inst.data_i[233:0]
+@28
+conv1d.red_add_inst.valid_i
+conv1d.red_add_inst.last_i
+@24
+conv1d.red_add_inst.data_o[31:0]
+@28
+conv1d.red_add_inst.valid_o
+conv1d.red_add_inst.last_o
+@200
+-Bias Addition
+@23
+conv1d.bias_add_inst.data0_i[31:0]
+@28
+conv1d.bias_add_inst.valid0_i
+conv1d.bias_add_inst.last0_i
+@200
+-
+@22
+conv1d.bias_add_inst.data1_i[31:0]
+@28
+conv1d.bias_add_inst.valid1_i
+conv1d.bias_add_inst.last1_i
+@200
+-
+@22
+conv1d.bias_add_inst.data2_i[31:0]
+@28
+conv1d.bias_add_inst.valid2_i
+conv1d.bias_add_inst.last2_i
+@200
+-
+@22
+conv1d.bias_add_inst.data_o[31:0]
+@28
+conv1d.bias_add_inst.last_o
+conv1d.bias_add_inst.valid_o
 @200
 -Streaming Output
 @24
