@@ -23,7 +23,7 @@ module conv1d #(
     output                            ready_o,
 
     // Output Features
-    output signed [VECTOR_BW - 1 : 0] data_o,
+    output signed [BW - 1 : 0]        data_o,
     output                            valid_o,
     output                            last_o,
     input                             ready_i,
@@ -58,6 +58,7 @@ module conv1d #(
     localparam BANK_BW   = $clog2(FILTER_LEN + 1);
     localparam FRAME_COUNTER_BW = $clog2(FRAME_LEN);
     localparam FILTER_COUNTER_BW = $clog2(NUM_FILTERS);
+    localparam SHIFT_BW = $clog2(BIAS_BW);
     // ========================================================================
 
     genvar i;
@@ -70,6 +71,7 @@ module conv1d #(
     wire [VECTOR_BW - 1 : 0] recycler_data2_out;
     wire recycler_valid_out;
     wire recycler_last_out;
+    wire recycler_ready_out;
 
     recycler #(
         .BW(BW),
@@ -83,7 +85,7 @@ module conv1d #(
         .data_i(data_i),
         .valid_i(valid_i),
         .last_i(last_i),
-        .ready_o(ready_o),
+        .ready_o(recycler_ready_out),
 
         .data0_o(recycler_data0_out),
         .data1_o(recycler_data1_out),
@@ -331,6 +333,8 @@ module conv1d #(
     wire                   relu_valid_out;
     wire                   relu_last_out;
 
+    wire              quantizer_ready_out;
+
     relu #(
         .BW(BIAS_BW)
     ) relu_inst (
@@ -345,23 +349,47 @@ module conv1d #(
         .data_o(relu_data_out),
         .valid_o(relu_valid_out),
         .last_o(relu_last_out),
-        .ready_i(1'b1)
+        .ready_i(quantizer_ready_out)
     );
     // ========================================================================
 
     // ========================================================================
     // Quantization Layer
     // ========================================================================
+    wire [BW - 1 : 0] quantizer_data_out;
+    wire              quantizer_valid_out;
+    wire              quantizer_last_out;
+
+    quantizer #(
+        .BW_I(BIAS_BW),
+        .BW_O(BW),
+        .SHIFT_BW(SHIFT_BW)
+    ) quantizer_inst (
+        .clk_i(clk_i),
+        .rst_n_i(rst_n_i),
+
+        .shift_i(5'd8),
+
+        .data_i(relu_data_out),
+        .valid_i(relu_valid_out),
+        .last_i(relu_last_out),
+        .ready_o(quantizer_ready_out),
+
+        .data_o(quantizer_data_out),
+        .valid_o(quantizer_valid_out),
+        .last_o(quantizer_last_out),
+        .ready_i(1'b1)
+    );
     // ========================================================================
 
     // ========================================================================
     // Output Assignment
     // ========================================================================
+    assign data_o  = quantizer_data_out;
+    assign valid_o = quantizer_valid_out;
+    assign ready_o = recycler_ready_out;
+    assign last_o  = quantizer_last_out;
     // ========================================================================
-    assign data_o  = recycler_data2_out;
-    assign valid_o = vec_add_valid_out;
-    assign ready_o = ready_i;
-    assign last_o  = vec_add_last_out;
 
     // ========================================================================
     // Simulation Only Waveform Dump (.vcd export)

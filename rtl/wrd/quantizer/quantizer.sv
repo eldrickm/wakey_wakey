@@ -53,7 +53,8 @@ module quantizer #(
         end
     end
 
-    assign data_o  = (shifted > saturate_point) ? saturate_point : shifted[BW_O - 1 : 0];
+    assign data_o  = (shifted > saturate_point) ? saturate_point :
+                                                  shifted[BW_O - 1 : 0];
     assign valid_o = valid_q;
     assign last_o  = last_q;
     assign ready_o = ready_q;
