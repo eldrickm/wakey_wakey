@@ -14,7 +14,7 @@
 module recycler #(
     parameter BW          = 8,
     parameter FRAME_LEN   = 50,
-    parameter COLUMN_LEN  = 1,
+    parameter COLUMN_LEN  = 13,
     parameter NUM_FILTERS = 8
 ) (
     input                                      clk_i,

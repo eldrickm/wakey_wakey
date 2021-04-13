@@ -8,9 +8,9 @@
 
 module conv_mem #(
     parameter BW          = 8,
-    parameter BIAS_BW     = BW * 2,
+    parameter BIAS_BW     = BW * 4,
     parameter FRAME_LEN   = 50,
-    parameter COLUMN_LEN  = 2,
+    parameter COLUMN_LEN  = 13,
     parameter NUM_FILTERS = 8
 ) (
     input                             clk_i,

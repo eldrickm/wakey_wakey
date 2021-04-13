@@ -14,7 +14,7 @@
 
 module conv1d #(
     parameter FRAME_LEN   = 50,
-    parameter COLUMN_LEN  = 2,
+    parameter COLUMN_LEN  = 13,
     parameter NUM_FILTERS = 8
 ) (
     input                             clk_i,
@@ -49,10 +49,13 @@ module conv1d #(
 
     // Bitwidth Definitions
     localparam BW         = 8;
-    localparam BIAS_BW    = BW * 2;
+    localparam BIAS_BW    = BW * 4;
     localparam MUL_OUT_BW = 16;
     localparam ADD_OUT_BW = 18;
-    localparam VECTOR_BW  = COLUMN_LEN  * BW;
+
+    localparam VECTOR_BW         = COLUMN_LEN * BW;
+    localparam MUL_OUT_VECTOR_BW = COLUMN_LEN * MUL_OUT_BW;
+    localparam ADD_OUT_VECTOR_BW = COLUMN_LEN * ADD_OUT_BW;
 
     localparam ADDR_BW   = $clog2(NUM_FILTERS);
     // Number of weight banks + bias bank
@@ -95,10 +98,18 @@ module conv1d #(
         .ready_i(vec_mul_ready0_out[0])
     );
 
-    wire [VECTOR_BW - 1 : 0] recycler_data_out [FILTER_LEN - 1 : 0];
-    assign recycler_data_out[0] = recycler_data0_out;
-    assign recycler_data_out[1] = recycler_data1_out;
-    assign recycler_data_out[2] = recycler_data2_out;
+    reg [VECTOR_BW - 1 : 0] recycler_data_out_q [FILTER_LEN - 1 : 0];
+    reg recycler_valid_out_q;
+    reg recycler_last_out_q;
+    always @(posedge clk_i) begin
+        recycler_data_out_q[0] <= recycler_data0_out;
+        recycler_data_out_q[1] <= recycler_data1_out;
+        recycler_data_out_q[2] <= recycler_data2_out;
+        recycler_valid_out_q   <= recycler_valid_out;
+        recycler_last_out_q    <= recycler_last_out;
+
+    end
+    // ========================================================================
 
     // ========================================================================
     // Parameter Memory
@@ -119,7 +130,6 @@ module conv1d #(
         .rst_n_i(rst_n_i),
 
         // Control Ports
-        // TODO: Hook up cycle_en
         .cycle_en_i(recycler_valid_out),
 
         // Manual Read/Write Ports
@@ -146,11 +156,11 @@ module conv1d #(
     // ========================================================================
     // Vector Multiplication
     // ========================================================================
-    wire [MUL_OUT_BW - 1 : 0] vec_mul_data_out  [FILTER_LEN - 1 : 0];
-    wire                      vec_mul_valid_out [FILTER_LEN - 1 : 0];
-    wire                      vec_mul_last_out  [FILTER_LEN - 1 : 0];
-    wire                      vec_mul_ready0_out  [FILTER_LEN - 1 : 0];
-    wire                      vec_mul_ready1_out  [FILTER_LEN - 1 : 0];
+    wire [MUL_OUT_VECTOR_BW - 1 : 0] vec_mul_data_out  [FILTER_LEN - 1 : 0];
+    wire                             vec_mul_valid_out [FILTER_LEN - 1 : 0];
+    wire                             vec_mul_last_out  [FILTER_LEN - 1 : 0];
+    wire                             vec_mul_ready0_out  [FILTER_LEN - 1 : 0];
+    wire                             vec_mul_ready1_out  [FILTER_LEN - 1 : 0];
 
     for (i = 0; i < FILTER_LEN; i = i + 1) begin: vector_multiply
         vec_mul #(
@@ -162,9 +172,9 @@ module conv1d #(
             .rst_n_i(rst_n_i),
 
             // recycler ports
-            .data0_i(recycler_data_out[i]),
-            .valid0_i(recycler_valid_out),
-            .last0_i(recycler_last_out),
+            .data0_i(recycler_data_out_q[i]),
+            .valid0_i(recycler_valid_out_q),
+            .last0_i(recycler_last_out_q),
             .ready0_o(vec_mul_ready0_out[i]),
 
             // conv_mem ports
@@ -185,10 +195,10 @@ module conv1d #(
     // ========================================================================
     // Vector Addition
     // ========================================================================
-    wire [ADD_OUT_BW - 1 : 0] vec_add_data_out;
-    wire                      vec_add_valid_out;
-    wire                      vec_add_last_out;
-    wire                      vec_add_ready_out [FILTER_LEN - 1 : 0];
+    wire [ADD_OUT_VECTOR_BW - 1 : 0] vec_add_data_out;
+    wire                             vec_add_valid_out;
+    wire                             vec_add_last_out;
+    wire                             vec_add_ready_out [FILTER_LEN - 1 : 0];
 
     vec_add #(
         .BW_I(MUL_OUT_BW),        // input bitwidth
@@ -216,7 +226,32 @@ module conv1d #(
         .data_o(vec_add_data_out),
         .valid_o(vec_add_valid_out),
         .last_o(vec_add_last_out),
-        .ready_i(1'b1)
+        .ready_i(red_add_ready_out)
+    );
+    // ========================================================================
+
+    // ========================================================================
+    // Reduction Addition
+    // ========================================================================
+    wire red_add_ready_out;
+
+    red_add #(
+        .BW_I(ADD_OUT_BW),        // input bitwidth
+        .BW_O(BIAS_BW),           // output bitwidth
+        .VECTOR_LEN(COLUMN_LEN)   // number of vector elements
+    ) red_add_inst (
+        .clk_i(clk_i),
+        .rst_n_i(rst_n_i),
+
+        .data_i(vec_add_data_out),
+        .valid_i(vec_add_valid_out),
+        .last_i(vec_add_last_out),
+        .ready_o(red_add_ready_out),
+
+        .data_o(),
+        .valid_o(),
+        .last_o(),
+        .ready_i()
     );
     // ========================================================================
 
@@ -240,9 +275,9 @@ module conv1d #(
     // ========================================================================
     // ========================================================================
     assign data_o  = recycler_data2_out;
-    assign valid_o = recycler_valid_out;
+    assign valid_o = vec_add_valid_out;
     assign ready_o = ready_i;
-    assign last_o  = last_i;
+    assign last_o  = vec_add_last_out;
 
     // ========================================================================
     // Simulation Only Waveform Dump (.vcd export)

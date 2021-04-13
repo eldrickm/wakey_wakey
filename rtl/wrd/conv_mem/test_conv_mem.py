@@ -6,7 +6,7 @@ from cocotb.clock import Clock
 from cocotb.triggers import FallingEdge, RisingEdge
 from cocotb.binary import BinaryValue
 
-DUT_VECTOR_SIZE = 1
+DUT_VECTOR_SIZE = 13
 
 @cocotb.test()
 async def test_conv_mem(dut):
