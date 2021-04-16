@@ -1,3 +1,4 @@
 **/*.vcd
 **/sim_build/
 **/results.xml
+design.v
