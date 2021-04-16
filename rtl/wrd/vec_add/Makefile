@@ -7,7 +7,7 @@
 SIM			   ?= icarus			# Simulator (icarus, verilator, ...)
 TOPLEVEL_LANG  ?= verilog			# HDL (verilog, vhdl, ...)
 RTL_DIR			= $(shell pwd)
-VERILOG_SOURCES = $(RTL_DIR)/*.sv
+VERILOG_SOURCES = $(RTL_DIR)/*.v
 MODULE			= test_vec_add		# Python cocotb tests
 TOPLEVEL        = vec_add			# Top level RTL module
 # ===

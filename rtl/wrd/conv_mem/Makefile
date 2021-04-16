@@ -7,8 +7,8 @@
 SIM			    ?= icarus			# Simulator (icarus, verilator, ...)
 TOPLEVEL_LANG   ?= verilog			# HDL (verilog, vhdl, ...)
 RTL_DIR			 = $(shell pwd)
-VERILOG_SOURCES += $(RTL_DIR)/*.sv
-VERILOG_SOURCES += ../../lib/dffram/*.sv
+VERILOG_SOURCES += $(RTL_DIR)/*.v
+VERILOG_SOURCES += ../../lib/dffram/*.v
 MODULE			 = test_conv_mem 	# Python cocotb tests
 TOPLEVEL         = conv_mem	        # Top level RTL module
 # ===
