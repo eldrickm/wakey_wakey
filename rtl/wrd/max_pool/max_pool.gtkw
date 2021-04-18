@@ -1,0 +1,38 @@
+[*]
+[*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
+[*] Sun Apr 18 00:21:49 2021
+[*]
+[dumpfile] "/home/eldrick/wakey_wakey/rtl/wrd/max_pool/wave.vcd"
+[dumpfile_mtime] "Sun Apr 18 00:15:31 2021"
+[dumpfile_size] 1975
+[savefile] "/home/eldrick/wakey_wakey/rtl/wrd/max_pool/max_pool.gtkw"
+[timestart] 0
+[size] 1848 1016
+[pos] -39 -39
+*-24.256485 17500000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 233
+[signals_width] 118
+[sst_expanded] 1
+[sst_vpaned_height] 289
+@28
+max_pool.clk_i
+@29
+max_pool.rst_n_i
+@200
+-
+@420
+max_pool.data_i[7:0]
+@28
+max_pool.valid_i
+max_pool.last_i
+max_pool.ready_i
+@200
+-
+@420
+max_pool.data_o[7:0]
+@28
+max_pool.valid_o
+max_pool.last_o
+max_pool.ready_o
+[pattern_trace] 1
+[pattern_trace] 0
