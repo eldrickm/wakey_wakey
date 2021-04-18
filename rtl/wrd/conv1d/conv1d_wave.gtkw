@@ -1,0 +1,232 @@
+[*]
+[*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
+[*] Tue Apr 13 07:51:36 2021
+[*]
+[dumpfile] "/home/eldrick/wakey_wakey/rtl/wrd/conv1d/wave.vcd"
+[dumpfile_mtime] "Tue Apr 13 07:49:33 2021"
+[dumpfile_size] 260860
+[savefile] "/home/eldrick/wakey_wakey/rtl/wrd/conv1d/conv1d_wave.gtkw"
+[timestart] 0
+[size] 3696 2032
+[pos] -51 -51
+*-28.608625 2322000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] conv1d.
+[sst_width] 668
+[signals_width] 350
+[sst_expanded] 1
+[sst_vpaned_height] 1207
+@200
+-Clock and Reset
+@28
+conv1d.clk_i
+conv1d.rst_n_i
+@200
+-Memory Configuration
+@28
+conv1d.rd_en_i
+conv1d.wr_en_i
+@24
+conv1d.rd_wr_addr_i[2:0]
+conv1d.rd_wr_bank_i[1:0]
+@200
+-Streaming Input
+@22
+conv1d.data_i[103:0]
+@28
+conv1d.valid_i
+conv1d.last_i
+conv1d.ready_o
+@200
+-Recycler
+@22
+conv1d.recycler_inst.data0_o[103:0]
+conv1d.recycler_inst.data1_o[103:0]
+conv1d.recycler_inst.data2_o[103:0]
+@28
+conv1d.recycler_valid_out
+conv1d.recycler_last_out
+@200
+-Convolution Memory
+@28
+conv1d.conv_mem_inst.cycle_en_i
+@22
+conv1d.conv_mem_inst.data0_o[103:0]
+conv1d.conv_mem_inst.data1_o[103:0]
+conv1d.conv_mem_inst.data2_o[103:0]
+conv1d.conv_mem_inst.bias_o[31:0]
+@28
+conv1d.conv_mem_valid_out
+conv1d.conv_mem_last_out
+@200
+-Vector Multiplier 0
+@22
+conv1d.vector_multiply[0].vec_mul_inst.data0_i[103:0]
+@28
+conv1d.vector_multiply[0].vec_mul_inst.valid0_i
+conv1d.vector_multiply[0].vec_mul_inst.last0_i
+@200
+-
+@22
+conv1d.vector_multiply[0].vec_mul_inst.data1_i[103:0]
+@28
+conv1d.vector_multiply[0].vec_mul_inst.valid1_i
+conv1d.vector_multiply[0].vec_mul_inst.last1_i
+@200
+-
+@22
+conv1d.vector_multiply[0].vec_mul_inst.data_o[207:0]
+@28
+conv1d.vector_multiply[0].vec_mul_inst.valid_o
+conv1d.vector_multiply[0].vec_mul_inst.last_o
+@200
+-Vector Multiplier 1
+@22
+conv1d.vector_multiply[1].vec_mul_inst.data0_i[103:0]
+@28
+conv1d.vector_multiply[1].vec_mul_inst.valid0_i
+conv1d.vector_multiply[1].vec_mul_inst.last0_i
+@200
+-
+@22
+conv1d.vector_multiply[1].vec_mul_inst.data1_i[103:0]
+@28
+conv1d.vector_multiply[1].vec_mul_inst.valid1_i
+conv1d.vector_multiply[1].vec_mul_inst.last1_i
+@200
+-
+@22
+conv1d.vector_multiply[1].vec_mul_inst.data_o[207:0]
+@28
+conv1d.vector_multiply[1].vec_mul_inst.valid_o
+conv1d.vector_multiply[1].vec_mul_inst.last_o
+@200
+-Vector Multiplier 2
+@22
+conv1d.vector_multiply[2].vec_mul_inst.data0_i[103:0]
+@28
+conv1d.vector_multiply[2].vec_mul_inst.valid0_i
+conv1d.vector_multiply[2].vec_mul_inst.last0_i
+@200
+-
+@22
+conv1d.vector_multiply[2].vec_mul_inst.data1_i[103:0]
+@28
+conv1d.vector_multiply[2].vec_mul_inst.valid1_i
+conv1d.vector_multiply[2].vec_mul_inst.last1_i
+@200
+-
+@22
+conv1d.vector_multiply[2].vec_mul_inst.data_o[207:0]
+@28
+conv1d.vector_multiply[2].vec_mul_inst.valid_o
+conv1d.vector_multiply[2].vec_mul_inst.last_o
+@200
+-Vector Addition
+@22
+conv1d.vec_add_inst.data0_i[207:0]
+@28
+conv1d.vec_add_inst.valid0_i
+conv1d.vec_add_inst.last0_i
+@200
+-
+@22
+conv1d.vec_add_inst.data1_i[207:0]
+@28
+conv1d.vec_add_inst.valid1_i
+conv1d.vec_add_inst.last1_i
+@200
+-
+@22
+conv1d.vec_add_inst.data2_i[207:0]
+@28
+conv1d.vec_add_inst.valid2_i
+conv1d.vec_add_inst.last2_i
+@200
+-
+@22
+conv1d.vec_add_inst.data_o[233:0]
+@28
+conv1d.vec_add_valid_out
+conv1d.vec_add_last_out
+@200
+-Reduction Addition
+@22
+conv1d.red_add_inst.data_i[233:0]
+@28
+conv1d.red_add_inst.valid_i
+conv1d.red_add_inst.last_i
+@24
+conv1d.red_add_inst.data_o[31:0]
+@28
+conv1d.red_add_inst.valid_o
+conv1d.red_add_inst.last_o
+@200
+-Bias Addition
+@22
+conv1d.bias_add_inst.data0_i[31:0]
+@28
+conv1d.bias_add_inst.valid0_i
+conv1d.bias_add_inst.last0_i
+@200
+-
+@22
+conv1d.bias_add_inst.data1_i[31:0]
+@28
+conv1d.bias_add_inst.valid1_i
+conv1d.bias_add_inst.last1_i
+@200
+-
+@22
+conv1d.bias_add_inst.data2_i[31:0]
+@28
+conv1d.bias_add_inst.valid2_i
+conv1d.bias_add_inst.last2_i
+@200
+-
+@22
+conv1d.bias_add_inst.data_o[31:0]
+@28
+conv1d.bias_add_inst.last_o
+conv1d.bias_add_inst.valid_o
+@200
+-ReLU
+@420
+conv1d.relu_inst.data_i[31:0]
+@28
+conv1d.relu_inst.valid_i
+conv1d.relu_inst.last_i
+@200
+-
+@420
+conv1d.relu_inst.data_o[31:0]
+@28
+conv1d.relu_inst.valid_o
+conv1d.relu_inst.last_o
+@200
+-Quantizer
+@23
+conv1d.quantizer_inst.shift_i[4:0]
+@200
+-
+@420
+conv1d.quantizer_inst.data_i[31:0]
+@28
+conv1d.quantizer_inst.valid_i
+conv1d.quantizer_inst.last_i
+@200
+-
+@420
+conv1d.quantizer_inst.data_o[7:0]
+@28
+conv1d.quantizer_inst.last_o
+conv1d.quantizer_inst.valid_o
+@200
+-Streaming Output
+@22
+conv1d.data_o[7:0]
+@28
+conv1d.valid_o
+conv1d.last_o
+conv1d.ready_i
+[pattern_trace] 1
+[pattern_trace] 0
