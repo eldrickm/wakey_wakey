@@ -41,13 +41,13 @@ module recycler #(
     // This unit is hard coded for width 3 filters
     localparam FILTER_LEN = 3;
     // Need to account for cycles where the ends of the featuremap wrap
-    // through the shift registers, hence the +2
-    localparam MAX_CYCLES = NUM_FILTERS * (FRAME_LEN + 2);
+    // through the shift registers, hence the extra +NUM_FILTERS-1
+    localparam MAX_CYCLES = NUM_FILTERS * (FRAME_LEN + FILTER_LEN - 1);
 
     // Bitwidth Definitions
     localparam VECTOR_BW  = COLUMN_LEN  * BW;
     localparam COUNTER_BW = $clog2(MAX_CYCLES);
-    localparam FRAME_COUNTER_BW = $clog2(FRAME_LEN + 2);
+    localparam FRAME_COUNTER_BW = $clog2(FRAME_LEN + FILTER_LEN - 1);
     // ========================================================================
 
     // ========================================================================
@@ -103,8 +103,9 @@ module recycler #(
                     // If valid_i is deasserted, we transition into IDLE
                     // and wait on the next input blocks to come in
                     counter <= counter + 'd1;
-                    frame_counter <= (frame_counter < FRAME_LEN + 2) ? frame_counter + 'd1
-                                                                     : 'd1;
+                    frame_counter <= (frame_counter < FRAME_LEN + FILTER_LEN - 1)
+                                        ? frame_counter + 'd1
+                                        : 'd1;
                     state   <= (counter < MAX_CYCLES - 1) ? STATE_CYCLE :
                                ((valid_i) ? STATE_PRELOAD : STATE_IDLE);
                 end
