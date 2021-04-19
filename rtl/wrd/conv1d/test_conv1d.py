@@ -98,7 +98,9 @@ async def receive_data(dut, n_frames, n_channels, expected):
                                                      expected_value))
             received_values += 1
             # if dut.last_o == 1:
-                # assert(received_values == total_values)
+                # assert(received_values == total_values,
+                       # 'received only {} values but {} expected'.format(received_values,
+                                                                        # total_values))
     # return output_arr
     print('Received output:')
     print(output_arr)
