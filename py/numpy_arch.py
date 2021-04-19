@@ -8,19 +8,22 @@ https://colab.research.google.com/drive/11s4RKhQOqi4lxJz2K83RSuqHdArnLfA0
 import numpy as np
 import requests
 import os
+import pathlib
 
 
 # Load MFCC features
 
 API_KEY = 'ei_9eedce842a674656748bf65a19f0e2a80cc867cde21a7810354f75a4fb565a3d'
 
+cache_dir = pathlib.Path(__file__).parent.absolute()
+
 def get_data(fname, url):
     '''Locally cache MFCC features so they can be loaded quickly.'''
-    if not os.path.exists(fname):
+    if not os.path.exists(cache_dir / fname):
         data = (requests.get(url, headers={'x-api-key': API_KEY})).content
-        with open(fname, 'wb') as file:
+        with open(cache_dir / fname, 'wb') as file:
             file.write(data)
-    return np.load(fname)
+    return np.load(cache_dir / fname)
 
 X = get_data('x_train.npy', 'https://studio.edgeimpulse.com/v1/api/24007/dsp-data/3/x/training')
 Y = get_data('y_train.npy', 'https://studio.edgeimpulse.com/v1/api/24007/dsp-data/3/y/training')[:,0]
@@ -30,7 +33,7 @@ Ytest = get_data('y_test.npy', 'https://studio.edgeimpulse.com/v1/api/24007/dsp-
 
 # Load quantized parameters
 
-weights_archive = np.load('parameters_quantized.npz')
+weights_archive = np.load(cache_dir / 'parameters_quantized.npz')
 weights_list = [weights_archive['arr_{}'.format(i)] for i in range(len(weights_archive))]
 
 # for weights in weights_list:
