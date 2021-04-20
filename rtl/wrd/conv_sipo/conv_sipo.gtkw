@@ -1,0 +1,103 @@
+[*]
+[*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
+[*] Tue Apr 20 22:52:57 2021
+[*]
+[dumpfile] "/home/eldrick/wakey_wakey/rtl/wrd/conv_sipo/wave.vcd"
+[dumpfile_mtime] "Tue Apr 20 22:47:44 2021"
+[dumpfile_size] 142460
+[savefile] "/home/eldrick/wakey_wakey/rtl/wrd/conv_sipo/conv_sipo.gtkw"
+[timestart] 3942300000
+[size] 3696 2032
+[pos] -1 -1
+*-25.298716 4225200000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] conv_sipo.
+[treeopen] conv_sipo.create_sipo_fifo[0].
+[treeopen] conv_sipo.create_sipo_fifo[1].
+[treeopen] conv_sipo.create_sipo_fifo[1].fifo_inst.
+[treeopen] conv_sipo.create_sipo_fifo[6].
+[treeopen] conv_sipo.create_sipo_fifo[7].
+[sst_width] 388
+[signals_width] 813
+[sst_expanded] 1
+[sst_vpaned_height] 289
+@28
+conv_sipo.clk_i
+conv_sipo.rst_n_i
+@200
+-
+@24
+conv_sipo.data_i[7:0]
+@28
+conv_sipo.last_i
+conv_sipo.ready_o
+@29
+conv_sipo.valid_i
+@200
+-
+@22
+conv_sipo.counter[5:0]
+@28
+conv_sipo.state[1:0]
+conv_sipo.fifo_sel[7:0]
+@200
+-
+@22
+conv_sipo.data_o[63:0]
+@28
+conv_sipo.last_o
+conv_sipo.ready_i
+conv_sipo.valid_o
+@200
+-
+-FIFO 0
+@22
+conv_sipo.create_sipo_fifo[0].fifo_inst.din_i[7:0]
+@28
+conv_sipo.create_sipo_fifo[0].fifo_inst.enq_i
+@24
+conv_sipo.create_sipo_fifo[0].fifo_inst.dout_o[7:0]
+@22
+conv_sipo.create_sipo_fifo[0].fifo_inst.dout_o[7:0]
+@28
+conv_sipo.create_sipo_fifo[0].fifo_inst.deq_i
+@200
+-
+-FIFO 1
+@22
+conv_sipo.create_sipo_fifo[1].fifo_inst.din_i[7:0]
+@28
+conv_sipo.create_sipo_fifo[1].fifo_inst.enq_i
+@24
+conv_sipo.create_sipo_fifo[1].fifo_inst.dout_o[7:0]
+@22
+conv_sipo.create_sipo_fifo[1].fifo_inst.dout_o[7:0]
+@28
+conv_sipo.create_sipo_fifo[1].fifo_inst.deq_i
+@200
+-
+-FIFO 6
+@22
+conv_sipo.create_sipo_fifo[6].fifo_inst.din_i[7:0]
+@28
+conv_sipo.create_sipo_fifo[6].fifo_inst.enq_i
+@24
+conv_sipo.create_sipo_fifo[6].fifo_inst.dout_o[7:0]
+@22
+conv_sipo.create_sipo_fifo[6].fifo_inst.dout_o[7:0]
+@28
+conv_sipo.create_sipo_fifo[6].fifo_inst.deq_i
+@200
+-
+-FIFO 7
+@22
+conv_sipo.create_sipo_fifo[7].fifo_inst.din_i[7:0]
+@28
+conv_sipo.create_sipo_fifo[7].fifo_inst.enq_i
+@24
+conv_sipo.create_sipo_fifo[7].fifo_inst.dout_o[7:0]
+@22
+conv_sipo.create_sipo_fifo[7].fifo_inst.dout_o[7:0]
+@28
+conv_sipo.create_sipo_fifo[7].fifo_inst.deq_i
+[pattern_trace] 1
+[pattern_trace] 0
