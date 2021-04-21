@@ -134,7 +134,7 @@ def get_random_test_values(n_frames, in_channels, out_channels, zero_biases=Fals
     input_features = get_random_int8((n_frames, in_channels))
 
     expected_conv = na.conv1d_multi_kernel(input_features, weights, biases)
-    expected_output = na.scale_feature_map(expected_conv, 8)
+    expected_output = na.scale_feature_map(expected_conv, 7)
 
     return weights, biases, input_features, expected_output
 
@@ -166,51 +166,51 @@ async def test_conv1d(dut):
     for _ in range(20):
         await FallingEdge(dut.clk_i)
 
-    print('=' * 50)
+    print('=' * 100)
     print('Beginning basic test with fixed weights, biases, and features.')
-    print('=' * 50)
+    print('=' * 100)
 
     weights = np.ones((3, 13, 8), dtype=np.int8) * 127
     biases = np.ones(8, dtype=np.int32)
     input_features = np.ones((50, 13), dtype=np.int8)
     expected_output = na.conv1d_multi_kernel(input_features, weights, biases)
-    expected_output = na.scale_feature_map(expected_output, 8)
+    expected_output = na.scale_feature_map(expected_output, 7)
 
     await write_conv_mem(dut, weights, biases)
     await write_input_features(dut, input_features)
     await read_output_features(dut, 50, 8, expected_output)
 
-    print('=' * 50)
+    print('=' * 100)
     print('Beginning second basic test with fixed weights, biases, and features.')
-    print('=' * 50)
+    print('=' * 100)
 
     weights = np.ones((3, 13, 8), dtype=np.int8) * 100
     biases = np.ones(8, dtype=np.int32)
     input_features = np.ones((50, 13), dtype=np.int8) * 2
     expected_output = na.conv1d_multi_kernel(input_features, weights, biases)
-    expected_output = na.scale_feature_map(expected_output, 8)
+    expected_output = na.scale_feature_map(expected_output, 7)
 
     await write_conv_mem(dut, weights, biases)
     await write_input_features(dut, input_features)
     await read_output_features(dut, 50, 8, expected_output)
 
-    print('=' * 50)
+    print('=' * 100)
     print('Beginning third test with fixed weights and features, but varied biases.')
-    print('=' * 50)
+    print('=' * 100)
 
     weights = np.ones((3, 13, 8), dtype=np.int8) * 50
     biases = np.arange(8, dtype=np.int32) * 2000 + 5
     input_features = np.ones((50, 13), dtype=np.int8)
     expected_output = na.conv1d_multi_kernel(input_features, weights, biases)
-    expected_output = na.scale_feature_map(expected_output, 8)
+    expected_output = na.scale_feature_map(expected_output, 7)
 
     await write_conv_mem(dut, weights, biases)
     await write_input_features(dut, input_features)
     await read_output_features(dut, 50, 8, expected_output)
 
-    print('=' * 50)
+    print('=' * 100)
     print('Beginning test with random weights and features.')
-    print('=' * 50)
+    print('=' * 100)
 
     weights, biases, input_features, expected_output = get_random_test_values(50, 13, 8,
                                                                             zero_biases=True)
@@ -219,12 +219,32 @@ async def test_conv1d(dut):
     await write_input_features(dut, input_features)
     await read_output_features(dut, 50, 8, expected_output)
 
-    print('=' * 50)
+    print('=' * 100)
     print('Beginning saturation test with random weights, biases, and features.')
-    print('=' * 50)
+    print('=' * 100)
 
     weights, biases, input_features, expected_output = get_random_test_values(50, 13, 8)
 
     await write_conv_mem(dut, weights, biases)
     await write_input_features(dut, input_features)
     await read_output_features(dut, 50, 8, expected_output)
+
+    # Now test with real weights, biases and MFCC features
+
+    total_samples = na.get_num_train_samples()
+
+    for i in range(10):
+        print('=' * 100)
+        print('Beginning conv1 test {}/{} with real weights, biases and features.'.format(i, 10))
+        print('=' * 100)
+
+        weights = na.conv1_weights
+        biases = na.conv1_biases
+        print(weights.shape, biases.shape)
+        input_features = na.get_featuremap(np.random.randint(total_samples))
+        expected_output = na.conv1d_multi_kernel(input_features, weights, biases)
+        expected_output = na.scale_feature_map(expected_output, na.bitshifts[0])
+
+        await write_conv_mem(dut, weights, biases)
+        await write_input_features(dut, input_features)
+        await read_output_features(dut, 50, 8, expected_output)
