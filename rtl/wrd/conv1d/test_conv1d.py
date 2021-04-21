@@ -19,6 +19,7 @@ INT8_MAX = np.iinfo(np.int8).max
 INT32_MIN = np.iinfo(np.int32).min
 INT32_MAX = np.iinfo(np.int32).max
 
+ENABLE_ASSERTS = True
 
 def np2bv(int_arr):
     """ Convert a 8b integer numpy array in cocotb BinaryValue """
@@ -97,17 +98,18 @@ async def read_output_features(dut, n_frames, n_channels, expected):
             value = dut.data_o.value.get_value_signed()
             output_arr[frame_num, channel_num] = value
             expected_value = expected[frame_num, channel_num]
-            # assert value == expected_value, \
-                   # (('Output at frame {} and channel {} of value {} does not match '
-                       # 'expected output of {}').format(frame_num, channel_num, value,
-                                                       # expected_value))
             received_values += 1
-            # if dut.last_o == 1:
-                # assert frame_num == n_frames - 1, \
-                       # 'last_o asserted at unexpected frame number of {}'.format(frame_num)
-            # else:
-                # assert frame_num != n_frames - 1, \
-                       # 'last_o not asserted at expected frame number of {}'.format(frame_num)
+            if ENABLE_ASSERTS:
+                assert value == expected_value, \
+                       (('Output at frame {} and channel {} of value {} does not match '
+                           'expected output of {}').format(frame_num, channel_num, value,
+                                                           expected_value))
+                if dut.last_o == 1:
+                    assert frame_num == n_frames - 1, \
+                           'last_o asserted at unexpected frame number of {}'.format(frame_num)
+                else:
+                    assert frame_num != n_frames - 1, \
+                           'last_o not asserted at expected frame number of {}'.format(frame_num)
 
     print('Received output:')
     print(output_arr)
@@ -123,9 +125,12 @@ def get_random_int32(size):
     return np.random.randint(INT32_MIN, INT32_MAX, size, dtype=np.int32)
 
 
-def get_random_test_values(n_frames, in_channels, out_channels):
+def get_random_test_values(n_frames, in_channels, out_channels, zero_biases=False):
+    '''zero_biases: set to True to have biases set to 0.'''
     weights = get_random_int8((3, in_channels, out_channels))
     biases = get_random_int32(8)
+    if zero_biases:
+        biases = biases * 0
     input_features = get_random_int8((n_frames, in_channels))
 
     expected_conv = na.conv1d_multi_kernel(input_features, weights, biases)
@@ -194,7 +199,7 @@ async def test_conv1d(dut):
     print('=' * 50)
 
     weights = np.ones((3, 13, 8), dtype=np.int8) * 50
-    biases = np.arange(8, dtype=np.int32) * 2000
+    biases = np.arange(8, dtype=np.int32) * 2000 + 5
     input_features = np.ones((50, 13), dtype=np.int8)
     expected_output = na.conv1d_multi_kernel(input_features, weights, biases)
     expected_output = na.scale_feature_map(expected_output, 8)
@@ -204,7 +209,18 @@ async def test_conv1d(dut):
     await read_output_features(dut, 50, 8, expected_output)
 
     print('=' * 50)
-    print('Beginning test with random weights, biases, and features.')
+    print('Beginning test with random weights and features.')
+    print('=' * 50)
+
+    weights, biases, input_features, expected_output = get_random_test_values(50, 13, 8,
+                                                                            zero_biases=True)
+
+    await write_conv_mem(dut, weights, biases)
+    await write_input_features(dut, input_features)
+    await read_output_features(dut, 50, 8, expected_output)
+
+    print('=' * 50)
+    print('Beginning saturation test with random weights, biases, and features.')
     print('=' * 50)
 
     weights, biases, input_features, expected_output = get_random_test_values(50, 13, 8)
