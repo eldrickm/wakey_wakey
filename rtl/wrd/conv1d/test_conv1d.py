@@ -14,6 +14,11 @@ import numpy_arch as na
 
 DUT_VECTOR_SIZE = 2
 
+INT8_MIN = np.iinfo(np.int8).min
+INT8_MAX = np.iinfo(np.int8).max
+INT32_MIN = np.iinfo(np.int32).min
+INT32_MAX = np.iinfo(np.int32).max
+
 
 def np2bv(int_arr):
     """ Convert a 8b integer numpy array in cocotb BinaryValue """
@@ -56,7 +61,7 @@ async def write_conv_mem(dut, weights, biases):
     dut.wr_data_i <= 0
 
 
-async def send_data(dut, x):
+async def write_input_features(dut, x):
     '''Asynchronously send a full set of MFCC features to the dut.
 
     x is an array of size (n_frames, n_channels), and needs zero padding.
@@ -78,7 +83,7 @@ async def send_data(dut, x):
     dut.data_i <= 0
 
 
-async def receive_data(dut, n_frames, n_channels, expected):
+async def read_output_features(dut, n_frames, n_channels, expected):
     '''Receive the output featuremap and put it in a numpy array.'''
     total_values = n_frames * n_channels
     received_values = 0
@@ -89,26 +94,45 @@ async def receive_data(dut, n_frames, n_channels, expected):
         if dut.valid_o.value == 1:
             frame_num = received_values % n_frames
             channel_num = received_values // n_frames
-            value = dut.data_o.value
+            value = dut.data_o.value.get_value_signed()
             output_arr[frame_num, channel_num] = value
             expected_value = expected[frame_num, channel_num]
-            if value != expected_value:
-                print(('Output at frame {} and channel {} of value {} does not match'
-                       'expected output of {}').format(frame_num, channel_num, value,
-                                                     expected_value))
+            # assert value == expected_value, \
+                   # (('Output at frame {} and channel {} of value {} does not match '
+                       # 'expected output of {}').format(frame_num, channel_num, value,
+                                                       # expected_value))
             received_values += 1
             # if dut.last_o == 1:
-                # assert(received_values == total_values,
-                       # 'received only {} values but {} expected'.format(received_values,
-                                                                        # total_values))
-    # return output_arr
+                # assert frame_num == n_frames - 1, \
+                       # 'last_o asserted at unexpected frame number of {}'.format(frame_num)
+            # else:
+                # assert frame_num != n_frames - 1, \
+                       # 'last_o not asserted at expected frame number of {}'.format(frame_num)
+
     print('Received output:')
     print(output_arr)
     print('Expected output:')
     print(expected)
-    
-        #  assert observed == expected, "observed = %d, expected = %d," %\
-        #                               (observed, expected)
+
+
+def get_random_int8(size):
+    return np.random.randint(INT8_MIN, INT8_MAX, size, dtype=np.int8)
+
+
+def get_random_int32(size):
+    return np.random.randint(INT32_MIN, INT32_MAX, size, dtype=np.int32)
+
+
+def get_random_test_values(n_frames, in_channels, out_channels):
+    weights = get_random_int8((3, in_channels, out_channels))
+    biases = get_random_int32(8)
+    input_features = get_random_int8((n_frames, in_channels))
+
+    expected_conv = na.conv1d_multi_kernel(input_features, weights, biases)
+    expected_output = na.scale_feature_map(expected_conv, 8)
+
+    return weights, biases, input_features, expected_output
+
 
 @cocotb.test()
 async def test_conv1d(dut):
@@ -137,18 +161,54 @@ async def test_conv1d(dut):
     for _ in range(20):
         await FallingEdge(dut.clk_i)
 
+    print('=' * 50)
+    print('Beginning basic test with fixed weights, biases, and features.')
+    print('=' * 50)
+
     weights = np.ones((3, 13, 8), dtype=np.int8) * 127
     biases = np.ones(8, dtype=np.int32)
     input_features = np.ones((50, 13), dtype=np.int8)
     expected_output = na.conv1d_multi_kernel(input_features, weights, biases)
-    # expected_output = na.scale_feature_map(expected_output, na.bitshifts[0])
     expected_output = na.scale_feature_map(expected_output, 8)
 
     await write_conv_mem(dut, weights, biases)
-    await FallingEdge(dut.clk_i)
-    await send_data(dut, input_features)
-    await FallingEdge(dut.clk_i)
-    await receive_data(dut, 50, 8, expected_output)
+    await write_input_features(dut, input_features)
+    await read_output_features(dut, 50, 8, expected_output)
 
-        #  assert observed == expected, "observed = %d, expected = %d," %\
-        #                               (observed, expected)
+    print('=' * 50)
+    print('Beginning second basic test with fixed weights, biases, and features.')
+    print('=' * 50)
+
+    weights = np.ones((3, 13, 8), dtype=np.int8) * 100
+    biases = np.ones(8, dtype=np.int32)
+    input_features = np.ones((50, 13), dtype=np.int8) * 2
+    expected_output = na.conv1d_multi_kernel(input_features, weights, biases)
+    expected_output = na.scale_feature_map(expected_output, 8)
+
+    await write_conv_mem(dut, weights, biases)
+    await write_input_features(dut, input_features)
+    await read_output_features(dut, 50, 8, expected_output)
+
+    print('=' * 50)
+    print('Beginning third test with fixed weights and features, but varied biases.')
+    print('=' * 50)
+
+    weights = np.ones((3, 13, 8), dtype=np.int8) * 50
+    biases = np.arange(8, dtype=np.int32) * 2000
+    input_features = np.ones((50, 13), dtype=np.int8)
+    expected_output = na.conv1d_multi_kernel(input_features, weights, biases)
+    expected_output = na.scale_feature_map(expected_output, 8)
+
+    await write_conv_mem(dut, weights, biases)
+    await write_input_features(dut, input_features)
+    await read_output_features(dut, 50, 8, expected_output)
+
+    print('=' * 50)
+    print('Beginning test with random weights, biases, and features.')
+    print('=' * 50)
+
+    weights, biases, input_features, expected_output = get_random_test_values(50, 13, 8)
+
+    await write_conv_mem(dut, weights, biases)
+    await write_input_features(dut, input_features)
+    await read_output_features(dut, 50, 8, expected_output)

@@ -41,8 +41,12 @@ module recycler #(
     // This unit is hard coded for width 3 filters
     localparam FILTER_LEN = 3;
     // Need to account for cycles where the ends of the featuremap wrap
-    // through the shift registers, hence the extra +NUM_FILTERS-1
-    localparam MAX_CYCLES = NUM_FILTERS * (FRAME_LEN + FILTER_LEN - 1);
+    // through the shift registers, hence the extra "+ NUM_FILTERS - 1"
+    localparam CYCYLE_PERIOD = (FRAME_LEN + FILTER_LEN - 1);
+    localparam MAX_CYCLES = NUM_FILTERS * CYCYLE_PERIOD;
+    // Number of cycles where we want to requeue data into the FIFO. For last
+    // filter want to drop all the data and leave the FIFO empty.
+    localparam MAX_CYCLES_REQUEUE = (NUM_FILTERS - 1) * CYCYLE_PERIOD;
 
     // Bitwidth Definitions
     localparam VECTOR_BW  = COLUMN_LEN  * BW;
@@ -142,7 +146,7 @@ module recycler #(
 
     // Always enqueue if FIFO is not idle
     wire fifo_enq;
-    assign fifo_enq = !(state == STATE_IDLE);
+    assign fifo_enq = (!(state == STATE_IDLE) & (counter <= MAX_CYCLES_REQUEUE));
 
     // Dequeue the FIFO when we begin recycling
     // or dequeue the FIFO exactly FILTER_LEN - 1 times when Preloading
