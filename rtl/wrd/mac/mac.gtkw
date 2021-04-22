@@ -1,0 +1,55 @@
+[*]
+[*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
+[*] Thu Apr 22 04:39:18 2021
+[*]
+[dumpfile] "/home/eldrick/wakey_wakey/rtl/wrd/mac/wave.vcd"
+[dumpfile_mtime] "Thu Apr 22 04:38:42 2021"
+[dumpfile_size] 16808
+[savefile] "/home/eldrick/wakey_wakey/rtl/wrd/mac/mac.gtkw"
+[timestart] 0
+[size] 1848 1016
+[pos] -1 -1
+*-24.456419 50000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 233
+[signals_width] 422
+[sst_expanded] 1
+[sst_vpaned_height] 289
+@28
+mac.clk_i
+mac.rst_n_i
+@200
+-
+@28
+mac.clr_i
+@200
+-
+-IFMAP Input
+@22
+mac.data0_i[23:0]
+@28
+mac.valid0_i
+mac.last0_i
+mac.ready0_o
+@200
+-
+-Weight and Biases
+@22
+mac.data1_w_i[23:0]
+mac.data1_b_i[47:0]
+@28
+mac.valid1_i
+@29
+mac.last1_i
+@28
+mac.ready1_o
+@200
+-
+-Output
+@22
+mac.data_o[71:0]
+@28
+mac.valid_o
+mac.last_o
+mac.ready_i
+[pattern_trace] 1
+[pattern_trace] 0
