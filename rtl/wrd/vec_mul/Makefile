@@ -1,19 +1,28 @@
-# This file is public domain, it can be freely copied without restrictions.
-# SPDX-License-Identifier: CC0-1.0
+# ==============================================================================
+# simulation settings
+# ==============================================================================
+SIM			    ?= icarus			# simulator (icarus, verilator, ...)
+TOPLEVEL_LANG   ?= verilog			# hdl (verilog, vhdl)
 
-# === cocotb Makefile ===
+# ==============================================================================
+# source files
+# ==============================================================================
+VERILOG_SOURCES += ./*.v
 
-# === Makefile Variables ===
-SIM			   ?= icarus			# Simulator (icarus, verilator, ...)
-TOPLEVEL_LANG  ?= verilog			# HDL (verilog, vhdl, ...)
-RTL_DIR			= $(shell pwd)
-VERILOG_SOURCES = $(RTL_DIR)/*.v
-MODULE			= test_vec_mul		# Python cocotb tests
-TOPLEVEL        = vec_mul			# Top level RTL module
-# ===
+# ==============================================================================
+# modules
+# ==============================================================================
+MODULE	 = test_vec_mul 			# Python cocotb tests
+TOPLEVEL = vec_mul	        		# Top level RTL module
 
+# ==============================================================================
+# cocotb magic
+# ==============================================================================
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
+# ==============================================================================
+# supplemental commands
+# ==============================================================================
 clean::
 	rm -f results.xml
 	rm -f *.vcd
