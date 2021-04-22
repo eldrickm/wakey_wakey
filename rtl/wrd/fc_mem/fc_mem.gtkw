@@ -1,0 +1,51 @@
+[*]
+[*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
+[*] Thu Apr 22 06:47:22 2021
+[*]
+[dumpfile] "/home/eldrick/wakey_wakey/rtl/wrd/fc_mem/wave.vcd"
+[dumpfile_mtime] "Thu Apr 22 06:39:45 2021"
+[dumpfile_size] 298235
+[savefile] "/home/eldrick/wakey_wakey/rtl/wrd/fc_mem/fc_mem.gtkw"
+[timestart] 0
+[size] 1848 1016
+[pos] -84 -84
+*-31.059126 170000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] fc_mem.
+[sst_width] 233
+[signals_width] 190
+[sst_expanded] 1
+[sst_vpaned_height] 289
+@200
+-Clock and Reset
+@28
+fc_mem.clk_i
+fc_mem.rst_n_i
+@201
+-
+@200
+-Memory Configuration
+@28
+fc_mem.rd_en_i
+fc_mem.wr_en_i
+@22
+fc_mem.rd_wr_addr_i[7:0]
+@28
+fc_mem.rd_wr_bank_i[2:0]
+@22
+fc_mem.wr_data_i[15:0]
+@200
+-
+@28
+fc_mem.cycle_en_i
+@200
+-
+-Output
+@22
+fc_mem.data_w_o[23:0]
+fc_mem.data_b_o[47:0]
+@28
+fc_mem.valid_o
+fc_mem.last_o
+fc_mem.ready_i
+[pattern_trace] 1
+[pattern_trace] 0
