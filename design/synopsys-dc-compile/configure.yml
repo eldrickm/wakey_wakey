@@ -1,4 +1,0 @@
-name: synopsys-dc-compile
-
-outputs:
-  - compile.tcl
