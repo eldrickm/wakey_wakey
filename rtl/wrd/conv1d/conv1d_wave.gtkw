@@ -1,20 +1,20 @@
 [*]
 [*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
-[*] Tue Apr 13 07:51:36 2021
+[*] Tue Apr 20 20:35:15 2021
 [*]
-[dumpfile] "/home/eldrick/wakey_wakey/rtl/wrd/conv1d/wave.vcd"
-[dumpfile_mtime] "Tue Apr 13 07:49:33 2021"
-[dumpfile_size] 260860
-[savefile] "/home/eldrick/wakey_wakey/rtl/wrd/conv1d/conv1d_wave.gtkw"
+[dumpfile] "/home/mjpauly/repos/wakey_wakey/rtl/wrd/conv1d/wave.vcd"
+[dumpfile_mtime] "Tue Apr 20 20:34:48 2021"
+[dumpfile_size] 152252
+[savefile] "/home/mjpauly/repos/wakey_wakey/rtl/wrd/conv1d/conv1d_wave.gtkw"
 [timestart] 0
-[size] 3696 2032
-[pos] -51 -51
+[size] 1848 1016
+[pos] -1 -1
 *-28.608625 2322000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] conv1d.
-[sst_width] 668
+[sst_width] 233
 [signals_width] 350
 [sst_expanded] 1
-[sst_vpaned_height] 1207
+[sst_vpaned_height] 719
 @200
 -Clock and Reset
 @28
@@ -204,7 +204,7 @@ conv1d.relu_inst.valid_o
 conv1d.relu_inst.last_o
 @200
 -Quantizer
-@23
+@22
 conv1d.quantizer_inst.shift_i[4:0]
 @200
 -
@@ -222,7 +222,7 @@ conv1d.quantizer_inst.last_o
 conv1d.quantizer_inst.valid_o
 @200
 -Streaming Output
-@22
+@25
 conv1d.data_o[7:0]
 @28
 conv1d.valid_o

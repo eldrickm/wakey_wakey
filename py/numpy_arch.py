@@ -138,6 +138,7 @@ def get_featuremap(index):
     '''Return the MFCC featuremap for a given index.'''
     x = X[index,:]
     x = np.clip(np.round(x * input_scale), -128, 127).astype(np.int8)
+    x = x.reshape((int(x.size / 13), 13))
     return x
 
 def get_numpy_pred_index(index):

@@ -74,8 +74,8 @@ module conv_mem #(
                                      filter_counter + 1 : 'd0)
                                   : filter_counter;
             end else begin
-                frame_counter <= 0;
-                filter_counter <= 0;
+                frame_counter <= frame_counter;
+                filter_counter <= filter_counter;
             end
         end
     end

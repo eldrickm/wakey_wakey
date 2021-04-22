@@ -368,7 +368,7 @@ module conv1d #(
         .clk_i(clk_i),
         .rst_n_i(rst_n_i),
 
-        .shift_i(5'd8),
+        .shift_i(5'd7),
 
         .data_i(relu_data_out),
         .valid_i(relu_valid_out),
