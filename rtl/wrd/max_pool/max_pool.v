@@ -8,14 +8,17 @@
 module max_pool #(
     parameter BW = 8
 ) (
+    // clock and reset
     input                      clk_i,
     input                      rst_n_i,
 
+    // streaming input
     input  signed [BW - 1 : 0] data_i,
     input                      valid_i,
     input                      last_i,
     output                     ready_o,
 
+    // streaming output
     output signed [BW - 1 : 0] data_o,
     output                     valid_o,
     output                     last_o,

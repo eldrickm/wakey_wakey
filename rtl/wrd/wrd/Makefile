@@ -8,12 +8,21 @@ TOPLEVEL_LANG   ?= verilog			# hdl (verilog, vhdl)
 # source files
 # ==============================================================================
 VERILOG_SOURCES += ./*.v
+VERILOG_SOURCES += ../vec_mul/*.v
+VERILOG_SOURCES += ../vec_add/*.v
+VERILOG_SOURCES += ../red_add/*.v
+VERILOG_SOURCES += ../recycler/*.v
+VERILOG_SOURCES += ../conv_mem/*.v
+VERILOG_SOURCES += ../relu/*.v
+VERILOG_SOURCES += ../quantizer/*.v
+VERILOG_SOURCES += ../../lib/fifo/*.v
+VERILOG_SOURCES += ../../lib/dffram/*.v
 
 # ==============================================================================
 # modules
 # ==============================================================================
-MODULE	 = test_dffram 				# Python cocotb tests
-TOPLEVEL = dffram	        		# Top level RTL module
+MODULE   = test_conv_top			# python cocotb tests
+TOPLEVEL = conv_top					# top level rtl module
 
 # ==============================================================================
 # cocotb magic
