@@ -42,6 +42,9 @@ module mac #(
 
     genvar i;
 
+    // =========================================================================
+    // Delay Lines
+    // =========================================================================
     // add 2 cycle bias delay line to account for multiplier and accumulator
     reg signed [(NUM_CLASSES * BIAS_BW) - 1 : 0] data1_b_q, data1_b_q2;
     always @(posedge clk_i) begin
@@ -87,14 +90,17 @@ module mac #(
     // =========================================================================
     // Accumulation Buffer
     // =========================================================================
-    // accumulation buffer
+    // clear the accumulation buffer when valid has a rising edge
+    wire valid_i_pos_edge;
+    assign valid_i_pos_edge = valid0_i & (!valid_q);
+
     reg signed [O_BW - 1: 0] acc_arr [NUM_CLASSES - 1 : 0];
     for (i = 0; i < NUM_CLASSES; i = i + 1) begin: fc_accumulate
         always @(posedge clk_i) begin
             if (!rst_n_i) begin
                 acc_arr[i] <= 'd0;
             end else begin
-                if (last_q2) begin
+                if (last_q2 | valid_i_pos_edge) begin
                     acc_arr[i] <= 'd0;
                 end else begin
                     acc_arr[i] <= mult_arr[i] + acc_arr[i];
@@ -147,6 +153,7 @@ module mac #(
             ready_q  <= ready_i;
         end
     end
+
 
     assign valid_o  = valid_q3 && last_q3;
     assign last_o   = last_q3;
