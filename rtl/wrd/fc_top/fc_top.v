@@ -1,6 +1,6 @@
 // ============================================================================
-// Fully Connected Layer
-// Design: Eldrick Millares
+// Module:       Fully Connected Layer
+// Design:       Eldrick Millares
 // Verification: Matthew Pauly
 // Notes:
 // Assumes BIAS_BW > BW
@@ -10,8 +10,8 @@
 
 module fc_top #(
     parameter I_BW        = 8,
-    parameter BIAS_BW     = I_BW * 2,
-    parameter O_BW        = I_BW * 3,
+    parameter BIAS_BW     = 16,
+    parameter O_BW        = 24,
     parameter FRAME_LEN   = 208,
     parameter NUM_CLASSES = 3
 ) (
@@ -150,6 +150,5 @@ module fc_top #(
         #1;
     end
     `endif
-    // ========================================================================
 
 endmodule

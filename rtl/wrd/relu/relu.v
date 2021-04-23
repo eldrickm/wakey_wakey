@@ -1,9 +1,9 @@
-// ============================================================================
-// ReLU (Rectified Linear Unit)
-// Design: Eldrick Millares
+// =============================================================================
+// Module:       ReLU (Rectified Linear Unit)
+// Design:       Eldrick Millares
 // Verification: Matthew Pauly
 // Notes:
-// ============================================================================
+// =============================================================================
 
 module relu #(
     parameter BW = 32
@@ -22,12 +22,17 @@ module relu #(
     input                      ready_i
 );
 
+    // =========================================================================
+    // Rectification
+    // =========================================================================
     reg [BW - 1 : 0] rectified;
-
     always @(posedge clk_i) begin
         rectified <= (data_i > 0) ? data_i : 0;
     end
 
+    // =========================================================================
+    // Output Assignment
+    // =========================================================================
     // register all outputs
     reg valid_q, last_q, ready_q;
     always @(posedge clk_i) begin
@@ -47,6 +52,9 @@ module relu #(
     assign last_o  = last_q;
     assign ready_o = ready_q;
 
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
     `ifdef COCOTB_SIM
     initial begin
         $dumpfile ("wave.vcd");

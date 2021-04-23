@@ -1,32 +1,38 @@
-/*
- * Vector Adder
- * Design: Eldrick Millares
- * Verification: Matthew Pauly
- */
+// =============================================================================
+// Module:       Vector Adder
+// Design:       Eldrick Millares
+// Verification: Matthew Pauly
+// Notes:
+// =============================================================================
 
 module vec_add #(
-    parameter I_BW = 16,        // input bitwidth
-    parameter O_BW = 18,        // output bitwidth
-    parameter VECTOR_LEN = 13   // number of vector elements
+    parameter I_BW = 16,
+    parameter O_BW = 18,
+    parameter VECTOR_LEN = 13
 ) (
+    // clock and reset
     input                                       clk_i,
     input                                       rst_n_i,
 
+    // streaming input
     input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data0_i,
     input                                       valid0_i,
     input                                       last0_i,
     output                                      ready0_o,
 
+    // streaming input
     input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data1_i,
     input                                       valid1_i,
     input                                       last1_i,
     output                                      ready1_o,
 
+    // streaming input
     input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data2_i,
     input                                       valid2_i,
     input                                       last2_i,
     output                                      ready2_o,
 
+    // streaming output
     output signed [(VECTOR_LEN * O_BW) - 1 : 0] data_o,
     output                                      valid_o,
     output                                      last_o,
@@ -35,6 +41,9 @@ module vec_add #(
 
     genvar i;
 
+    // =========================================================================
+    // Input Unpacking
+    // =========================================================================
     // unpacked arrays
     wire signed [I_BW - 1 : 0] data0_arr [VECTOR_LEN - 1 : 0];
     wire signed [I_BW - 1 : 0] data1_arr [VECTOR_LEN - 1 : 0];
@@ -48,6 +57,9 @@ module vec_add #(
         assign data2_arr[i] = data2_i[(i + 1) * I_BW - 1 : i * I_BW];
     end
 
+    // =========================================================================
+    // Vector Addition
+    // =========================================================================
     // registered addition of data elements
     for (i = 0; i < VECTOR_LEN; i = i + 1) begin: vector_addition
         always @(posedge clk_i) begin
@@ -59,11 +71,17 @@ module vec_add #(
         end
     end
 
+    // =========================================================================
+    // Output Packing
+    // =========================================================================
     // pack addition results
     for (i = 0; i < VECTOR_LEN; i = i + 1) begin: pack_output
         assign data_o[(i + 1) * O_BW - 1 : i * O_BW] = out_arr[i];
     end
 
+    // =========================================================================
+    // Output Assignment
+    // =========================================================================
     // register all outputs
     reg valid_q, last_q, ready_q;
     always @(posedge clk_i) begin
@@ -84,13 +102,13 @@ module vec_add #(
     assign ready1_o = ready_q;
     assign ready2_o = ready_q;
 
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
     `ifdef COCOTB_SIM
     initial begin
         $dumpfile ("wave.vcd");
         $dumpvars (0, vec_add);
-        // Uncomment below to dump array variables
-        // for(int i = 0; i < VECTOR_LEN; i = i + 1)
-        //     $dumpvars(1, out_arr[i]);
         #1;
     end
     `endif

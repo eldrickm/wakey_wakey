@@ -1,6 +1,6 @@
-// ============================================================================
-// Zero Pad
-// Design: Eldrick Millares
+// =============================================================================
+// Module:       Zero Pad
+// Design:       Eldrick Millares
 // Verification: Matthew Pauly
 // Notes:
 // Adds 1 leading and 1 trailing zero to stream
@@ -10,29 +10,38 @@
 // module to just 1 cycle.
 //
 // TODO: Gate registers with valid
-// ============================================================================
+// =============================================================================
 
 module zero_pad #(
-    parameter BW = 8,
-    parameter VECTOR_LEN = 13   // number of vector elements
+    parameter BW         = 8,
+    parameter VECTOR_LEN = 13
 ) (
-    input                                       clk_i,
-    input                                       rst_n_i,
+    // clock and reset
+    input                             clk_i,
+    input                             rst_n_i,
 
-    input  signed [(VECTOR_LEN * BW) - 1 : 0] data_i,
-    input                                       valid_i,
-    input                                       last_i,
-    output                                      ready_o,
+    // streaming input
+    input  signed [VECTOR_BW - 1 : 0] data_i,
+    input                             valid_i,
+    input                             last_i,
+    output                            ready_o,
 
-    output signed [(VECTOR_LEN * BW) - 1 : 0] data_o,
-    output                                      valid_o,
-    output                                      last_o,
-    input                                       ready_i
+    // streaming output
+    output signed [VECTOR_BW - 1 : 0] data_o,
+    output                            valid_o,
+    output                            last_o,
+    input                             ready_i
 );
 
+    // =========================================================================
+    // Local Parameters
+    // =========================================================================
+    localparam VECTOR_BW = VECTOR_LEN * BW;
 
-    // register all outputs
-    reg signed [(VECTOR_LEN * BW) - 1 : 0] data_q, data_q2;
+    // =========================================================================
+    // Delay Lines
+    // =========================================================================
+    reg signed [VECTOR_BW - 1 : 0] data_q, data_q2;
     reg valid_q, valid_q2, valid_q3, last_q, last_q2, last_q3, ready_q;
     always @(posedge clk_i) begin
         if (!rst_n_i) begin
@@ -58,6 +67,9 @@ module zero_pad #(
         end
     end
 
+    // =========================================================================
+    // Edge Detectors
+    // =========================================================================
     // positive edge detector to emit initial 0
     wire valid_i_pos_edge  = valid_i  & (!valid_q);
 
@@ -65,11 +77,17 @@ module zero_pad #(
     wire valid_q_neg_edge  = valid_q2 & (!valid_q);
     wire valid_q2_neg_edge = valid_q3 & (!valid_q2);
 
+    // =========================================================================
+    // Output Assignment
+    // =========================================================================
     assign data_o  = (valid_q2_neg_edge | valid_i_pos_edge) ? 0 : data_q2;
     assign valid_o = valid_q | valid_q_neg_edge | valid_q2_neg_edge;
     assign last_o  = last_q3;
     assign ready_o = ready_q;
 
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
     `ifdef COCOTB_SIM
     initial begin
         $dumpfile ("wave.vcd");

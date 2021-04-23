@@ -1,6 +1,6 @@
 // ============================================================================
-// Multiply Accumulate
-// Design: Eldrick Millares
+// Module:       Multiply Accumulate
+// Design:       Eldrick Millares
 // Verification: Matthew Pauly
 // Notes:
 // Assumes that biases have 2x bitwidth of weights, and outputs are 3x bitwidth
@@ -16,20 +16,24 @@ module mac #(
     parameter BIAS_BW     = I_BW * 2,   // bias bitwidth
     parameter NUM_CLASSES = 3           // number of output classes
 ) (
+    // clock and reset
     input                                           clk_i,
     input                                           rst_n_i,
 
+    // streaming input
     input  signed [(NUM_CLASSES * I_BW) - 1 : 0]    data0_i,
     input                                           valid0_i,
     input                                           last0_i,
     output                                          ready0_o,
 
+    // streaming input
     input  signed [(NUM_CLASSES * I_BW) - 1 : 0]    data1_w_i,
     input  signed [(NUM_CLASSES * BIAS_BW) - 1 : 0] data1_b_i,
     input                                           valid1_i,
     input                                           last1_i,
     output                                          ready1_o,
 
+    // streaming output
     output signed [(NUM_CLASSES * O_BW) - 1 : 0]    data_o,
     output                                          valid_o,
     output                                          last_o,
@@ -50,6 +54,9 @@ module mac #(
         end
     end
 
+    // =========================================================================
+    // Input Unpacking
+    // =========================================================================
     // unpacked arrays
     wire signed [I_BW - 1 : 0]    input_arr  [NUM_CLASSES - 1 : 0];
     wire signed [I_BW - 1 : 0]    weight_arr [NUM_CLASSES - 1 : 0];
@@ -62,6 +69,9 @@ module mac #(
         assign bias_arr[i]   = data1_b_q2[(i + 1) * BIAS_BW - 1 : i * BIAS_BW];
     end
 
+    // =========================================================================
+    // Vector Multiplication
+    // =========================================================================
     // registered multiplication of input and bias
     reg signed [(I_BW * 2) - 1: 0] mult_arr [NUM_CLASSES - 1 : 0];
     for (i = 0; i < NUM_CLASSES; i = i + 1) begin: fc_multiply
@@ -74,6 +84,9 @@ module mac #(
         end
     end
 
+    // =========================================================================
+    // Accumulation Buffer
+    // =========================================================================
     // accumulation buffer
     reg signed [O_BW - 1: 0] acc_arr [NUM_CLASSES - 1 : 0];
     for (i = 0; i < NUM_CLASSES; i = i + 1) begin: fc_accumulate
@@ -90,7 +103,9 @@ module mac #(
         end
     end
 
-    // bias addition
+    // =========================================================================
+    // Bias Addition
+    // =========================================================================
     reg signed [O_BW - 1: 0] add_arr [NUM_CLASSES - 1 : 0];
     for (i = 0; i < NUM_CLASSES; i = i + 1) begin: fc_bias
         always @(posedge clk_i) begin
@@ -102,7 +117,9 @@ module mac #(
         end
     end
 
-    // assign output
+    // =========================================================================
+    // Output Assignment
+    // =========================================================================
     for (i = 0; i < NUM_CLASSES; i = i + 1) begin: pack_output
         assign data_o[(i + 1) * O_BW - 1 : i * O_BW] = add_arr[i];
     end
@@ -136,6 +153,9 @@ module mac #(
     assign ready0_o = ready_q;
     assign ready1_o = ready_q;
 
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
     `ifdef COCOTB_SIM
     initial begin
         $dumpfile ("wave.vcd");

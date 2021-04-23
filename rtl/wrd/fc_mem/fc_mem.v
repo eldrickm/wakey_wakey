@@ -1,25 +1,26 @@
-// ============================================================================
-// Fully Connected Layer Memory
-// Design: Eldrick Millares
+// =============================================================================
+// Module:       Fully Connected Memory
+// Design:       Eldrick Millares
 // Verification: Matthew Pauly
 // Notes:
-// Assumes BIAS_BW > BW
+// Constraint: BIAS_BW > BW
 // TODO: Implement rd_data_o for reading memories
-// ============================================================================
+// =============================================================================
 
 module fc_mem #(
     parameter BW          = 8,
-    parameter BIAS_BW     = BW * 2,
+    parameter BIAS_BW     = 16,
     parameter FRAME_LEN   = 208,
     parameter NUM_CLASSES = 3
 ) (
+    // clock and reset
     input                                           clk_i,
     input                                           rst_n_i,
 
-    // Control Ports
+    // control
     input                                           cycle_en_i,
 
-    // Manual Read/Write Ports
+    // memory configuration
     input                                           rd_en_i,
     input                                           wr_en_i,
     input         [BANK_BW - 1 : 0]                 rd_wr_bank_i,
@@ -27,7 +28,7 @@ module fc_mem #(
     input  signed [BIAS_BW - 1 : 0]                 wr_data_i,
     output signed [BIAS_BW - 1 : 0]                 rd_data_o,
 
-    // Streaming Interace Ports
+    // streaming output
     output signed [(BW * NUM_CLASSES) - 1 : 0]      data_w_o,
     output signed [(BIAS_BW * NUM_CLASSES) - 1 : 0] data_b_o,
     output                                          valid_o,
@@ -45,7 +46,6 @@ module fc_mem #(
     // Number of weight banks + bias bank per class
     localparam BANK_BW          = $clog2(NUM_CLASSES * 2);
     localparam FRAME_COUNTER_BW = $clog2(FRAME_LEN);
-    // ========================================================================
 
     // ========================================================================
     // Frame Counter
@@ -64,7 +64,6 @@ module fc_mem #(
             end
         end
     end
-    // ========================================================================
 
     // ========================================================================
     // Weight Memories
@@ -97,7 +96,6 @@ module fc_mem #(
             .data_o(weight_data_out[i])
         );
     end
-    // ========================================================================
 
     // ========================================================================
     // Bias Memories
@@ -131,7 +129,6 @@ module fc_mem #(
             .data_o(bias_data_out[i])
         );
     end
-    // ========================================================================
 
     // ========================================================================
     // Output Assignment
@@ -153,7 +150,6 @@ module fc_mem #(
     end
     assign valid_o = cycle_en_i_q;
     assign last_o  = valid_o & frame_last;
-    // ========================================================================
 
     // ========================================================================
     // Simulation Only Waveform Dump (.vcd export)
@@ -165,6 +161,5 @@ module fc_mem #(
         #1;
     end
     `endif
-    // ========================================================================
 
 endmodule
