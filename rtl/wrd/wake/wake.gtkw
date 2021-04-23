@@ -1,0 +1,31 @@
+[*]
+[*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
+[*] Fri Apr 23 05:52:05 2021
+[*]
+[dumpfile] "/home/eldrick/wakey_wakey/rtl/wrd/wake/wave.vcd"
+[dumpfile_mtime] "Fri Apr 23 05:51:38 2021"
+[dumpfile_size] 91677
+[savefile] "/home/eldrick/wakey_wakey/rtl/wrd/wake/wake.gtkw"
+[timestart] 0
+[size] 1848 1016
+[pos] -51 -51
+*0.000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 233
+[signals_width] 118
+[sst_expanded] 1
+[sst_vpaned_height] 289
+@28
+wake.clk_i
+@200
+-
+@28
+wake.data_i[2:0]
+wake.valid_i
+wake.last_i
+wake.ready_o
+@201
+-
+@28
+wake.wake_o
+[pattern_trace] 1
+[pattern_trace] 0
