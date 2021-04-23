@@ -7,19 +7,19 @@
 // ============================================================================
 
 module red_add #(
-    parameter BW_I = 18,        // input bitwidth
-    parameter BW_O = 32,        // output bitwidth
+    parameter I_BW = 18,        // input bitwidth
+    parameter O_BW = 32,        // output bitwidth
     parameter VECTOR_LEN =  2   // number of vector elements
 ) (
     input                                       clk_i,
     input                                       rst_n_i,
 
-    input  signed [(VECTOR_LEN * BW_I) - 1 : 0] data_i,
+    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data_i,
     input                                       valid_i,
     input                                       last_i,
     output                                      ready_o,
 
-    output signed [BW_O - 1 : 0]                data_o,
+    output signed [O_BW - 1 : 0]                data_o,
     output                                      valid_o,
     output                                      last_o,
     input                                       ready_i
@@ -28,13 +28,13 @@ module red_add #(
     genvar i;
 
     // unpacked arrays
-    wire signed [BW_I - 1 : 0] data_arr [VECTOR_LEN - 1 : 0];
-    wire signed [BW_O - 1 : 0] sum      [VECTOR_LEN - 1 : 0];
-    reg  signed [BW_O - 1 : 0] final_sum_q;
+    wire signed [I_BW - 1 : 0] data_arr [VECTOR_LEN - 1 : 0];
+    wire signed [O_BW - 1 : 0] sum      [VECTOR_LEN - 1 : 0];
+    reg  signed [O_BW - 1 : 0] final_sum_q;
 
     // unpack data input
     for (i = 0; i < VECTOR_LEN; i = i + 1) begin: unpack_inputs
-        assign data_arr[i] = data_i[(i + 1) * BW_I - 1 : i * BW_I];
+        assign data_arr[i] = data_i[(i + 1) * I_BW - 1 : i * I_BW];
     end
 
     for (i = 1; i < VECTOR_LEN; i = i + 1) begin: reduction_sum

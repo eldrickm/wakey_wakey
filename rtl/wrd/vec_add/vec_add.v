@@ -5,29 +5,29 @@
  */
 
 module vec_add #(
-    parameter BW_I = 16,        // input bitwidth
-    parameter BW_O = 18,        // output bitwidth
+    parameter I_BW = 16,        // input bitwidth
+    parameter O_BW = 18,        // output bitwidth
     parameter VECTOR_LEN = 13   // number of vector elements
 ) (
     input                                       clk_i,
     input                                       rst_n_i,
 
-    input  signed [(VECTOR_LEN * BW_I) - 1 : 0] data0_i,
+    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data0_i,
     input                                       valid0_i,
     input                                       last0_i,
     output                                      ready0_o,
 
-    input  signed [(VECTOR_LEN * BW_I) - 1 : 0] data1_i,
+    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data1_i,
     input                                       valid1_i,
     input                                       last1_i,
     output                                      ready1_o,
 
-    input  signed [(VECTOR_LEN * BW_I) - 1 : 0] data2_i,
+    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data2_i,
     input                                       valid2_i,
     input                                       last2_i,
     output                                      ready2_o,
 
-    output signed [(VECTOR_LEN * BW_O) - 1 : 0] data_o,
+    output signed [(VECTOR_LEN * O_BW) - 1 : 0] data_o,
     output                                      valid_o,
     output                                      last_o,
     input                                       ready_i
@@ -36,16 +36,16 @@ module vec_add #(
     genvar i;
 
     // unpacked arrays
-    wire signed [BW_I - 1 : 0] data0_arr [VECTOR_LEN - 1 : 0];
-    wire signed [BW_I - 1 : 0] data1_arr [VECTOR_LEN - 1 : 0];
-    wire signed [BW_I - 1 : 0] data2_arr [VECTOR_LEN - 1 : 0];
-    reg  signed [BW_O - 1 : 0] out_arr   [VECTOR_LEN - 1 : 0];
+    wire signed [I_BW - 1 : 0] data0_arr [VECTOR_LEN - 1 : 0];
+    wire signed [I_BW - 1 : 0] data1_arr [VECTOR_LEN - 1 : 0];
+    wire signed [I_BW - 1 : 0] data2_arr [VECTOR_LEN - 1 : 0];
+    reg  signed [O_BW - 1 : 0] out_arr   [VECTOR_LEN - 1 : 0];
 
     // unpack data input
     for (i = 0; i < VECTOR_LEN; i = i + 1) begin: unpack_inputs
-        assign data0_arr[i] = data0_i[(i + 1) * BW_I - 1 : i * BW_I];
-        assign data1_arr[i] = data1_i[(i + 1) * BW_I - 1 : i * BW_I];
-        assign data2_arr[i] = data2_i[(i + 1) * BW_I - 1 : i * BW_I];
+        assign data0_arr[i] = data0_i[(i + 1) * I_BW - 1 : i * I_BW];
+        assign data1_arr[i] = data1_i[(i + 1) * I_BW - 1 : i * I_BW];
+        assign data2_arr[i] = data2_i[(i + 1) * I_BW - 1 : i * I_BW];
     end
 
     // registered addition of data elements
@@ -61,7 +61,7 @@ module vec_add #(
 
     // pack addition results
     for (i = 0; i < VECTOR_LEN; i = i + 1) begin: pack_output
-        assign data_o[(i + 1) * BW_O - 1 : i * BW_O] = out_arr[i];
+        assign data_o[(i + 1) * O_BW - 1 : i * O_BW] = out_arr[i];
     end
 
     // register all outputs

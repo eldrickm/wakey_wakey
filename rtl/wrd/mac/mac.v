@@ -11,26 +11,26 @@
 // ============================================================================
 
 module mac #(
-    parameter BW_I        = 8,          // input bitwidth
-    parameter BW_O        = BW_I * 3,   // output bitwidth
-    parameter BW_BIAS     = BW_I * 2,   // bias bitwidth
+    parameter I_BW        = 8,          // input bitwidth
+    parameter O_BW        = I_BW * 3,   // output bitwidth
+    parameter BIAS_BW     = I_BW * 2,   // bias bitwidth
     parameter NUM_CLASSES = 3           // number of output classes
 ) (
     input                                           clk_i,
     input                                           rst_n_i,
 
-    input  signed [(NUM_CLASSES * BW_I) - 1 : 0]    data0_i,
+    input  signed [(NUM_CLASSES * I_BW) - 1 : 0]    data0_i,
     input                                           valid0_i,
     input                                           last0_i,
     output                                          ready0_o,
 
-    input  signed [(NUM_CLASSES * BW_I) - 1 : 0]    data1_w_i,
-    input  signed [(NUM_CLASSES * BW_BIAS) - 1 : 0] data1_b_i,
+    input  signed [(NUM_CLASSES * I_BW) - 1 : 0]    data1_w_i,
+    input  signed [(NUM_CLASSES * BIAS_BW) - 1 : 0] data1_b_i,
     input                                           valid1_i,
     input                                           last1_i,
     output                                          ready1_o,
 
-    output signed [(NUM_CLASSES * BW_O) - 1 : 0]    data_o,
+    output signed [(NUM_CLASSES * O_BW) - 1 : 0]    data_o,
     output                                          valid_o,
     output                                          last_o,
     input                                           ready_i
@@ -39,7 +39,7 @@ module mac #(
     genvar i;
 
     // add 2 cycle bias delay line to account for multiplier and accumulator
-    reg signed [(NUM_CLASSES * BW_BIAS) - 1 : 0] data1_b_q, data1_b_q2;
+    reg signed [(NUM_CLASSES * BIAS_BW) - 1 : 0] data1_b_q, data1_b_q2;
     always @(posedge clk_i) begin
         if (!rst_n_i) begin
             data1_b_q  <= 0;
@@ -51,19 +51,19 @@ module mac #(
     end
 
     // unpacked arrays
-    wire signed [BW_I - 1 : 0]    input_arr  [NUM_CLASSES - 1 : 0];
-    wire signed [BW_I - 1 : 0]    weight_arr [NUM_CLASSES - 1 : 0];
-    wire signed [BW_BIAS - 1 : 0] bias_arr   [NUM_CLASSES - 1 : 0];
+    wire signed [I_BW - 1 : 0]    input_arr  [NUM_CLASSES - 1 : 0];
+    wire signed [I_BW - 1 : 0]    weight_arr [NUM_CLASSES - 1 : 0];
+    wire signed [BIAS_BW - 1 : 0] bias_arr   [NUM_CLASSES - 1 : 0];
 
     // unpack data input
     for (i = 0; i < NUM_CLASSES; i = i + 1) begin: unpack_inputs
-        assign input_arr[i]  = data0_i[(i + 1) * BW_I - 1 : i * BW_I];
-        assign weight_arr[i] = data1_w_i[(i + 1) * BW_I - 1 : i * BW_I];
-        assign bias_arr[i]   = data1_b_q2[(i + 1) * BW_BIAS - 1 : i * BW_BIAS];
+        assign input_arr[i]  = data0_i[(i + 1) * I_BW - 1 : i * I_BW];
+        assign weight_arr[i] = data1_w_i[(i + 1) * I_BW - 1 : i * I_BW];
+        assign bias_arr[i]   = data1_b_q2[(i + 1) * BIAS_BW - 1 : i * BIAS_BW];
     end
 
     // registered multiplication of input and bias
-    reg signed [(BW_I * 2) - 1: 0] mult_arr [NUM_CLASSES - 1 : 0];
+    reg signed [(I_BW * 2) - 1: 0] mult_arr [NUM_CLASSES - 1 : 0];
     for (i = 0; i < NUM_CLASSES; i = i + 1) begin: fc_multiply
         always @(posedge clk_i) begin
             if (!rst_n_i) begin
@@ -75,7 +75,7 @@ module mac #(
     end
 
     // accumulation buffer
-    reg signed [BW_O - 1: 0] acc_arr [NUM_CLASSES - 1 : 0];
+    reg signed [O_BW - 1: 0] acc_arr [NUM_CLASSES - 1 : 0];
     for (i = 0; i < NUM_CLASSES; i = i + 1) begin: fc_accumulate
         always @(posedge clk_i) begin
             if (!rst_n_i) begin
@@ -91,7 +91,7 @@ module mac #(
     end
 
     // bias addition
-    reg signed [BW_O - 1: 0] add_arr [NUM_CLASSES - 1 : 0];
+    reg signed [O_BW - 1: 0] add_arr [NUM_CLASSES - 1 : 0];
     for (i = 0; i < NUM_CLASSES; i = i + 1) begin: fc_bias
         always @(posedge clk_i) begin
             if (!rst_n_i) begin
@@ -104,7 +104,7 @@ module mac #(
 
     // assign output
     for (i = 0; i < NUM_CLASSES; i = i + 1) begin: pack_output
-        assign data_o[(i + 1) * BW_O - 1 : i * BW_O] = add_arr[i];
+        assign data_o[(i + 1) * O_BW - 1 : i * O_BW] = add_arr[i];
     end
 
     // register all outputs

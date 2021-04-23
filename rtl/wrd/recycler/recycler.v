@@ -1,62 +1,64 @@
-// ============================================================================
-// Recycler
-// Design: Eldrick Millares
+// =============================================================================
+// Module:       Recycler
+// Design:       Eldrick Millares
 // Verification: Matthew Pauly
 // Notes:
-//  FRAME_LEN > FILTER_LEN
-//  FILTER_LEN == 3
-//  In order to change filter size, you'll have to parameterize the vec_add
-//  unit.
-//
+// Constraint: FRAME_LEN > FILTER_LEN
+// Constraint: FILTER_LEN == 3
+// In order to change filter size, you'll have to parameterize the vec_add
+// unit.
 // TODO: Fix initial deque errors
-// ============================================================================
+// TODO: Handle deassertions of valid midstream
+// TODO: Handle Full and Empty
+// =============================================================================
 
 module recycler #(
     parameter BW          = 8,
     parameter FRAME_LEN   = 50,
-    parameter COLUMN_LEN  = 13,
+    parameter VECTOR_LEN  = 13,
     parameter NUM_FILTERS = 8
 ) (
-    input                                      clk_i,
-    input                                      rst_n_i,
+    // clock and reset
+    input                             clk_i,
+    input                             rst_n_i,
 
-    input  signed [(COLUMN_LEN  * BW) - 1 : 0] data_i,
-    input                                      valid_i,
-    input                                      last_i,
-    output                                     ready_o,
+    // streaming input
+    input  signed [VECTOR_BW - 1 : 0] data_i,
+    input                             valid_i,
+    input                             last_i,
+    output                            ready_o,
 
-    output signed [(COLUMN_LEN  * BW) - 1 : 0] data0_o,
-    output signed [(COLUMN_LEN  * BW) - 1 : 0] data1_o,
-    output signed [(COLUMN_LEN  * BW) - 1 : 0] data2_o,
-    output                                     valid_o,
-    output                                     last_o,
-    input                                      ready_i
+    // streaming output
+    output signed [VECTOR_BW - 1 : 0] data0_o,
+    output signed [VECTOR_BW - 1 : 0] data1_o,
+    output signed [VECTOR_BW - 1 : 0] data2_o,
+    output                            valid_o,
+    output                            last_o,
+    input                             ready_i
 );
 
     genvar i;
 
-    // ========================================================================
+    // =========================================================================
     // Local Parameters
-    // ========================================================================
+    // =========================================================================
     // This unit is hard coded for width 3 filters
     localparam FILTER_LEN = 3;
     // Need to account for cycles where the ends of the featuremap wrap
     // through the shift registers, hence the extra "+ NUM_FILTERS - 1"
-    localparam CYCYLE_PERIOD = (FRAME_LEN + FILTER_LEN - 1);
-    localparam MAX_CYCLES = NUM_FILTERS * CYCYLE_PERIOD;
+    localparam CYCLE_PERIOD = (FRAME_LEN + FILTER_LEN - 1);
+    localparam MAX_CYCLES = NUM_FILTERS * CYCLE_PERIOD;
     // Number of cycles where we want to requeue data into the FIFO. For last
     // filter want to drop all the data and leave the FIFO empty.
-    localparam MAX_CYCLES_REQUEUE = (NUM_FILTERS - 1) * CYCYLE_PERIOD;
+    localparam MAX_CYCLES_REQUEUE = (NUM_FILTERS - 1) * CYCLE_PERIOD;
 
-    // Bitwidth Definitions
-    localparam VECTOR_BW  = COLUMN_LEN  * BW;
+    // bitwidth definitions
+    localparam VECTOR_BW  = VECTOR_LEN * BW;
     localparam COUNTER_BW = $clog2(MAX_CYCLES);
     localparam FRAME_COUNTER_BW = $clog2(FRAME_LEN + FILTER_LEN - 1);
-    // ========================================================================
 
     // ========================================================================
     // Recycler Controller
-    // TODO: Fix initial deque errors
     // ========================================================================
     // Define States
     localparam STATE_IDLE    = 2'd0,
@@ -70,7 +72,6 @@ module recycler #(
     // having the ends of the featuremap both in the shift registers
     reg [FRAME_COUNTER_BW - 1 : 0] frame_counter;
 
-    // TODO: Handle deassertions of valid midstream
     always @(posedge clk_i) begin
         if (!rst_n_i) begin
             counter <= 'd0;
@@ -121,11 +122,9 @@ module recycler #(
             endcase
         end
     end
-    // ========================================================================
 
     // ========================================================================
     // Recycling FIFO
-    // TODO: Fix initial deque errors
     // ========================================================================
     // Needed to ensure we do not drop data_i the first cycle "valid"
     // is asserted
@@ -170,7 +169,6 @@ module recycler #(
         .din_i(fifo_din),
         .dout_o(fifo_dout),
 
-        // TODO: Handle Full and Empty
         .full_o_n(),
         .empty_o_n()
     );
@@ -199,7 +197,6 @@ module recycler #(
     always @(posedge clk_i) begin
         fifo_out_valid <= (state == STATE_CYCLE);
     end
-    // ========================================================================
 
     // ========================================================================
     // Output Assignment
@@ -212,7 +209,6 @@ module recycler #(
     assign valid_o = fifo_out_valid & (frame_counter <= FRAME_LEN);
     assign ready_o = ready_i;
     assign last_o  = last_i;
-    // ========================================================================
 
     // ========================================================================
     // Simulation Only Waveform Dump (.vcd export)
@@ -224,6 +220,5 @@ module recycler #(
         #1;
     end
     `endif
-    // ========================================================================
 
 endmodule

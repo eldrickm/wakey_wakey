@@ -5,13 +5,13 @@
 // Notes:
 // Assumes BIAS_BW > BW
 // TODO: Implement rd_data_o for reading memories
-// TODO: Calculate BW_O from NUM_CLASSES?
+// TODO: Calculate O_BW from NUM_CLASSES?
 // ============================================================================
 
 module fc_top #(
-    parameter BW_I        = 8,
-    parameter BIAS_BW     = BW_I * 2,
-    parameter BW_O        = BW_I * 3,
+    parameter I_BW        = 8,
+    parameter BIAS_BW     = I_BW * 2,
+    parameter O_BW        = I_BW * 3,
     parameter FRAME_LEN   = 208,
     parameter NUM_CLASSES = 3
 ) (
@@ -19,7 +19,7 @@ module fc_top #(
     input                               rst_n_i,
 
     // Input Features
-    input  signed [BW_I - 1 : 0]        data_i,
+    input  signed [I_BW - 1 : 0]        data_i,
     input                               valid_i,
     input                               last_i,
     output                              ready_o,
@@ -46,9 +46,9 @@ module fc_top #(
     // ========================================================================
     // Bitwidth Definitions
     localparam ADDR_BW   = $clog2(FRAME_LEN);
-    localparam VECTOR_I_BW = BW_O * NUM_CLASSES;
+    localparam VECTOR_I_BW = O_BW * NUM_CLASSES;
     localparam VECTOR_BIAS_BW = BIAS_BW * NUM_CLASSES;
-    localparam VECTOR_O_BW = BW_O * NUM_CLASSES;
+    localparam VECTOR_O_BW = O_BW * NUM_CLASSES;
 
     // Number of weight banks + bias bank per class
     localparam BANK_BW          = $clog2(NUM_CLASSES * 2);
@@ -65,7 +65,7 @@ module fc_top #(
     wire fc_mem_ready;
 
     fc_mem #(
-        .BW(BW_I),
+        .BW(I_BW),
         .BIAS_BW(BIAS_BW),
         .FRAME_LEN(FRAME_LEN),
         .NUM_CLASSES(NUM_CLASSES)
@@ -93,7 +93,7 @@ module fc_top #(
     // MAC Array
     // ========================================================================
     // register stream input array to give fc_mem 1 cycle to ready outputs
-    reg  signed [BW_I - 1 : 0]        data_i_q;
+    reg  signed [I_BW - 1 : 0]        data_i_q;
     reg                               valid_i_q;
     reg                               last_i_q;
     reg                               mac_ready0_q;
@@ -115,9 +115,9 @@ module fc_top #(
     wire mac_ready0;
 
     mac #(
-        .BW_I(BW_I),
-        .BW_O(BW_O),
-        .BW_BIAS(BIAS_BW),
+        .I_BW(I_BW),
+        .O_BW(O_BW),
+        .BIAS_BW(BIAS_BW),
         .NUM_CLASSES(NUM_CLASSES)
     ) mac_inst (
         .clk_i(clk_i),

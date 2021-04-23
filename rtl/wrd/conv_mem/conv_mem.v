@@ -1,25 +1,26 @@
-// ============================================================================
-// Convolution Memory
-// Design: Eldrick Millares
+// =============================================================================
+// Module:       Convolution Memory
+// Design:       Eldrick Millares
 // Verification: Matthew Pauly
 // Notes:
 // TODO: Implement rd_data_o for reading memories
-// ============================================================================
+// =============================================================================
 
 module conv_mem #(
     parameter BW          = 8,
-    parameter BIAS_BW     = BW * 4,
+    parameter BIAS_BW     = 32,
     parameter FRAME_LEN   = 50,
-    parameter COLUMN_LEN  = 13,
+    parameter VECTOR_LEN  = 13,
     parameter NUM_FILTERS = 8
 ) (
+    // clock and reset
     input                             clk_i,
     input                             rst_n_i,
 
-    // Control Ports
+    // control
     input                             cycle_en_i,
 
-    // Manual Read/Write Ports
+    // memory configuration
     input                             rd_en_i,
     input                             wr_en_i,
     input         [BANK_BW - 1 : 0]   rd_wr_bank_i,
@@ -27,7 +28,7 @@ module conv_mem #(
     input  signed [VECTOR_BW - 1 : 0] wr_data_i,
     output signed [VECTOR_BW - 1 : 0] rd_data_o,
 
-    // Streaming Interace Ports
+    // streaming output
     output signed [VECTOR_BW - 1 : 0] data0_o,
     output signed [VECTOR_BW - 1 : 0] data1_o,
     output signed [VECTOR_BW - 1 : 0] data2_o,
@@ -39,20 +40,19 @@ module conv_mem #(
 
     genvar i;
 
-    // ========================================================================
+    // =========================================================================
     // Local Parameters
-    // ========================================================================
+    // =========================================================================
     // This unit is hard coded for width 3 filters
     localparam FILTER_LEN = 3;
 
     // Bitwidth Definitions
-    localparam VECTOR_BW = COLUMN_LEN * BW;
+    localparam VECTOR_BW = VECTOR_LEN * BW;
     localparam ADDR_BW   = $clog2(NUM_FILTERS);
     // Number of weight banks + bias bank
     localparam BANK_BW   = $clog2(FILTER_LEN + 1);
     localparam FRAME_COUNTER_BW = $clog2(FRAME_LEN);
     localparam FILTER_COUNTER_BW = $clog2(NUM_FILTERS);
-    // ========================================================================
 
     // ========================================================================
     // Convolution Memory Controller
@@ -79,7 +79,6 @@ module conv_mem #(
             end
         end
     end
-    // ========================================================================
 
     // ========================================================================
     // Weight Memories
@@ -112,7 +111,6 @@ module conv_mem #(
             .data_o(weight_data_out[i])
         );
     end
-    // ========================================================================
 
     // ========================================================================
     // Bias Memory
@@ -141,7 +139,6 @@ module conv_mem #(
         .data_i(bias_data_in),
         .data_o(bias_data_out)
     );
-    // ========================================================================
 
     // ========================================================================
     // Output Assignment
@@ -162,7 +159,6 @@ module conv_mem #(
     assign bias_o  = bias_data_out;
     assign valid_o = cycle_en_i_q;
     assign last_o  = valid_o & frame_last;
-    // ========================================================================
 
     // ========================================================================
     // Simulation Only Waveform Dump (.vcd export)
@@ -174,6 +170,5 @@ module conv_mem #(
         #1;
     end
     `endif
-    // ========================================================================
 
 endmodule

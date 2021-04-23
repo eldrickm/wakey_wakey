@@ -21,8 +21,8 @@ VERILOG_SOURCES += ../../lib/dffram/*.v
 # ==============================================================================
 # modules
 # ==============================================================================
-MODULE   = test_conv1d				# python cocotb tests
-TOPLEVEL = conv1d					# top level rtl module
+MODULE   = test_conv_top			# python cocotb tests
+TOPLEVEL = conv_top					# top level rtl module
 
 # ==============================================================================
 # cocotb magic
