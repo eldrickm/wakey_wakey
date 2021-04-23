@@ -1,0 +1,199 @@
+[*]
+[*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
+[*] Fri Apr 23 03:20:35 2021
+[*]
+[dumpfile] "/home/eldrick/wakey_wakey/rtl/wrd/argmax/wave.vcd"
+[dumpfile_mtime] "Fri Apr 23 03:16:01 2021"
+[dumpfile_size] 2091
+[savefile] "/home/eldrick/wakey_wakey/rtl/wrd/argmax/argmax.gtkw"
+[timestart] 0
+[size] 1848 1016
+[pos] -51 -51
+*-24.050358 78610000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 233
+[signals_width] 378
+[sst_expanded] 1
+[sst_vpaned_height] 289
+@28
+argmax.clk_i
+argmax.rst_n_i
+@200
+-
+@c00022
+argmax.data_i[71:0]
+@28
+(0)argmax.data_i[71:0]
+(1)argmax.data_i[71:0]
+(2)argmax.data_i[71:0]
+(3)argmax.data_i[71:0]
+(4)argmax.data_i[71:0]
+(5)argmax.data_i[71:0]
+(6)argmax.data_i[71:0]
+(7)argmax.data_i[71:0]
+(8)argmax.data_i[71:0]
+(9)argmax.data_i[71:0]
+(10)argmax.data_i[71:0]
+(11)argmax.data_i[71:0]
+(12)argmax.data_i[71:0]
+(13)argmax.data_i[71:0]
+(14)argmax.data_i[71:0]
+(15)argmax.data_i[71:0]
+(16)argmax.data_i[71:0]
+(17)argmax.data_i[71:0]
+(18)argmax.data_i[71:0]
+(19)argmax.data_i[71:0]
+(20)argmax.data_i[71:0]
+(21)argmax.data_i[71:0]
+(22)argmax.data_i[71:0]
+(23)argmax.data_i[71:0]
+(24)argmax.data_i[71:0]
+(25)argmax.data_i[71:0]
+(26)argmax.data_i[71:0]
+(27)argmax.data_i[71:0]
+(28)argmax.data_i[71:0]
+(29)argmax.data_i[71:0]
+(30)argmax.data_i[71:0]
+(31)argmax.data_i[71:0]
+(32)argmax.data_i[71:0]
+(33)argmax.data_i[71:0]
+(34)argmax.data_i[71:0]
+(35)argmax.data_i[71:0]
+(36)argmax.data_i[71:0]
+(37)argmax.data_i[71:0]
+(38)argmax.data_i[71:0]
+(39)argmax.data_i[71:0]
+(40)argmax.data_i[71:0]
+(41)argmax.data_i[71:0]
+(42)argmax.data_i[71:0]
+(43)argmax.data_i[71:0]
+(44)argmax.data_i[71:0]
+(45)argmax.data_i[71:0]
+(46)argmax.data_i[71:0]
+(47)argmax.data_i[71:0]
+(48)argmax.data_i[71:0]
+(49)argmax.data_i[71:0]
+(50)argmax.data_i[71:0]
+(51)argmax.data_i[71:0]
+(52)argmax.data_i[71:0]
+(53)argmax.data_i[71:0]
+(54)argmax.data_i[71:0]
+(55)argmax.data_i[71:0]
+(56)argmax.data_i[71:0]
+(57)argmax.data_i[71:0]
+(58)argmax.data_i[71:0]
+(59)argmax.data_i[71:0]
+(60)argmax.data_i[71:0]
+(61)argmax.data_i[71:0]
+(62)argmax.data_i[71:0]
+(63)argmax.data_i[71:0]
+(64)argmax.data_i[71:0]
+(65)argmax.data_i[71:0]
+(66)argmax.data_i[71:0]
+(67)argmax.data_i[71:0]
+(68)argmax.data_i[71:0]
+(69)argmax.data_i[71:0]
+(70)argmax.data_i[71:0]
+(71)argmax.data_i[71:0]
+@1401200
+-group_end
+@c00420
+#{data_i[71:48][2]} (0)argmax.data_i[71:0] (1)argmax.data_i[71:0] (2)argmax.data_i[71:0] (3)argmax.data_i[71:0] (4)argmax.data_i[71:0] (5)argmax.data_i[71:0] (6)argmax.data_i[71:0] (7)argmax.data_i[71:0] (8)argmax.data_i[71:0] (9)argmax.data_i[71:0] (10)argmax.data_i[71:0] (11)argmax.data_i[71:0] (12)argmax.data_i[71:0] (13)argmax.data_i[71:0] (14)argmax.data_i[71:0] (15)argmax.data_i[71:0] (16)argmax.data_i[71:0] (17)argmax.data_i[71:0] (18)argmax.data_i[71:0] (19)argmax.data_i[71:0] (20)argmax.data_i[71:0] (21)argmax.data_i[71:0] (22)argmax.data_i[71:0] (23)argmax.data_i[71:0]
+@28
+(0)argmax.data_i[71:0]
+(1)argmax.data_i[71:0]
+(2)argmax.data_i[71:0]
+(3)argmax.data_i[71:0]
+(4)argmax.data_i[71:0]
+(5)argmax.data_i[71:0]
+(6)argmax.data_i[71:0]
+(7)argmax.data_i[71:0]
+(8)argmax.data_i[71:0]
+(9)argmax.data_i[71:0]
+(10)argmax.data_i[71:0]
+(11)argmax.data_i[71:0]
+(12)argmax.data_i[71:0]
+(13)argmax.data_i[71:0]
+(14)argmax.data_i[71:0]
+(15)argmax.data_i[71:0]
+(16)argmax.data_i[71:0]
+(17)argmax.data_i[71:0]
+(18)argmax.data_i[71:0]
+(19)argmax.data_i[71:0]
+(20)argmax.data_i[71:0]
+(21)argmax.data_i[71:0]
+(22)argmax.data_i[71:0]
+(23)argmax.data_i[71:0]
+@1401600
+-group_end
+@c00420
+#{data_i[47:24][1]} (24)argmax.data_i[71:0] (25)argmax.data_i[71:0] (26)argmax.data_i[71:0] (27)argmax.data_i[71:0] (28)argmax.data_i[71:0] (29)argmax.data_i[71:0] (30)argmax.data_i[71:0] (31)argmax.data_i[71:0] (32)argmax.data_i[71:0] (33)argmax.data_i[71:0] (34)argmax.data_i[71:0] (35)argmax.data_i[71:0] (36)argmax.data_i[71:0] (37)argmax.data_i[71:0] (38)argmax.data_i[71:0] (39)argmax.data_i[71:0] (40)argmax.data_i[71:0] (41)argmax.data_i[71:0] (42)argmax.data_i[71:0] (43)argmax.data_i[71:0] (44)argmax.data_i[71:0] (45)argmax.data_i[71:0] (46)argmax.data_i[71:0] (47)argmax.data_i[71:0]
+@28
+(24)argmax.data_i[71:0]
+(25)argmax.data_i[71:0]
+(26)argmax.data_i[71:0]
+(27)argmax.data_i[71:0]
+(28)argmax.data_i[71:0]
+(29)argmax.data_i[71:0]
+(30)argmax.data_i[71:0]
+(31)argmax.data_i[71:0]
+(32)argmax.data_i[71:0]
+(33)argmax.data_i[71:0]
+(34)argmax.data_i[71:0]
+(35)argmax.data_i[71:0]
+(36)argmax.data_i[71:0]
+(37)argmax.data_i[71:0]
+(38)argmax.data_i[71:0]
+(39)argmax.data_i[71:0]
+(40)argmax.data_i[71:0]
+(41)argmax.data_i[71:0]
+(42)argmax.data_i[71:0]
+(43)argmax.data_i[71:0]
+(44)argmax.data_i[71:0]
+(45)argmax.data_i[71:0]
+(46)argmax.data_i[71:0]
+(47)argmax.data_i[71:0]
+@1401600
+-group_end
+@c00420
+#{datai[23:0][0]} (48)argmax.data_i[71:0] (49)argmax.data_i[71:0] (50)argmax.data_i[71:0] (51)argmax.data_i[71:0] (52)argmax.data_i[71:0] (53)argmax.data_i[71:0] (54)argmax.data_i[71:0] (55)argmax.data_i[71:0] (56)argmax.data_i[71:0] (57)argmax.data_i[71:0] (58)argmax.data_i[71:0] (59)argmax.data_i[71:0] (60)argmax.data_i[71:0] (61)argmax.data_i[71:0] (62)argmax.data_i[71:0] (63)argmax.data_i[71:0] (64)argmax.data_i[71:0] (65)argmax.data_i[71:0] (66)argmax.data_i[71:0] (67)argmax.data_i[71:0] (68)argmax.data_i[71:0] (69)argmax.data_i[71:0] (70)argmax.data_i[71:0] (71)argmax.data_i[71:0]
+@28
+(48)argmax.data_i[71:0]
+(49)argmax.data_i[71:0]
+(50)argmax.data_i[71:0]
+(51)argmax.data_i[71:0]
+(52)argmax.data_i[71:0]
+(53)argmax.data_i[71:0]
+(54)argmax.data_i[71:0]
+(55)argmax.data_i[71:0]
+(56)argmax.data_i[71:0]
+(57)argmax.data_i[71:0]
+(58)argmax.data_i[71:0]
+(59)argmax.data_i[71:0]
+(60)argmax.data_i[71:0]
+(61)argmax.data_i[71:0]
+(62)argmax.data_i[71:0]
+(63)argmax.data_i[71:0]
+(64)argmax.data_i[71:0]
+(65)argmax.data_i[71:0]
+(66)argmax.data_i[71:0]
+(67)argmax.data_i[71:0]
+(68)argmax.data_i[71:0]
+(69)argmax.data_i[71:0]
+(70)argmax.data_i[71:0]
+(71)argmax.data_i[71:0]
+@1401600
+-group_end
+@28
+argmax.valid_i
+argmax.last_i
+@29
+argmax.ready_o
+@200
+-
+@28
+argmax.data_o[2:0]
+argmax.valid_o
+argmax.last_o
+argmax.ready_i
+[pattern_trace] 1
+[pattern_trace] 0
