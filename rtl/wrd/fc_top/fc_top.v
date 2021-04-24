@@ -15,22 +15,23 @@ module fc_top #(
     parameter FRAME_LEN   = 208,
     parameter NUM_CLASSES = 3
 ) (
+    // clock and reset
     input                               clk_i,
     input                               rst_n_i,
 
-    // Input Features
+    // streaming input
     input  signed [I_BW - 1 : 0]        data_i,
     input                               valid_i,
     input                               last_i,
     output                              ready_o,
 
-    // Output Features
+    // streaming output
     output signed [VECTOR_O_BW - 1 : 0] data_o,
     output                              valid_o,
     output                              last_o,
     input                               ready_i,
 
-    // Memory Configuration Ports
+    // memory configuration
     input                               rd_en_i,
     input                               wr_en_i,
     input         [BANK_BW - 1 : 0]     rd_wr_bank_i,
@@ -46,7 +47,7 @@ module fc_top #(
     // ========================================================================
     // Bitwidth Definitions
     localparam ADDR_BW   = $clog2(FRAME_LEN);
-    localparam VECTOR_I_BW = O_BW * NUM_CLASSES;
+    localparam VECTOR_I_BW = I_BW * NUM_CLASSES;
     localparam VECTOR_BIAS_BW = BIAS_BW * NUM_CLASSES;
     localparam VECTOR_O_BW = O_BW * NUM_CLASSES;
 
@@ -93,10 +94,10 @@ module fc_top #(
     // MAC Array
     // ========================================================================
     // register stream input array to give fc_mem 1 cycle to ready outputs
-    reg  signed [I_BW - 1 : 0]        data_i_q;
-    reg                               valid_i_q;
-    reg                               last_i_q;
-    reg                               mac_ready0_q;
+    reg signed [VECTOR_I_BW - 1 : 0] data_i_q;
+    reg                              valid_i_q;
+    reg                              last_i_q;
+    reg                              mac_ready0_q;
 
     always @(posedge clk_i) begin
         if (!rst_n_i) begin

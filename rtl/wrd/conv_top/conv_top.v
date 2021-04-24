@@ -245,7 +245,7 @@ module conv_top #(
     wire [BIAS_BW - 1 : 0] red_add_data;
     wire                   red_add_valid;
     wire                   red_add_last;
-    wire [0]               red_add_ready; // [0] needed to avoid undecl. error
+    wire [0:0]             red_add_ready; // [0:0] needed to avoid undecl. error
 
     red_add #(
         .I_BW(ADD_BW),
@@ -312,7 +312,7 @@ module conv_top #(
     wire [BIAS_BW - 1 : 0] relu_data;
     wire                   relu_valid;
     wire                   relu_last;
-    wire [0]               relu_ready;
+    wire [0:0]             relu_ready;
 
     relu #(
         .BW(BIAS_BW)
@@ -337,7 +337,7 @@ module conv_top #(
     wire [BW - 1 : 0] quantizer_data;
     wire              quantizer_valid;
     wire              quantizer_last;
-    wire [0]          quantizer_ready;
+    wire [0:0]        quantizer_ready;
 
     quantizer #(
         .I_BW(BIAS_BW),
@@ -347,7 +347,7 @@ module conv_top #(
         .clk_i(clk_i),
         .rst_n_i(rst_n_i),
 
-        .shift_i('d7),
+        .shift_i(5'd7),
 
         .data_i(relu_data),
         .valid_i(relu_valid),

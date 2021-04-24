@@ -3,7 +3,7 @@
 // Design:       Eldrick Millares
 // Verification: Matthew Pauly
 // Notes:
-// TODO: Hard coded for 3 24b elements - can we parameterize?
+// TODO: Hard coded for 2 elements - can we parameterize the one-hot compare?
 // ============================================================================
 
 module argmax #(
@@ -31,7 +31,7 @@ module argmax #(
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam VECTOR_LEN = 3;
+    localparam VECTOR_LEN = 2;
 
     // =========================================================================
     // Input Unpacking
@@ -47,9 +47,7 @@ module argmax #(
     wire [VECTOR_LEN - 1 : 0] argmax_one_hot;
     reg  [VECTOR_LEN - 1 : 0] argmax_one_hot_q;
 
-    assign argmax_one_hot = (data_arr[0] > data_arr[1] &&
-                             data_arr[0] > data_arr[2]) ? 'b001 :
-                            ((data_arr[1] > data_arr[2]) ? 'b010 : 'b100);
+    assign argmax_one_hot = (data_arr[0] > data_arr[1]) ? 'b01 : 'b10;
 
     always @(posedge clk_i) begin
         if (!rst_n_i) begin
