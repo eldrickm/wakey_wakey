@@ -134,7 +134,7 @@ def get_random_test_values(n_frames, in_channels, out_channels, zero_biases=Fals
     input_features = get_random_int8((n_frames, in_channels))
 
     expected_conv = na.conv1d_multi_kernel(input_features, weights, biases)
-    expected_output = na.scale_feature_map(expected_conv, 7)
+    expected_output = na.scale_feature_map(expected_conv, 8)
 
     return weights, biases, input_features, expected_output
 
@@ -174,7 +174,7 @@ async def test_conv1d(dut):
     biases = np.ones(8, dtype=np.int32)
     input_features = np.ones((50, 13), dtype=np.int8)
     expected_output = na.conv1d_multi_kernel(input_features, weights, biases)
-    expected_output = na.scale_feature_map(expected_output, 7)
+    expected_output = na.scale_feature_map(expected_output, 8)
 
     await write_conv_mem(dut, weights, biases)
     await write_input_features(dut, input_features)
@@ -188,7 +188,7 @@ async def test_conv1d(dut):
     biases = np.ones(8, dtype=np.int32)
     input_features = np.ones((50, 13), dtype=np.int8) * 2
     expected_output = na.conv1d_multi_kernel(input_features, weights, biases)
-    expected_output = na.scale_feature_map(expected_output, 7)
+    expected_output = na.scale_feature_map(expected_output, 8)
 
     await write_conv_mem(dut, weights, biases)
     await write_input_features(dut, input_features)
@@ -202,7 +202,7 @@ async def test_conv1d(dut):
     biases = np.arange(8, dtype=np.int32) * 2000 + 5
     input_features = np.ones((50, 13), dtype=np.int8)
     expected_output = na.conv1d_multi_kernel(input_features, weights, biases)
-    expected_output = na.scale_feature_map(expected_output, 7)
+    expected_output = na.scale_feature_map(expected_output, 8)
 
     await write_conv_mem(dut, weights, biases)
     await write_input_features(dut, input_features)

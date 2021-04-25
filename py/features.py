@@ -13,7 +13,7 @@ def cache_features():
     # download and unzip keywords dataset
     zip_fname = str(cache_dir / 'keywords2.zip')
     os.system('curl https://cdn.edgeimpulse.com/datasets/keywords2.zip -o ' + zip_fname)
-    os.system('unzip ' + zip_fname)
+    os.system('unzip ' + zip_fname + ' -d ' + str(cache_dir))
 
     train_test_split = 0.75  # fraction to have as training data
 

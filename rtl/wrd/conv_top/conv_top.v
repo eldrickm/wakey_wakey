@@ -347,7 +347,7 @@ module conv_top #(
         .clk_i(clk_i),
         .rst_n_i(rst_n_i),
 
-        .shift_i(5'd7),
+        .shift_i(5'd8),
 
         .data_i(relu_data),
         .valid_i(relu_valid),
