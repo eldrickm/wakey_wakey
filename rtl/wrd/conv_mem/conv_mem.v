@@ -4,11 +4,17 @@
 // Verification: Matthew Pauly
 // Notes:
 // TODO: Implement rd_data_o for reading memories
+//
+// Stores weights, biases, and shifts in different banks, numbered like so:
+// [0, NUM_FILTERS-1] : Kernel weights for nth output channel
+// [NUM_FILTERS]      : Bias terms for each kernel
+// [NUM_FILTERS+1]    : Global shift applied to all outputs of this convolution
 // =============================================================================
 
 module conv_mem #(
     parameter BW          = 8,
     parameter BIAS_BW     = 32,
+    parameter SHIFT_BW    = $clog2(BIAS_BW),
     parameter FRAME_LEN   = 50,
     parameter VECTOR_LEN  = 13,
     parameter NUM_FILTERS = 8
@@ -33,6 +39,7 @@ module conv_mem #(
     output signed [VECTOR_BW - 1 : 0] data1_o,
     output signed [VECTOR_BW - 1 : 0] data2_o,
     output signed [BIAS_BW - 1 : 0]   bias_o,
+    output        [SHIFT_BW - 1 : 0]  shift_o,
     output                            valid_o,
     output                            last_o,
     input                             ready_i
@@ -49,8 +56,8 @@ module conv_mem #(
     // Bitwidth Definitions
     localparam VECTOR_BW = VECTOR_LEN * BW;
     localparam ADDR_BW   = $clog2(NUM_FILTERS);
-    // Number of weight banks + bias bank
-    localparam BANK_BW   = $clog2(FILTER_LEN + 1);
+    // Number of weight banks + bias bank + shift bank
+    localparam BANK_BW   = $clog2(FILTER_LEN + 2);
     localparam FRAME_COUNTER_BW = $clog2(FRAME_LEN);
     localparam FILTER_COUNTER_BW = $clog2(NUM_FILTERS);
 
@@ -141,6 +148,26 @@ module conv_mem #(
     );
 
     // ========================================================================
+    // Shift Memory
+    // ========================================================================
+    // wire shift_en;
+    wire                   shift_wr_en;
+    wire [SHIFT_BW - 1 : 0] shift_data_in;
+    reg [SHIFT_BW - 1 : 0] shift_data_out;
+
+    // assign shift_en      = (wr_en_i | rd_en_i | cycle_en_i);
+    assign shift_wr_en   = (wr_en_i) & (rd_wr_bank_i == FILTER_LEN + 1);
+    assign shift_data_in = (wr_en_i) ? wr_data_i[SHIFT_BW - 1 : 0] : 'd0;
+
+    always @(posedge clk_i) begin
+        if (shift_wr_en) begin
+            shift_data_out <= shift_data_in;
+        end else begin
+            shift_data_out <= shift_data_out;
+        end
+    end
+
+    // ========================================================================
     // Output Assignment
     // ========================================================================
     reg cycle_en_i_q;
@@ -157,6 +184,7 @@ module conv_mem #(
     assign data1_o = weight_data_out[1];
     assign data2_o = weight_data_out[2];
     assign bias_o  = bias_data_out;
+    assign shift_o  = shift_data_out;
     assign valid_o = cycle_en_i_q;
     assign last_o  = valid_o & frame_last;
 

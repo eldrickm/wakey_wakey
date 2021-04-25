@@ -55,7 +55,7 @@ module conv_top #(
     localparam MUL_VECTOR_BW     = VECTOR_LEN * MUL_BW;
     localparam ADD_VECTOR_BW     = VECTOR_LEN * ADD_BW;
     localparam ADDR_BW           = $clog2(NUM_FILTERS);
-    localparam BANK_BW           = $clog2(FILTER_LEN + 1);
+    localparam BANK_BW           = $clog2(FILTER_LEN + 2);
     localparam FRAME_COUNTER_BW  = $clog2(FRAME_LEN);
     localparam FILTER_COUNTER_BW = $clog2(NUM_FILTERS);
     localparam SHIFT_BW          = $clog2(BIAS_BW);
@@ -109,12 +109,14 @@ module conv_top #(
     // =========================================================================
     wire [VECTOR_BW - 1 : 0] conv_mem_weight [FILTER_LEN - 1 : 0];
     wire [BIAS_BW - 1 : 0]   conv_mem_bias;
+    wire [SHIFT_BW - 1 : 0]  conv_mem_shift;
     wire                     conv_mem_valid;
     wire                     conv_mem_last;
 
     conv_mem #(
         .BW(BW),
         .BIAS_BW(BIAS_BW),
+        .SHIFT_BW(SHIFT_BW),
         .FRAME_LEN(FRAME_LEN),
         .VECTOR_LEN(VECTOR_LEN),
         .NUM_FILTERS(NUM_FILTERS)
@@ -135,6 +137,7 @@ module conv_top #(
         .data1_o(conv_mem_weight[1]),
         .data2_o(conv_mem_weight[2]),
         .bias_o(conv_mem_bias),
+        .shift_o(conv_mem_shift),
         .valid_o(conv_mem_valid),
         .last_o(conv_mem_last),
         .ready_i(vec_mul_ready1[0])
@@ -347,7 +350,7 @@ module conv_top #(
         .clk_i(clk_i),
         .rst_n_i(rst_n_i),
 
-        .shift_i(5'd8),
+        .shift_i(conv_mem_shift),
 
         .data_i(relu_data),
         .valid_i(relu_valid),
