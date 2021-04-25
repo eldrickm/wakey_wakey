@@ -10,25 +10,10 @@ import requests
 import os
 import pathlib
 
-
-# Load MFCC features
-
-API_KEY = 'ei_9eedce842a674656748bf65a19f0e2a80cc867cde21a7810354f75a4fb565a3d'
-
+import sys
 cache_dir = pathlib.Path(__file__).parent.absolute()
-
-def get_data(fname, url):
-    '''Locally cache MFCC features so they can be loaded quickly.'''
-    if not os.path.exists(cache_dir / fname):
-        data = (requests.get(url, headers={'x-api-key': API_KEY})).content
-        with open(cache_dir / fname, 'wb') as file:
-            file.write(data)
-    return np.load(cache_dir / fname)
-
-X = get_data('x_train.npy', 'https://studio.edgeimpulse.com/v1/api/24007/dsp-data/23/x/training')
-Y = get_data('y_train.npy', 'https://studio.edgeimpulse.com/v1/api/24007/dsp-data/23/y/training')[:,0]
-Xtest = get_data('x_test.npy', 'https://studio.edgeimpulse.com/v1/api/24007/dsp-data/23/x/testing')
-Ytest = get_data('y_test.npy', 'https://studio.edgeimpulse.com/v1/api/24007/dsp-data/23/y/testing')[:,0]
+sys.path.append(str(cache_dir))
+import features  # module for loading mfcc features
 
 
 # Load quantized parameters
@@ -105,7 +90,7 @@ def scale_feature_map(x, shift):
 
 def get_numpy_pred(features):
     '''Top level function for running inference with the numpy model.'''
-    out = np.zeros((features.shape[0], 3), dtype=np.int64)
+    out = np.zeros((features.shape[0], 2), dtype=np.int64)
     for i in range(features.shape[0]):
         # condition input feature map
         x = features[i]
@@ -132,18 +117,18 @@ def get_numpy_pred(features):
 # Functions for external use in testbench
 
 def get_num_train_samples():
-    return X.shape[0]
+    return features.X.shape[0]
 
 def get_featuremap(index):
     '''Return the MFCC featuremap for a given index.'''
-    x = X[index,:]
+    x = features.X[index,:]
     x = np.clip(np.round(x * input_scale), -128, 127).astype(np.int8)
     x = x.reshape((int(x.size / 13), 13))
     return x
 
 def get_numpy_pred_index(index):
     '''Run inference for training sample given its index.'''
-    return get_numpy_pred(X[index:index+1,:])
+    return get_numpy_pred(features.X[index:index+1,:])
 
 def output_is_equal(y1, y2):
     diff = y1 - y2
