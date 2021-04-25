@@ -15,5 +15,11 @@ __pycache__/
 # ctags
 tags
 
-# downloadable MFCC features
+# downloadable audio data and extracted MFCC features
+py/__MACOSX/
+py/keywords2.zip
+py/no/
+py/noise/
+py/unknown/
+py/yes/
 py/*.npy
