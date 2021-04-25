@@ -25,10 +25,10 @@ def get_data(fname, url):
             file.write(data)
     return np.load(cache_dir / fname)
 
-X = get_data('x_train.npy', 'https://studio.edgeimpulse.com/v1/api/24007/dsp-data/3/x/training')
-Y = get_data('y_train.npy', 'https://studio.edgeimpulse.com/v1/api/24007/dsp-data/3/y/training')[:,0]
-Xtest = get_data('x_test.npy', 'https://studio.edgeimpulse.com/v1/api/24007/dsp-data/3/x/testing')
-Ytest = get_data('y_test.npy', 'https://studio.edgeimpulse.com/v1/api/24007/dsp-data/3/y/testing')[:,0]
+X = get_data('x_train.npy', 'https://studio.edgeimpulse.com/v1/api/24007/dsp-data/23/x/training')
+Y = get_data('y_train.npy', 'https://studio.edgeimpulse.com/v1/api/24007/dsp-data/23/y/training')[:,0]
+Xtest = get_data('x_test.npy', 'https://studio.edgeimpulse.com/v1/api/24007/dsp-data/23/x/testing')
+Ytest = get_data('y_test.npy', 'https://studio.edgeimpulse.com/v1/api/24007/dsp-data/23/y/testing')[:,0]
 
 
 # Load quantized parameters
