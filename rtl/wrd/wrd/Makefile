@@ -47,4 +47,4 @@ clean::
 	rm -rf __pycache__/
 
 wave:
-	gtkwave *.vcd
+	gtkwave *.vcd -a *.gtkw

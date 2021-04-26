@@ -19,7 +19,7 @@ INT8_MAX = np.iinfo(np.int8).max
 INT32_MIN = np.iinfo(np.int32).min
 INT32_MAX = np.iinfo(np.int32).max
 
-ENABLE_ASSERTS = True
+ENABLE_ASSERTS = False
 
 def np2bv(int_arr):
     """ Convert a 8b integer numpy array in cocotb BinaryValue """
@@ -80,7 +80,7 @@ async def write_conv_mem(dut, conv_num, weights, biases, shift):
     wr_data_i <= 0
 
 
-async def write_fc_mem(w, b):
+async def write_fc_mem(dut, w, b):
     in_length, n_classes = w.shape
 
     rd_en = dut.fc_rd_en_i
@@ -97,13 +97,13 @@ async def write_fc_mem(w, b):
         for j in range(n_classes):
             bank <= j
             addr <= i
-            data <= w[i, j]
+            data <= int(w[i, j])
             await FallingEdge(dut.clk_i)
     # write biases
     for j in range(n_classes):
         bank <= j + n_classes
         addr <= 0
-        data <= b[j]
+        data <= int(b[j])
         await FallingEdge(dut.clk_i)
     # unset signals
     wr_en <= 0
@@ -117,15 +117,13 @@ async def write_input_features(dut, x):
 
     x is an array of size (n_frames, n_channels), and needs zero padding.
     '''
-    n_frames_pad = x.shape[0] + 2
-    x_pad = np.zeros((n_frames_pad, x.shape[1]), dtype=np.int8)
-    x_pad[1:-1,:] = x
+    n_frames = x.shape[0]
 
     await FallingEdge(dut.clk_i)
     dut.valid_i <= 1
-    for i in range(n_frames_pad):
-        dut.data_i <= np2bv(x_pad[i,:])
-        if i == n_frames_pad - 1:
+    for i in range(n_frames):
+        dut.data_i <= np2bv(x[i,:])
+        if i == n_frames - 1:
             dut.last_i <= 1
         await FallingEdge(dut.clk_i)
     # unset signals
@@ -143,17 +141,14 @@ async def read_fc_output(dut, expected):
     split_binstr = [value[:32], value[32:]]
     output_arr = [BinaryValue(x).signed_integer() for x in split_binstr]
     if ENABLE_ASSERTS:
-        for i in range(len(expected)):
-            assert output_arr[i] == expected[i], \  #TODO
-                   (('Output at frame {} and channel {} of value {} does not match '
-                       'expected output of {}').format(frame_num, channel_num, value,
+        for i in range(2):
+            value = output_arr[i]
+            expected_value = expected[i]
+            assert value == expected_value, \
+                   (('FC output at index {} of value {} does not match '
+                       'expected output of {}').format(i, value,
                                                        expected_value))
-        # if dut.last_o == 1:
-            # assert frame_num == n_frames - 1, \
-                   # 'last_o asserted at unexpected frame number of {}'.format(frame_num)
-        # else:
-            # assert frame_num != n_frames - 1, \
-                   # 'last_o not asserted at expected frame number of {}'.format(frame_num)
+        assert dut.fc_last == 1, 'fc_last not asserted when expected'
 
     print('Received output:')
     print(output_arr)
@@ -192,6 +187,17 @@ async def write_all_mem_random(dut):
     await write_conv_mem(dut, 1, c1w, c1b, c1s)
     await write_conv_mem(dut, 2, c2w, c2b, c2s)
     await write_fc_mem(dut, fcw, fcb)
+    print('fcw shape: ', fcw.shape)
+    return [c1w, c1b, c1s, c2w, c2b, c2s, fcw, fcb]
+
+
+async def do_random_test(dut):
+    params = await write_all_mem_random(dut)
+    input_features = get_random_input()
+    expected = na.get_numpy_pred_custom_params(input_features, params)
+
+    await write_input_features(dut, input_features)
+    await read_fc_output(dut, expected)
 
 
 @cocotb.test()
@@ -207,103 +213,32 @@ async def test_conv1d(dut):
     dut.data_i <= 0
     dut.valid_i <= 0
     dut.last_i <= 0
-    dut.ready_i <= 0
 
-    dut.wr_en_i <= 0
-    dut.rd_en_i <= 0
-    dut.rd_wr_bank_i <= 0
-    dut.rd_wr_addr_i <= 0
-    dut.wr_data_i <= 0
+    dut.conv1_rd_en_i <= 0
+    dut.conv1_wr_en_i <= 0
+    dut.conv1_rd_wr_bank_i <= 0
+    dut.conv1_rd_wr_addr_i <= 0
+    dut.conv1_wr_data_i <= 0
+
+    dut.conv2_rd_en_i <= 0
+    dut.conv2_wr_en_i <= 0
+    dut.conv2_rd_wr_bank_i <= 0
+    dut.conv2_rd_wr_addr_i <= 0
+    dut.conv2_wr_data_i <= 0
+
+    dut.fc_rd_en_i <= 0
+    dut.fc_wr_en_i <= 0
+    dut.fc_rd_wr_bank_i <= 0
+    dut.fc_rd_wr_addr_i <= 0
+    dut.fc_wr_data_i <= 0
 
     await FallingEdge(dut.clk_i)
     dut.rst_n_i <= 1
-    dut.ready_i <= 1
     for _ in range(20):
         await FallingEdge(dut.clk_i)
 
     print('=' * 100)
-    print('Beginning basic test with fixed weights, biases, and features.')
+    print('Beginning test with random weights, biases, and features.')
     print('=' * 100)
 
-    # w is weights, b is biases, s is shift, i is input features, o is expected
-
-    w = np.ones((3, 13, 8), dtype=np.int8) * 127
-    b = np.ones(8, dtype=np.int32)
-    s = 8
-    i = np.ones((50, 13), dtype=np.int8)
-    o = na.conv1d_multi_kernel(i, w, b)
-    o = na.scale_feature_map(o, s)
-
-    await write_conv_mem(dut, w, b, s)
-    await write_input_features(dut, i)
-    await read_output_features(dut, 50, 8, o)
-
-    print('=' * 100)
-    print('Beginning second basic test with fixed weights, biases, and features.')
-    print('=' * 100)
-
-    w = np.ones((3, 13, 8), dtype=np.int8) * 100
-    b = np.ones(8, dtype=np.int32)
-    s = 8
-    i = np.ones((50, 13), dtype=np.int8) * 2
-    o = na.conv1d_multi_kernel(i, w, b)
-    o = na.scale_feature_map(o, s)
-
-    await write_conv_mem(dut, w, b, s)
-    await write_input_features(dut, i)
-    await read_output_features(dut, 50, 8, o)
-
-    print('=' * 100)
-    print('Beginning third test with fixed weights and features, but varied biases.')
-    print('=' * 100)
-
-    w = np.ones((3, 13, 8), dtype=np.int8) * 50
-    b = np.arange(8, dtype=np.int32) * 2000 + 5
-    s = 8
-    i = np.ones((50, 13), dtype=np.int8)
-    o = na.conv1d_multi_kernel(i, w, b)
-    o = na.scale_feature_map(o, s)
-
-    await write_conv_mem(dut, w, b, s)
-    await write_input_features(dut, i)
-    await read_output_features(dut, 50, 8, o)
-
-    print('=' * 100)
-    print('Beginning test with random weights and features.')
-    print('=' * 100)
-
-    w, b, s, i, o = get_random_test_values(50, 13, 8, zero_biases=True)
-
-    await write_conv_mem(dut, w, b, s)
-    await write_input_features(dut, i)
-    await read_output_features(dut, 50, 8, o)
-
-    print('=' * 100)
-    print('Beginning saturation test with random weights, biases, and features.')
-    print('=' * 100)
-
-    w, b, s, i, o = get_random_test_values(50, 13, 8)
-
-    await write_conv_mem(dut, w, b, s)
-    await write_input_features(dut, i)
-    await read_output_features(dut, 50, 8, o)
-
-    # Now test with real weights, biases and MFCC features
-
-    total_samples = na.get_num_train_samples()
-
-    for test_num in range(10):
-        print('=' * 100)
-        print('Beginning conv1 test {}/{} with real weights, biases and features.'.format(test_num, 10))
-        print('=' * 100)
-
-        w = na.conv1_weights
-        b = na.conv1_biases
-        s = na.bitshifts[0]
-        i = na.get_featuremap(np.random.randint(total_samples))
-        o = na.conv1d_multi_kernel(i, w, b)
-        o = na.scale_feature_map(o, s)
-
-        await write_conv_mem(dut, w, b, s)
-        await write_input_features(dut, i)
-        await read_output_features(dut, 50, 8, o)
+    await do_random_test(dut)

@@ -1,20 +1,20 @@
 [*]
 [*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
-[*] Sat Apr 24 21:50:50 2021
+[*] Mon Apr 26 17:46:59 2021
 [*]
-[dumpfile] "/home/eldrick/wakey_wakey/rtl/wrd/wrd/wave.vcd"
-[dumpfile_mtime] "Sat Apr 24 21:47:46 2021"
-[dumpfile_size] 115158
-[savefile] "/home/eldrick/wakey_wakey/rtl/wrd/wrd/wrd.gtkw"
+[dumpfile] "/home/mjpauly/repos/wakey_wakey/rtl/wrd/wrd/wave.vcd"
+[dumpfile_mtime] "Mon Apr 26 17:44:05 2021"
+[dumpfile_size] 2624515
+[savefile] "/home/mjpauly/repos/wakey_wakey/rtl/wrd/wrd/wrd.gtkw"
 [timestart] 0
-[size] 3768 2096
-[pos] -51 -51
-*-24.277176 41700000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[size] 1848 1016
+[pos] -1 -1
+*-31.277176 6290000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] wrd.
-[sst_width] 733
-[signals_width] 870
+[sst_width] 240
+[signals_width] 394
 [sst_expanded] 1
-[sst_vpaned_height] 665
+[sst_vpaned_height] 256
 @200
 -Clock and Reset
 @28
@@ -32,8 +32,25 @@ wrd.ready_o
 @200
 -
 -Zero Pad 1
+@22
+wrd.zero_pad1_data[103:0]
+@28
+wrd.zero_pad1_valid
+wrd.zero_pad1_last
+@200
+-
+-Conv1
+@22
+wrd.conv1_data[7:0]
+@28
+wrd.conv1_valid
+wrd.conv2_last
+@200
+-
 -
 @28
 wrd.wake_o
+@200
+-
 [pattern_trace] 1
 [pattern_trace] 0

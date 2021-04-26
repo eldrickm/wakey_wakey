@@ -72,6 +72,9 @@ def max_pool_1d(x):
 def fc(x, weights, biases):
     '''A fully connected linear layer.'''
     x = x.flatten()
+    # print('x shape', x.shape)
+    # print('weights shape', weights.shape)
+    # print('biases shape', biases.shape)
     out = np.matmul(x, weights, dtype=np.int64) + biases
     return out
 
@@ -88,8 +91,14 @@ def scale_feature_map(x, shift):
     x = x.astype(np.int8)
     return x
 
-def get_numpy_pred(features):
+def get_numpy_pred_custom_params(features, params):
     '''Top level function for running inference with the numpy model.'''
+
+    c1w, c1b, c1s, c2w, c2b, c2s, fcw, fcb = params
+
+    if features.ndim == 2:
+        features = features.reshape((1, features.shape[0], features.shape[1]))
+
     out = np.zeros((features.shape[0], 2), dtype=np.int64)
     for i in range(features.shape[0]):
         # condition input feature map
@@ -98,21 +107,28 @@ def get_numpy_pred(features):
         x = x.reshape((int(x.size / 13), 13))
 
         # conv1
-        x = conv1d_multi_kernel(x, conv1_weights, conv1_biases)
-        x = scale_feature_map(x, bitshifts[0])
+        x = conv1d_multi_kernel(x, c1w, c1b)
+        x = scale_feature_map(x, c1s)
         x = max_pool_1d(x)
+        print('x shape after maxpool1', x.shape)
 
         # conv2
-        x = conv1d_multi_kernel(x, conv2_weights, conv2_biases)
-        x = scale_feature_map(x, bitshifts[1])
+        x = conv1d_multi_kernel(x, c2w, c2b)
+        x = scale_feature_map(x, c2s)
         x = max_pool_1d(x)
+        print('x shape after maxpool2', x.shape)
 
         # fc1
-        x = fc(x, fc1_weights, fc1_biases)
+        x = fc(x, fcw, fcb)
         
         out[i] = x
     return out
 
+def get_numpy_pred(features):
+    params = [conv1_weights, conv1_biases, bitshifts[0],
+              conv2_weights, conv2_biases, bitshifts[1],
+              fc1_weights, fc1_biases]
+    get_numpy_pred_custom_params(features, params)
 
 # Functions for external use in testbench
 
