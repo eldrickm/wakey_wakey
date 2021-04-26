@@ -102,8 +102,8 @@ module wrd (
 
     // fc module parameters
     localparam FC_I_BW        = I_BW;                                  // 8
-    localparam FC_BIAS_BW     = 16;
-    localparam FC_O_BW        = 24;
+    localparam FC_BIAS_BW     = 32;
+    localparam FC_O_BW        = 32;
     localparam FC_FRAME_LEN   = $rtoi($ceil(CONV_SIPO_FRAME_LEN / 2)); // 13
     localparam FC_NUM_CLASSES = 2;
     // fc helper parameters
