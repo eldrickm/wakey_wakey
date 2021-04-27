@@ -131,15 +131,56 @@ async def write_input_features(dut, x):
     dut.last_i <= 0
     dut.data_i <= 0
 
+async def read_conv_output(dut, conv_num, n_frames, n_channels, expected):
+    '''Receive the output featuremap and put it in a numpy array.'''
+    total_values = n_frames * n_channels
+    received_values = 0
+    output_arr = np.zeros((n_frames, n_channels), dtype=np.int8)
+
+    if conv_num == 1:
+        data = dut.conv1_data
+        valid = dut.conv1_valid
+        last = dut.conv1_last
+    else:
+        data = dut.conv2_data
+        valid = dut.conv2_valid
+        last = dut.conv2_last
+
+    while (received_values < total_values):
+        await FallingEdge(dut.clk_i)
+        if valid.value == 1:
+            frame_num = received_values % n_frames
+            channel_num = received_values // n_frames
+            value = data.value.get_value_signed()
+            output_arr[frame_num, channel_num] = value
+            expected_value = expected[frame_num, channel_num]
+            received_values += 1
+            if ENABLE_ASSERTS:
+                assert value == expected_value, \
+                       (('Output at frame {} and channel {} of value {} does not match '
+                           'expected output of {}').format(frame_num, channel_num, value,
+                                                           expected_value))
+                if last == 1:
+                    assert frame_num == n_frames - 1, \
+                           'last_o asserted at unexpected frame number of {}'.format(frame_num)
+                else:
+                    assert frame_num != n_frames - 1, \
+                           'last_o not asserted at expected frame number of {}'.format(frame_num)
+
+    print('Received output:')
+    print(output_arr)
+    print('Expected output:')
+    print(expected)
 
 async def read_fc_output(dut, expected):
     '''Receive the output featuremap and put it in a numpy array.'''
     await FallingEdge(dut.clk_i)
     while (dut.fc_valid != 1):  # wait until valid output
         await FallingEdge(dut.clk_i)
-    binstr = dut.data_o.value.get_binstr()
-    split_binstr = [value[:32], value[32:]]
-    output_arr = [BinaryValue(x).signed_integer() for x in split_binstr]
+    binstr = dut.fc_data.value.get_binstr()
+    split_binstr = [binstr[32:], binstr[:32]]
+    output_arr = [BinaryValue(x).signed_integer for x in split_binstr]
+
     if ENABLE_ASSERTS:
         for i in range(2):
             value = output_arr[i]
@@ -172,7 +213,8 @@ def get_random_conv_values(in_channels, out_channels):
 
 def get_random_fc_values(in_length, n_classes):
     weights = get_random_int8((in_length, n_classes))
-    biases = get_random_int32(n_classes)
+    # biases = get_random_int32(n_classes)
+    biases = np.zeros(n_classes)
     return weights, biases
 
 def get_random_input():
@@ -194,10 +236,12 @@ async def write_all_mem_random(dut):
 async def do_random_test(dut):
     params = await write_all_mem_random(dut)
     input_features = get_random_input()
-    expected = na.get_numpy_pred_custom_params(input_features, params)
+    fc_exp, c1_exp, c2_exp = na.get_numpy_pred_custom_params(input_features, params)
 
     await write_input_features(dut, input_features)
-    await read_fc_output(dut, expected)
+    await read_conv_output(dut, 1, 50, 8, c1_exp)
+    await read_conv_output(dut, 2, 25, 16, c2_exp)
+    await read_fc_output(dut, fc_exp)
 
 
 @cocotb.test()
@@ -232,10 +276,10 @@ async def test_conv1d(dut):
     dut.fc_rd_wr_addr_i <= 0
     dut.fc_wr_data_i <= 0
 
-    await FallingEdge(dut.clk_i)
-    dut.rst_n_i <= 1
-    for _ in range(20):
+    for _ in range(50):
         await FallingEdge(dut.clk_i)
+    dut.rst_n_i <= 1
+    await FallingEdge(dut.clk_i)
 
     print('=' * 100)
     print('Beginning test with random weights, biases, and features.')

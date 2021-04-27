@@ -60,7 +60,7 @@ module fc_mem #(
                 frame_counter <= (frame_counter < FRAME_LEN - 1) ?
                                   frame_counter + 'd1 : 'd0;
             end else begin
-                frame_counter <= 0;
+                frame_counter <= frame_counter;
             end
         end
     end

@@ -9,7 +9,7 @@
 // =============================================================================
 
 module conv_top #(
-    parameter FRAME_LEN   = 50,
+    parameter FRAME_LEN   = 50,  // output frame length
     parameter VECTOR_LEN  = 13,
     parameter NUM_FILTERS = 8
 ) (

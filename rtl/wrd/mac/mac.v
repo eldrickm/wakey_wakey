@@ -147,7 +147,8 @@ module mac #(
             valid_q  <= valid0_i && valid1_i;
             valid_q2 <= valid_q;
             valid_q3 <= valid_q2;
-            last_q   <= last0_i | last1_i;
+            // last_q   <= last0_i | last1_i;
+            last_q   <= last1_i;
             last_q2  <= last_q;
             last_q3  <= last_q2;
             ready_q  <= ready_i;
@@ -167,6 +168,19 @@ module mac #(
     initial begin
         $dumpfile ("wave.vcd");
         $dumpvars (0, mac);
+        // reg [7:0] idx; // need integer for loop
+        $dumpvars(0, input_arr[0]);
+        $dumpvars(0, weight_arr[0]);
+        $dumpvars(0, bias_arr[0]);
+        $dumpvars(0, mult_arr[0]);
+        $dumpvars(0, acc_arr[0]);
+        $dumpvars(0, add_arr[0]);
+        $dumpvars(0, input_arr[1]);
+        $dumpvars(0, weight_arr[1]);
+        $dumpvars(0, bias_arr[1]);
+        $dumpvars(0, mult_arr[1]);
+        $dumpvars(0, acc_arr[1]);
+        $dumpvars(0, add_arr[1]);
         #1;
     end
     `endif

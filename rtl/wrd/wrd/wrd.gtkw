@@ -1,18 +1,19 @@
 [*]
 [*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
-[*] Mon Apr 26 17:46:59 2021
+[*] Mon Apr 26 23:41:33 2021
 [*]
 [dumpfile] "/home/mjpauly/repos/wakey_wakey/rtl/wrd/wrd/wave.vcd"
-[dumpfile_mtime] "Mon Apr 26 17:44:05 2021"
-[dumpfile_size] 2624515
+[dumpfile_mtime] "Mon Apr 26 23:39:17 2021"
+[dumpfile_size] 3307603
 [savefile] "/home/mjpauly/repos/wakey_wakey/rtl/wrd/wrd/wrd.gtkw"
-[timestart] 0
+[timestart] 10238200000
 [size] 1848 1016
 [pos] -1 -1
-*-31.277176 6290000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-26.277176 10411400000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] wrd.
+[treeopen] wrd.fc_inst.
 [sst_width] 240
-[signals_width] 394
+[signals_width] 429
 [sst_expanded] 1
 [sst_vpaned_height] 256
 @200
@@ -31,6 +32,10 @@ wrd.last_i
 wrd.ready_o
 @200
 -
+@28
+wrd.wake_o
+@200
+-
 -Zero Pad 1
 @22
 wrd.zero_pad1_data[103:0]
@@ -47,10 +52,101 @@ wrd.conv1_valid
 wrd.conv2_last
 @200
 -
+-Max pool 1
+@22
+wrd.max_pool1_data[7:0]
+@28
+wrd.max_pool1_valid
+wrd.max_pool1_last
+@200
+-
+-Conv SIPO
+@22
+wrd.conv_sipo_data[63:0]
+@28
+wrd.conv_sipo_valid
+wrd.conv_sipo_last
+@200
+-
+-Zero Pad 2
+@22
+wrd.zero_pad2_data[63:0]
+@28
+wrd.zero_pad2_valid
+wrd.zero_pad2_last
+@200
+-
+-Conv2
+@22
+wrd.conv2_data[7:0]
+@28
+wrd.conv2_valid
+wrd.conv2_last
+@200
+-
+-Max Pool 2
+@22
+wrd.max_pool2_data[7:0]
+@28
+wrd.max_pool2_valid
+wrd.max_pool2_last
+@200
+-
+-Fc
+@22
+wrd.fc_inst.data_i[7:0]
+@28
+[color] 3
+wrd.fc_inst.valid_i
+wrd.fc_inst.last_i
+@200
 -
 @28
-wrd.wake_o
+wrd.fc_inst.valid_i_q
+wrd.fc_inst.fc_mem_valid
+wrd.fc_inst.fc_mem_inst.cycle_en_i
+[color] 6
+wrd.fc_inst.fc_mem_last
+@24
+[color] 6
+wrd.fc_inst.fc_mem_inst.frame_counter[7:0]
+@28
+wrd.fc_inst.mac_inst.valid_q
+wrd.fc_inst.mac_inst.valid_q2
+wrd.fc_inst.mac_inst.valid_q3
+wrd.fc_inst.mac_inst.valid_o
 @200
+-
+@22
+wrd.fc_data[63:0]
+@28
+wrd.fc_valid
+wrd.fc_last
+@200
+-
+-
+-
+-
+-
+@24
+wrd.testtest[7:0]
+wrd.testtest2[7:0]
+wrd.testtest3[7:0]
+@25
+wrd.testtest4[7:0]
+@200
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
 -
 [pattern_trace] 1
 [pattern_trace] 0
