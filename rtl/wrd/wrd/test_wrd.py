@@ -83,6 +83,9 @@ async def write_conv_mem(dut, conv_num, weights, biases, shift):
 async def write_fc_mem(dut, w, b):
     in_length, n_classes = w.shape
 
+    # need to reorder weights
+    # w = w.reshape(13, 16, 2).transpose((1,0,2)).reshape(208, 2)
+
     rd_en = dut.fc_rd_en_i
     wr_en = dut.fc_wr_en_i
     bank = dut.fc_rd_wr_bank_i
@@ -259,13 +262,17 @@ async def write_all_mem_random(dut):
     await write_mem_params(dut, p)
     return p
 
-async def write_all_mem_fixed(dut):
+async def write_all_mem_fixed(dut, permutation=1):
     '''Write random test values to all memories'''
-    c1w, c1b, c1s = get_fixed_conv_values(13, 8)
-    c2w, c2b, c2s = get_fixed_conv_values2(8, 16)
-    # c2w, c2b, c2s = get_random_conv_values(8, 16)
-    fcw, fcb      = get_fixed_fc_values(208, 2)
-    # fcw, fcb      = get_random_fc_values(208, 2)
+    if permutation == 1:
+        c1w, c1b, c1s = get_fixed_conv_values(13, 8)
+        c2w, c2b, c2s = get_fixed_conv_values(8, 16)
+        fcw, fcb      = get_fixed_fc_values(208, 2)
+    # elif permutation == 2:
+    else:
+        c1w, c1b, c1s = get_fixed_conv_values(13, 8)
+        c2w, c2b, c2s = get_fixed_conv_values2(8, 16)
+        fcw, fcb      = get_fixed_fc_values(208, 2)
 
     p = [c1w, c1b, c1s, c2w, c2b, c2s, fcw, fcb]
     await write_mem_params(dut, p)
@@ -281,15 +288,15 @@ async def do_random_test(dut):
     # await read_conv_output(dut, 2, 25, 16, c2_exp)
     await read_fc_output(dut, fc_exp)
 
-async def do_fixed_test(dut):
-    params = await write_all_mem_fixed(dut)
+async def do_fixed_test(dut, permutation=1):
+    params = await write_all_mem_fixed(dut, permutation=permutation)
     input_features = get_fixed_input()
     fc_exp, c1_exp, c2_exp = na.get_numpy_pred_custom_params(input_features, params)
 
     await write_input_features(dut, input_features)
     # await read_conv_output(dut, 1, 50, 8, c1_exp)
-    await read_conv_output(dut, 2, 25, 16, c2_exp)
-    # await read_fc_output(dut, fc_exp)
+    # await read_conv_output(dut, 2, 25, 16, c2_exp)
+    await read_fc_output(dut, fc_exp)
 
 
 @cocotb.test()
@@ -333,7 +340,7 @@ async def test_conv1d(dut):
     print('Beginning test with fixed weights, biases, and features.')
     print('=' * 100)
 
-    await do_fixed_test(dut)
+    await do_fixed_test(dut, 2)
 
     # print('=' * 100)
     # print('Beginning test with random weights, biases, and features.')

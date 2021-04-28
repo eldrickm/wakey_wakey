@@ -81,7 +81,8 @@ module max_pool #(
             last_q2  <= last_q;
             last_q3  <= last_q2;
             ready_q  <= ready_i;
-            data_q   <= data_i;
+            // set data_q to zero until valid data is shifted in
+            data_q   <= (state == STATE_VALID) ? 'd0 : data_i;
             data_q2  <= data_q;
             max      <= (data_q > data_q2) ? data_q : data_q2;
         end

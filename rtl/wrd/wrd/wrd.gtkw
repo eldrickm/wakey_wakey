@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
-[*] Wed Apr 28 17:42:53 2021
+[*] Wed Apr 28 19:02:07 2021
 [*]
 [dumpfile] "/home/mjpauly/repos/wakey_wakey/rtl/wrd/wrd/wave.vcd"
-[dumpfile_mtime] "Wed Apr 28 06:52:57 2021"
-[dumpfile_size] 628906
+[dumpfile_mtime] "Wed Apr 28 18:46:44 2021"
+[dumpfile_size] 571593
 [savefile] "/home/mjpauly/repos/wakey_wakey/rtl/wrd/wrd/wrd.gtkw"
-[timestart] 5447000000
+[timestart] 11050300000
 [size] 1848 1016
 [pos] -1 -1
-*-28.277176 6422000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-24.277176 11105100000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] wrd.
 [treeopen] wrd.fc_inst.
 [sst_width] 240
@@ -72,7 +72,7 @@ wrd.conv_sipo_last
 wrd.conv_sipo_inst.state[1:0]
 @24
 wrd.conv_sipo_inst.counter[4:0]
-@23
+@22
 wrd.conv_sipo_inst.fifo_sel[7:0]
 @200
 -
@@ -87,7 +87,7 @@ wrd.zero_pad2_last
 @200
 -
 -Conv2
-@22
+@24
 wrd.conv2_data[7:0]
 @28
 wrd.conv2_valid
@@ -95,12 +95,22 @@ wrd.conv2_last
 @200
 -
 -Max Pool 2
-@22
+@24
 wrd.max_pool2_data[7:0]
 @28
 wrd.max_pool2_valid
 wrd.max_pool2_last
 @200
+-
+@24
+wrd.max_pool2.state[1:0]
+wrd.max_pool2.data_q[7:0]
+wrd.max_pool2.data_q2[7:0]
+@25
+wrd.max_pool2.max[7:0]
+@200
+-
+-
 -
 -Fc
 @22
@@ -123,16 +133,23 @@ wrd.fc_inst.mac_inst.data1_w_i[15:0]
 wrd.fc_inst.mac_inst.data1_b_i[63:0]
 @200
 -
-@22
-wrd.fc_inst.mac_inst.\mult_arr[0][15:0]
-wrd.fc_inst.mac_inst.\acc_arr[0][31:0]
-wrd.fc_inst.mac_inst.\add_arr[0][31:0]
+@24
+wrd.fc_inst.mac_inst.data0_i[7:0]
+@28
+wrd.fc_inst.mac_inst.valid0_i
 @200
 -
+@24
+wrd.fc_inst.mac_inst.\mult_arr[0][15:0]
+@28
+wrd.fc_inst.mac_inst.valid_q
+@24
+wrd.fc_inst.mac_inst.\acc_arr[0][31:0]
+@200
 -
--
--
--
+@24
+wrd.fc_inst.mac_inst.\add_arr[0][31:0]
+@200
 -
 -
 -

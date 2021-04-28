@@ -33,6 +33,7 @@ conv2_biases = weights_list[5]
 fc1_weights = weights_list[6]
 fc1_biases = weights_list[7]
 
+# fc1_weights = fc1_weights.reshape(13, 16, 2).transpose((1,0,2)).reshape(208, 2)
 
 # Numpy NN model
 
@@ -72,9 +73,6 @@ def max_pool_1d(x):
 def fc(x, weights, biases):
     '''A fully connected linear layer.'''
     x = x.flatten()
-    # print('x shape', x.shape)
-    # print('weights shape', weights.shape)
-    # print('biases shape', biases.shape)
     out = np.matmul(x, weights, dtype=np.int64) + biases
     return out
 
@@ -91,7 +89,7 @@ def scale_feature_map(x, shift):
     x = x.astype(np.int8)
     return x
 
-def get_numpy_pred_custom_params(features, params, quantize_input=False):
+def get_numpy_pred_custom_params(x, params, quantize_input=False):
     '''Top level function for running inference with the numpy model.
 
     quantize_input: treat the input as a floating point MFCC featurmap and
@@ -100,10 +98,9 @@ def get_numpy_pred_custom_params(features, params, quantize_input=False):
 
     c1w, c1b, c1s, c2w, c2b, c2s, fcw, fcb = params
 
-    assert features.ndim == 2
+    assert x.ndim == 2
 
     # condition input feature map
-    x = features
     if quantize_input:
         x = np.clip(np.round(x * input_scale), -128, 127).astype(np.int8)
         x = x.reshape((int(x.size / 13), 13))
@@ -125,11 +122,11 @@ def get_numpy_pred_custom_params(features, params, quantize_input=False):
         
     return x, conv1_out, conv2_out
 
-def get_numpy_pred(features):
+def get_numpy_pred(x):
     params = [conv1_weights, conv1_biases, bitshifts[0],
               conv2_weights, conv2_biases, bitshifts[1],
               fc1_weights, fc1_biases]
-    get_numpy_pred_custom_params(features, params)
+    return get_numpy_pred_custom_params(x, params, quantize_input=True)
 
 # Functions for external use in testbench
 
