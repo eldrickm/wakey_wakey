@@ -40,6 +40,9 @@ module mac #(
     input                                           ready_i
 );
 
+    localparam VALID_TIMEOUT_CYCLES         = 8;  // num cycles to reset after
+    localparam VALID_TIMEOUT_BW             = $clog2(VALID_TIMEOUT_CYCLES + 1);
+
     genvar i;
 
     // =========================================================================
@@ -91,8 +94,27 @@ module mac #(
     // Accumulation Buffer
     // =========================================================================
     // clear the accumulation buffer when valid has a rising edge
-    wire valid_i_pos_edge;
-    assign valid_i_pos_edge = valid0_i & (!valid_q);
+    // wire valid_i_pos_edge;
+    // assign valid_i_pos_edge = valid0_i & (!valid_q);
+
+    // clear the accumulation buffer if no valid data has been passed in for
+    // VALID_TIMEOUT_CYCLES cycles
+    wire valid_timeout;
+    reg [VALID_TIMEOUT_BW - 1: 0] valid_timeout_counter;
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            valid_timeout_counter <= 'd0;
+        end else begin
+            if (valid0_i) begin  // reset counter on valid data
+                valid_timeout_counter <= 'd0;
+            end else if (valid_timeout_counter == VALID_TIMEOUT_CYCLES) begin
+                valid_timeout_counter <= valid_timeout_counter;
+            end else begin
+                valid_timeout_counter <= valid_timeout_counter + 'd1;
+            end
+        end
+    end
+    assign valid_timeout = (valid_timeout_counter == VALID_TIMEOUT_CYCLES);
 
     reg signed [O_BW - 1: 0] acc_arr [NUM_CLASSES - 1 : 0];
     for (i = 0; i < NUM_CLASSES; i = i + 1) begin: fc_accumulate
@@ -100,7 +122,7 @@ module mac #(
             if (!rst_n_i) begin
                 acc_arr[i] <= 'd0;
             end else begin
-                if (last_q2 | valid_i_pos_edge) begin
+                if (last_q2 | valid_timeout) begin
                     acc_arr[i] <= 'd0;
                 end else begin
                     acc_arr[i] <= mult_arr[i] + acc_arr[i];
@@ -169,15 +191,9 @@ module mac #(
         $dumpfile ("wave.vcd");
         $dumpvars (0, mac);
         // reg [7:0] idx; // need integer for loop
-        $dumpvars(0, input_arr[0]);
-        $dumpvars(0, weight_arr[0]);
-        $dumpvars(0, bias_arr[0]);
         $dumpvars(0, mult_arr[0]);
         $dumpvars(0, acc_arr[0]);
         $dumpvars(0, add_arr[0]);
-        $dumpvars(0, input_arr[1]);
-        $dumpvars(0, weight_arr[1]);
-        $dumpvars(0, bias_arr[1]);
         $dumpvars(0, mult_arr[1]);
         $dumpvars(0, acc_arr[1]);
         $dumpvars(0, add_arr[1]);
