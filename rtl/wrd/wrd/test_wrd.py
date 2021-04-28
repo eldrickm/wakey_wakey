@@ -218,7 +218,6 @@ def get_fixed_conv_values(in_channels, out_channels):
 
 def get_fixed_conv_values2(in_channels, out_channels):
     weights = np.ones((3, in_channels, out_channels), dtype=np.int8)
-    # weights[0, 0, :] = np.ones(out_channels, dtype=np.int8)
     biases = np.zeros(out_channels, dtype=np.int32)
     shift = 0
     return weights, biases, shift
@@ -244,15 +243,21 @@ def get_fixed_input():
     input_features = np.ones((50, 13), dtype=np.int8)
     return input_features
 
+async def write_mem_params(dut, p):
+    c1w, c1b, c1s, c2w, c2b, c2s, fcw, fcb = p
+    await write_conv_mem(dut, 1, c1w, c1b, c1s)
+    await write_conv_mem(dut, 2, c2w, c2b, c2s)
+    await write_fc_mem(dut, fcw, fcb)
+
 async def write_all_mem_random(dut):
     '''Write random test values to all memories'''
     c1w, c1b, c1s = get_random_conv_values(13, 8)
     c2w, c2b, c2s = get_random_conv_values(8, 16)
     fcw, fcb      = get_random_fc_values(208, 2)
-    await write_conv_mem(dut, 1, c1w, c1b, c1s)
-    await write_conv_mem(dut, 2, c2w, c2b, c2s)
-    await write_fc_mem(dut, fcw, fcb)
-    return [c1w, c1b, c1s, c2w, c2b, c2s, fcw, fcb]
+
+    p = [c1w, c1b, c1s, c2w, c2b, c2s, fcw, fcb]
+    await write_mem_params(dut, p)
+    return p
 
 async def write_all_mem_fixed(dut):
     '''Write random test values to all memories'''
@@ -261,11 +266,10 @@ async def write_all_mem_fixed(dut):
     # c2w, c2b, c2s = get_random_conv_values(8, 16)
     fcw, fcb      = get_fixed_fc_values(208, 2)
     # fcw, fcb      = get_random_fc_values(208, 2)
-    await write_conv_mem(dut, 1, c1w, c1b, c1s)
-    await write_conv_mem(dut, 2, c2w, c2b, c2s)
-    await write_fc_mem(dut, fcw, fcb)
-    return [c1w, c1b, c1s, c2w, c2b, c2s, fcw, fcb]
 
+    p = [c1w, c1b, c1s, c2w, c2b, c2s, fcw, fcb]
+    await write_mem_params(dut, p)
+    return p
 
 async def do_random_test(dut):
     params = await write_all_mem_random(dut)

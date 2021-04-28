@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
-[*] Wed Apr 28 06:10:42 2021
+[*] Wed Apr 28 17:42:53 2021
 [*]
 [dumpfile] "/home/mjpauly/repos/wakey_wakey/rtl/wrd/wrd/wave.vcd"
-[dumpfile_mtime] "Wed Apr 28 06:06:16 2021"
-[dumpfile_size] 516073
+[dumpfile_mtime] "Wed Apr 28 06:52:57 2021"
+[dumpfile_size] 628906
 [savefile] "/home/mjpauly/repos/wakey_wakey/rtl/wrd/wrd/wrd.gtkw"
-[timestart] 10309900000
+[timestart] 5447000000
 [size] 1848 1016
 [pos] -1 -1
-*-26.277176 10705600000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-28.277176 6422000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] wrd.
 [treeopen] wrd.fc_inst.
 [sst_width] 240
@@ -68,6 +68,16 @@ wrd.conv_sipo_valid
 wrd.conv_sipo_last
 @200
 -
+@28
+wrd.conv_sipo_inst.state[1:0]
+@24
+wrd.conv_sipo_inst.counter[4:0]
+@23
+wrd.conv_sipo_inst.fifo_sel[7:0]
+@200
+-
+-
+-
 -Zero Pad 2
 @22
 wrd.zero_pad2_data[63:0]
@@ -108,11 +118,9 @@ wrd.fc_valid
 wrd.fc_last
 @200
 -
-@23
-wrd.fc_inst.mac_inst.data1_w_i[15:0]
 @22
+wrd.fc_inst.mac_inst.data1_w_i[15:0]
 wrd.fc_inst.mac_inst.data1_b_i[63:0]
-wrd.fc_inst.mac_inst.data0_i[15:0]
 @200
 -
 @22
@@ -120,9 +128,6 @@ wrd.fc_inst.mac_inst.\mult_arr[0][15:0]
 wrd.fc_inst.mac_inst.\acc_arr[0][31:0]
 wrd.fc_inst.mac_inst.\add_arr[0][31:0]
 @200
--
--
--
 -
 -
 -

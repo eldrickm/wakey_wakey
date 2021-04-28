@@ -73,9 +73,9 @@ module conv_sipo #(
     reg [VECTOR_LEN - 1 : 0] fifo_sel;
     always @(posedge clk_i) begin
         if (!rst_n_i) begin
-            fifo_sel <= {{VECTOR_LEN - 1{1'b0}}, 1'b1};
+            fifo_sel <= {{VECTOR_LEN - 1{1'b0}}, 1'b1};  // 'd1
         end else begin
-            fifo_sel <= (last_i) ?
+            fifo_sel <= (last_i & valid_i) ?
                         {fifo_sel[VECTOR_LEN - 2 : 0], fifo_sel[VECTOR_LEN - 1]}
                         : fifo_sel;
         end
