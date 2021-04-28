@@ -47,7 +47,7 @@ module wake #(
             case (state)
                 STATE_IDLE: begin
                     counter <= 'd0;
-                    state <= (data_i[0]) ? STATE_WAKE : STATE_IDLE;
+                    state <= (data_i[0] & valid_i) ? STATE_WAKE : STATE_IDLE;
                 end
                 STATE_WAKE: begin
                     counter <= counter + 'd1;

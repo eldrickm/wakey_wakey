@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
-[*] Wed Apr 28 19:22:27 2021
+[*] Wed Apr 28 21:44:19 2021
 [*]
 [dumpfile] "/home/mjpauly/repos/wakey_wakey/rtl/wrd/wrd/wave.vcd"
-[dumpfile_mtime] "Wed Apr 28 19:08:58 2021"
-[dumpfile_size] 583100
+[dumpfile_mtime] "Wed Apr 28 21:23:50 2021"
+[dumpfile_size] 26647970
 [savefile] "/home/mjpauly/repos/wakey_wakey/rtl/wrd/wrd/wrd.gtkw"
-[timestart] 11021200000
+[timestart] 85990000000
 [size] 1848 1016
 [pos] -1 -1
-*-24.277176 11095300000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-33.277176 118930000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] wrd.
 [treeopen] wrd.fc_inst.
 [sst_width] 240
@@ -102,18 +102,6 @@ wrd.max_pool2_valid
 wrd.max_pool2_last
 @200
 -
-@24
-wrd.max_pool2.state[1:0]
-@25
-wrd.max_pool2.data_i[7:0]
-@24
-wrd.max_pool2.data_q[7:0]
-wrd.max_pool2.data_q2[7:0]
-wrd.max_pool2.max[7:0]
-@200
--
--
--
 -Fc
 @22
 wrd.fc_inst.data_i[7:0]
@@ -130,28 +118,29 @@ wrd.fc_valid
 wrd.fc_last
 @200
 -
+-Argmax
 @22
-wrd.fc_inst.mac_inst.data1_w_i[15:0]
-wrd.fc_inst.mac_inst.data1_b_i[63:0]
-@200
--
-@24
-wrd.fc_inst.mac_inst.data0_i[7:0]
+wrd.argmax_inst.data_i[63:0]
 @28
-wrd.fc_inst.mac_inst.valid0_i
+wrd.argmax_inst.valid_i
+wrd.argmax_inst.last_i
 @200
 -
-@24
-wrd.fc_inst.mac_inst.\mult_arr[0][15:0]
 @28
-wrd.fc_inst.mac_inst.valid_q
-@24
-wrd.fc_inst.mac_inst.\acc_arr[0][31:0]
+wrd.argmax_inst.data_o[1:0]
+wrd.argmax_inst.last_o
+wrd.argmax_inst.valid_o
 @200
 -
+-Wake
+@29
+wrd.wake_inst.data_i[1:0]
+@28
+wrd.wake_inst.state
 @24
-wrd.fc_inst.mac_inst.\add_arr[0][31:0]
+wrd.wake_inst.counter[9:0]
 @200
+-
 -
 -
 -
