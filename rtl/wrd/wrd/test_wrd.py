@@ -84,7 +84,7 @@ async def write_fc_mem(dut, w, b):
     in_length, n_classes = w.shape
 
     # need to reorder weights
-    # w = w.reshape(13, 16, 2).transpose((1,0,2)).reshape(208, 2)
+    w = w.reshape(13, 16, 2).transpose((1,0,2)).reshape(208, 2)
 
     rd_en = dut.fc_rd_en_i
     wr_en = dut.fc_wr_en_i
@@ -212,6 +212,12 @@ def get_random_conv_values(in_channels, out_channels):
     shift = np.random.randint(32)
     return weights, biases, shift
 
+def get_random_conv_values2(in_channels, out_channels):
+    weights = get_random_int8((3, in_channels, out_channels))
+    biases = np.zeros(out_channels, dtype=np.int32)
+    shift = np.random.randint(32)
+    return weights, biases, shift
+
 def get_fixed_conv_values(in_channels, out_channels):
     weights = np.zeros((3, in_channels, out_channels), dtype=np.int8)
     weights[0, 0, :] = np.ones(out_channels, dtype=np.int8)
@@ -225,9 +231,20 @@ def get_fixed_conv_values2(in_channels, out_channels):
     shift = 0
     return weights, biases, shift
 
+def get_fixed_conv_values3(in_channels, out_channels):
+    weights = np.arange(3*in_channels*out_channels, dtype=np.int8) - 63
+    weights = weights.reshape(3, in_channels, out_channels)
+    biases = np.zeros(out_channels, dtype=np.int32)
+    shift = 0
+    return weights, biases, shift
+
 def get_random_fc_values(in_length, n_classes):
     weights = get_random_int8((in_length, n_classes))
-    # biases = get_random_int32(n_classes)
+    biases = get_random_int32(n_classes)
+    return weights, biases
+
+def get_random_fc_values2(in_length, n_classes):
+    weights = get_random_int8((in_length, n_classes))
     biases = np.zeros(n_classes)
     return weights, biases
 
@@ -235,6 +252,12 @@ def get_fixed_fc_values(in_length, n_classes):
     weights = np.ones((in_length, n_classes), dtype=np.int8)
     # seq = np.arange(in_length, dtype=np.int8).reshape(in_length, 1) - 10
     # weights = np.hstack((seq, seq))
+    biases = np.zeros(n_classes, dtype=np.int32)
+    return weights, biases
+
+def get_fixed_fc_values2(in_length, n_classes):
+    seq = np.arange(in_length, dtype=np.int8).reshape(in_length, 1) - 10
+    weights = np.hstack((seq, seq))
     biases = np.zeros(n_classes, dtype=np.int32)
     return weights, biases
 
@@ -252,11 +275,16 @@ async def write_mem_params(dut, p):
     await write_conv_mem(dut, 2, c2w, c2b, c2s)
     await write_fc_mem(dut, fcw, fcb)
 
-async def write_all_mem_random(dut):
+async def write_all_mem_random(dut, permutation=1):
     '''Write random test values to all memories'''
-    c1w, c1b, c1s = get_random_conv_values(13, 8)
-    c2w, c2b, c2s = get_random_conv_values(8, 16)
-    fcw, fcb      = get_random_fc_values(208, 2)
+    if permutation == 1:
+        c1w, c1b, c1s = get_random_conv_values(13, 8)
+        c2w, c2b, c2s = get_random_conv_values(8, 16)
+        fcw, fcb      = get_random_fc_values(208, 2)
+    else:
+        c1w, c1b, c1s = get_fixed_conv_values(13, 8)
+        c2w, c2b, c2s = get_fixed_conv_values(8, 16)
+        fcw, fcb      = get_random_fc_values2(208, 2)
 
     p = [c1w, c1b, c1s, c2w, c2b, c2s, fcw, fcb]
     await write_mem_params(dut, p)
@@ -268,18 +296,21 @@ async def write_all_mem_fixed(dut, permutation=1):
         c1w, c1b, c1s = get_fixed_conv_values(13, 8)
         c2w, c2b, c2s = get_fixed_conv_values(8, 16)
         fcw, fcb      = get_fixed_fc_values(208, 2)
-    # elif permutation == 2:
-    else:
+    elif permutation == 2:
         c1w, c1b, c1s = get_fixed_conv_values(13, 8)
         c2w, c2b, c2s = get_fixed_conv_values2(8, 16)
         fcw, fcb      = get_fixed_fc_values(208, 2)
+    else:
+        c1w, c1b, c1s = get_fixed_conv_values(13, 8)
+        c2w, c2b, c2s = get_fixed_conv_values(8, 16)
+        fcw, fcb      = get_fixed_fc_values2(208, 2)
 
     p = [c1w, c1b, c1s, c2w, c2b, c2s, fcw, fcb]
     await write_mem_params(dut, p)
     return p
 
-async def do_random_test(dut):
-    params = await write_all_mem_random(dut)
+async def do_random_test(dut, permutation=1):
+    params = await write_all_mem_random(dut, permutation=permutation)
     input_features = get_random_input()
     fc_exp, c1_exp, c2_exp = na.get_numpy_pred_custom_params(input_features, params)
 
@@ -340,10 +371,17 @@ async def test_conv1d(dut):
     print('Beginning test with fixed weights, biases, and features.')
     print('=' * 100)
 
-    await do_fixed_test(dut, 2)
+    # await do_fixed_test(dut, 3)
 
     # print('=' * 100)
     # print('Beginning test with random weights, biases, and features.')
     # print('=' * 100)
+
+    for testn in range(10):
 # 
-    # await do_random_test(dut)
+        await do_random_test(dut, 1)
+
+        for _ in range(int(1e3)):
+            await FallingEdge(dut.clk_i)
+
+    # await do_random_test(dut, 1)
