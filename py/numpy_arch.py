@@ -91,8 +91,12 @@ def scale_feature_map(x, shift):
     x = x.astype(np.int8)
     return x
 
-def get_numpy_pred_custom_params(features, params):
-    '''Top level function for running inference with the numpy model.'''
+def get_numpy_pred_custom_params(features, params, quantize_input=False):
+    '''Top level function for running inference with the numpy model.
+
+    quantize_input: treat the input as a floating point MFCC featurmap and
+                    quantize it
+    '''
 
     c1w, c1b, c1s, c2w, c2b, c2s, fcw, fcb = params
 
@@ -100,8 +104,9 @@ def get_numpy_pred_custom_params(features, params):
 
     # condition input feature map
     x = features
-    x = np.clip(np.round(x * input_scale), -128, 127).astype(np.int8)
-    x = x.reshape((int(x.size / 13), 13))
+    if quantize_input:
+        x = np.clip(np.round(x * input_scale), -128, 127).astype(np.int8)
+        x = x.reshape((int(x.size / 13), 13))
 
     # conv1
     x = conv1d_multi_kernel(x, c1w, c1b)

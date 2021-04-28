@@ -21,7 +21,7 @@ module mac #(
     input                                           rst_n_i,
 
     // streaming input
-    input  signed [(NUM_CLASSES * I_BW) - 1 : 0]    data0_i,
+    input  signed [I_BW - 1: 0]                     data0_i,
     input                                           valid0_i,
     input                                           last0_i,
     output                                          ready0_o,
@@ -64,13 +64,11 @@ module mac #(
     // Input Unpacking
     // =========================================================================
     // unpacked arrays
-    wire signed [I_BW - 1 : 0]    input_arr  [NUM_CLASSES - 1 : 0];
     wire signed [I_BW - 1 : 0]    weight_arr [NUM_CLASSES - 1 : 0];
     wire signed [BIAS_BW - 1 : 0] bias_arr   [NUM_CLASSES - 1 : 0];
 
     // unpack data input
     for (i = 0; i < NUM_CLASSES; i = i + 1) begin: unpack_inputs
-        assign input_arr[i]  = data0_i[(i + 1) * I_BW - 1 : i * I_BW];
         assign weight_arr[i] = data1_w_i[(i + 1) * I_BW - 1 : i * I_BW];
         assign bias_arr[i]   = data1_b_q2[(i + 1) * BIAS_BW - 1 : i * BIAS_BW];
     end
@@ -85,7 +83,7 @@ module mac #(
             if (!rst_n_i) begin
                 mult_arr[i] <= 'd0;
             end else begin
-                mult_arr[i] <= input_arr[i] * weight_arr[i];
+                mult_arr[i] <= data0_i * weight_arr[i];
             end
         end
     end
@@ -124,8 +122,10 @@ module mac #(
             end else begin
                 if (last_q2 | valid_timeout) begin
                     acc_arr[i] <= 'd0;
-                end else begin
+                end else if (valid_q) begin
                     acc_arr[i] <= mult_arr[i] + acc_arr[i];
+                end else begin
+                    acc_arr[i] <= acc_arr[i];
                 end
             end
         end

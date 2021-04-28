@@ -1,19 +1,19 @@
 [*]
 [*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
-[*] Mon Apr 26 23:41:33 2021
+[*] Wed Apr 28 06:10:42 2021
 [*]
 [dumpfile] "/home/mjpauly/repos/wakey_wakey/rtl/wrd/wrd/wave.vcd"
-[dumpfile_mtime] "Mon Apr 26 23:39:17 2021"
-[dumpfile_size] 3307603
+[dumpfile_mtime] "Wed Apr 28 06:06:16 2021"
+[dumpfile_size] 516073
 [savefile] "/home/mjpauly/repos/wakey_wakey/rtl/wrd/wrd/wrd.gtkw"
-[timestart] 10238200000
+[timestart] 10309900000
 [size] 1848 1016
 [pos] -1 -1
-*-26.277176 10411400000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-26.277176 10705600000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] wrd.
 [treeopen] wrd.fc_inst.
 [sst_width] 240
-[signals_width] 429
+[signals_width] 489
 [sst_expanded] 1
 [sst_vpaned_height] 256
 @200
@@ -101,40 +101,29 @@ wrd.fc_inst.valid_i
 wrd.fc_inst.last_i
 @200
 -
-@28
-wrd.fc_inst.valid_i_q
-wrd.fc_inst.fc_mem_valid
-wrd.fc_inst.fc_mem_inst.cycle_en_i
-[color] 6
-wrd.fc_inst.fc_mem_last
 @24
-[color] 6
-wrd.fc_inst.fc_mem_inst.frame_counter[7:0]
-@28
-wrd.fc_inst.mac_inst.valid_q
-wrd.fc_inst.mac_inst.valid_q2
-wrd.fc_inst.mac_inst.valid_q3
-wrd.fc_inst.mac_inst.valid_o
-@200
--
-@22
 wrd.fc_data[63:0]
 @28
 wrd.fc_valid
 wrd.fc_last
 @200
 -
--
--
--
--
-@24
-wrd.testtest[7:0]
-wrd.testtest2[7:0]
-wrd.testtest3[7:0]
-@25
-wrd.testtest4[7:0]
+@23
+wrd.fc_inst.mac_inst.data1_w_i[15:0]
+@22
+wrd.fc_inst.mac_inst.data1_b_i[63:0]
+wrd.fc_inst.mac_inst.data0_i[15:0]
 @200
+-
+@22
+wrd.fc_inst.mac_inst.\mult_arr[0][15:0]
+wrd.fc_inst.mac_inst.\acc_arr[0][31:0]
+wrd.fc_inst.mac_inst.\add_arr[0][31:0]
+@200
+-
+-
+-
+-
 -
 -
 -

@@ -94,7 +94,7 @@ module fc_top #(
     // MAC Array
     // ========================================================================
     // register stream input array to give fc_mem 1 cycle to ready outputs
-    reg signed [VECTOR_I_BW - 1 : 0] data_i_q;
+    reg signed [I_BW - 1 : 0]        data_i_q;
     reg                              valid_i_q;
     reg                              last_i_q;
     reg                              mac_ready0_q;
