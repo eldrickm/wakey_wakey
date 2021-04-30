@@ -1,6 +1,8 @@
-# Wakey-Wakey - RTL and Simulation
+# Wakey-Wakey - Writing and Running RTL Simulations
 
-[Verlog Style Guide](https://github.com/lowRISC/style-guides/blob/master/VerilogCodingStyle.md)
+For information about the architecture of the chip itself, please see the
+`ARCHITECTURE.md` documents in each folder.
+
 
 ## Setup
 
@@ -34,7 +36,7 @@ sudo apt install gtkwave
 ```
 
 ### Step 3 - Install cocotb
-Install [cocotb](https://github.com/cocotb/cocotb), the latesst stable
+Install [cocotb](https://github.com/cocotb/cocotb), the latest stable
 version can be installed with `pip`.
 ```
 pip install cocotb
@@ -42,17 +44,30 @@ pip install cocotb
 
 ## Usage
 
+In order to run a testbench, navigate to the respective module's directory
+and run `make`. Each testbench will report it's success / failure.
+
+Running `make` in the top level `rtl/` directory will concatenate all `.v` files
+into a single Verilog source file `design.v` ready for export into a synthesis
+tool. In particular, this makes export to the `openlane` flow fairly easy.
+
+### Why cocotb
 Our RTL design testbenches are designed to use no additional HDL code.
 All tests are written in `python` using `cocotb`.
-We believe this facilitates more robust, scalable testing compared to ad-hoc
-(System)Verilog testbenches.
 
+We believe this facilitates more robust, scalable testing compared to ad-hoc
+(System)Verilog testbenches as well as allowing us to directly use our
+Python software models in our testbench.
+
+### Creating a new cocotb testbench
 You can follow the
 [cocotb Quickstart Guide](https://docs.cocotb.org/en/stable/quickstart.html)
 to walk you through an example `cocotb` testbench.
 
+
 ## External IP - Dependencies
 - [FFT - zipcpu/dblclockfft](https://github.com/ZipCPU/dblclockfft)
+
 
 ## External IP - Resources
 In order of where you should look first!
@@ -61,9 +76,11 @@ In order of where you should look first!
 - [TU Dresden Pile of Cores](https://github.com/VLSI-EDA/PoC)
 - [FOSSi LibreCores](https://www.librecores.org/)
 
+
 ## Tool Documentation
 - [Verilator Manual](https://www.veripool.org/wiki/verilator/Manual-verilator)
 - [cocotb Documentation](https://docs.cocotb.org/en/stable/)
+- [Verlog Style Guide](https://github.com/lowRISC/style-guides/blob/master/VerilogCodingStyle.md)
 
 
 ## Contributors
