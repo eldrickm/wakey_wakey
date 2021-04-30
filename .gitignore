@@ -23,3 +23,4 @@ py/noise/
 py/unknown/
 py/yes/
 py/*.npy
+py/speechpy
