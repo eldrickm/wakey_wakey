@@ -1,47 +1,22 @@
-# Wakey-Wakey - RTL and Simulation
+# Wakey-Wakey - Physical Design
 
-This document covers how to setup and run our testbenches for our design.
-For information about the architecture and test objectives themselves, please
-see the `ARCHITECTURE.md` documents in each folder.
+This document covers how to use the `OpenLANE` flow for RTL-to-GDS generation.
+This document also summarizes our key design metrics.
 
 
 ## Setup
 
-You have two options for a simulation backend - Icarus Verilog or Verilator
-We recommend Icarus Verilog as cocotb + Verilator support is experimental.
+### Step 1 - Install OpenLANE
+Install [OpenLANE](https://github.com/efabless/openlane).
+`OpenLANE` has been tricky to install. We are using Stanford's `caddy` computer
+cluster on which we were able to get OpenLANE running.
 
 
-### (Recommended) Step 1 - Install Icarus Verilog
-Install [Icarus Verilog](https://github.com/steveicarus/iverilog).
-Ubuntu 20.04 users can use `apt` directly to install.
-```
-sudo apt install iverilog
-```
+### Step 2 - Create a new OpenLANE design
 
-### (Not Recommended) Step 1 - Install Verilator
-Install [Verilator](https://github.com/verilator/verilator) using these
-[instructions](https://www.veripool.org/projects/verilator/wiki/Installing).
+### Step 3 - Export RTL to the OpenLANE design
 
-In order to work with `cocotb` you will need to install Verilator 4.106
-This version is currently not updated in Ubuntu 20.04 PPAs, so you will
-need to build from source.
-
-Building Verilator 4.201 from GitHub has been verified to work.
-Keep in mind that the `make` process can take a while.
-
-### Step 2 - Install GTKWave
-Install [GTKWave](http://gtkwave.sourceforge.net/).
-Ubuntu 20.04 users can use `apt` directly to install.
-```
-sudo apt install gtkwave
-```
-
-### Step 3 - Install cocotb
-Install [cocotb](https://github.com/cocotb/cocotb), the latest stable
-version can be installed with `pip`.
-```
-pip install cocotb
-```
+### Step 4 - Export RTL to the OpenLANE design
 
 ## Usage
 

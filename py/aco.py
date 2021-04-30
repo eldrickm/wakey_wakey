@@ -69,11 +69,18 @@ def aco(signal):
 
     # Outstanding Questions:
     # 1) What is our sampling rate? Do we want to anti-alias and downsample?
+    #       >> Fs = TODO?
+    #       >> Anti-alias / Downsample:
     # 2) Will we plan on constant 1s of samples per activation?
-    # 3) How much will we overlap our windows?
+    #       >> Yes!
+    #       >> Enforce this at DFE
+    # 3) How much will we overlap our frames?
+    #       >> 1s -> 50 frames (20ms) stride of 20ms, so no overlap!
     # 4) Do we need a Hamming window? speechpy does not use one
-    # 5) Anti-aliasing and downsampling?
-    # 6) Should we buffer the 20ms of data coming in for processing?
+    #       >> Nope
+    # 5) Should we buffer the 20ms of data coming in for processing?
+    #       >> Buffer the input feature map to the model, after ACO
+    #       >> 256 samples?
 
     # 1) preemphasis
     # delay by 1, preemphasis coefficient = 31 / 32 = 0.96875
@@ -81,25 +88,18 @@ def aco(signal):
     preemphasis_out = signal - 31 * rolled_signal / 32
 
     # 2) framing
-    # split into overlapping frames
 
+    # 3) fft
+    # FFT on each frame
 
-    # 3) windowing
-
-
-    # 4) fft
-    # FFT on each window
-
-    # 5) power spectrum
+    # 4) power spectrum
     # power spectrum = amplitude spectrum squared = real^2 + complex^2 / FFT_PTS
 
     # 6) mel filterbank elementwise multiplicaton (parallelized x13)
 
-    # 7) log?
+    # 7) dct
 
-    # 8) dct
-
-    # 9) cmvnw
+    # 8) cmvnw (scaling)
 
 
 # collect a big list of filenames and a big list of labels
