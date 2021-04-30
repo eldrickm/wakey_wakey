@@ -54,7 +54,7 @@ module conv_sipo #(
             case (state)
                 STATE_IDLE: begin
                     counter <= 'd0;
-                    state   <= ((fifo_sel == {1'b1, {VECTOR_LEN - 1{1'b0}}})
+                    state   <= ((fifo_sel == {{VECTOR_LEN - 1{1'b0}}, 1'b1})
                                && (last_i)) ? STATE_OUTPUT : STATE_IDLE;
                 end
                 STATE_OUTPUT: begin
@@ -73,10 +73,10 @@ module conv_sipo #(
     reg [VECTOR_LEN - 1 : 0] fifo_sel;
     always @(posedge clk_i) begin
         if (!rst_n_i) begin
-            fifo_sel <= {{VECTOR_LEN - 1{1'b0}}, 1'b1};  // 'd1
+            fifo_sel <= {1'b1, {VECTOR_LEN - 1{1'b0}}};
         end else begin
             fifo_sel <= (last_i & valid_i) ?
-                        {fifo_sel[VECTOR_LEN - 2 : 0], fifo_sel[VECTOR_LEN - 1]}
+                        {fifo_sel[0], fifo_sel[VECTOR_LEN - 1 : 1]}
                         : fifo_sel;
         end
     end

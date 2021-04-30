@@ -1,16 +1,21 @@
 [*]
 [*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
-[*] Wed Apr 28 21:44:19 2021
+[*] Fri Apr 30 04:57:20 2021
 [*]
 [dumpfile] "/home/mjpauly/repos/wakey_wakey/rtl/wrd/wrd/wave.vcd"
-[dumpfile_mtime] "Wed Apr 28 21:23:50 2021"
-[dumpfile_size] 26647970
+[dumpfile_mtime] "Fri Apr 30 04:55:22 2021"
+[dumpfile_size] 43506331
 [savefile] "/home/mjpauly/repos/wakey_wakey/rtl/wrd/wrd/wrd.gtkw"
-[timestart] 85990000000
+[timestart] 0
 [size] 1848 1016
 [pos] -1 -1
-*-33.277176 118930000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-33.277176 15200000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] wrd.
+[treeopen] wrd.conv2.vector_multiply[0].
+[treeopen] wrd.conv2.vector_multiply[2].
+[treeopen] wrd.conv_sipo_inst.
+[treeopen] wrd.conv_sipo_inst.create_sipo_fifo[0].
+[treeopen] wrd.conv_sipo_inst.create_sipo_fifo[7].
 [treeopen] wrd.fc_inst.
 [sst_width] 240
 [signals_width] 489
@@ -53,7 +58,7 @@ wrd.conv2_last
 @200
 -
 -Max pool 1
-@22
+@420
 wrd.max_pool1_data[7:0]
 @28
 wrd.max_pool1_valid
@@ -67,16 +72,6 @@ wrd.conv_sipo_data[63:0]
 wrd.conv_sipo_valid
 wrd.conv_sipo_last
 @200
--
-@28
-wrd.conv_sipo_inst.state[1:0]
-@24
-wrd.conv_sipo_inst.counter[4:0]
-@22
-wrd.conv_sipo_inst.fifo_sel[7:0]
-@200
--
--
 -
 -Zero Pad 2
 @22
@@ -133,9 +128,8 @@ wrd.argmax_inst.valid_o
 @200
 -
 -Wake
-@29
-wrd.wake_inst.data_i[1:0]
 @28
+wrd.wake_inst.data_i[1:0]
 wrd.wake_inst.state
 @24
 wrd.wake_inst.counter[9:0]

@@ -19,7 +19,8 @@ INT8_MAX = np.iinfo(np.int8).max
 INT32_MIN = np.iinfo(np.int32).min
 INT32_MAX = np.iinfo(np.int32).max
 
-ENABLE_ASSERTS = False
+# ENABLE_ASSERTS = False
+ENABLE_ASSERTS = True
 
 def np2bv(int_arr):
     """ Convert a 8b integer numpy array in cocotb BinaryValue """
@@ -149,6 +150,9 @@ async def read_conv_output(dut, conv_num, n_frames, n_channels, expected):
         valid = dut.conv2_valid
         last = dut.conv2_last
 
+    # track mismatches
+    mismatches = []
+
     while (received_values < total_values):
         await FallingEdge(dut.clk_i)
         if valid.value == 1:
@@ -158,22 +162,27 @@ async def read_conv_output(dut, conv_num, n_frames, n_channels, expected):
             output_arr[frame_num, channel_num] = value
             expected_value = expected[frame_num, channel_num]
             received_values += 1
+            if value != expected_value:
+                mismatches.append([frame_num, channel_num, value, expected_value])
             if ENABLE_ASSERTS:
-                assert value == expected_value, \
-                       (('Output at frame {} and channel {} of value {} does not match '
-                           'expected output of {}').format(frame_num, channel_num, value,
-                                                           expected_value))
                 if last == 1:
                     assert frame_num == n_frames - 1, \
                            'last_o asserted at unexpected frame number of {}'.format(frame_num)
                 else:
                     assert frame_num != n_frames - 1, \
                            'last_o not asserted at expected frame number of {}'.format(frame_num)
-
-    print('Received output:')
+    if len(mismatches) > 0:
+        print('Conv {} output has {} mismatches! They are:'.format(conv_num,
+                                                            len(mismatches)))
+        for m in mismatches:
+            print('Frame {}, channel {}, received value {}, expected value {}'.format(
+                                m[0], m[1], m[2], m[3]))
+    print('Conv {} received output:'.format(conv_num))
     print(output_arr)
     print('Expected output:')
     print(expected)
+    if ENABLE_ASSERTS:
+        assert len(mismatches) == 0, 'Output mismatch for conv'
 
 async def read_fc_output(dut, expected):
     '''Receive the output featuremap and put it in a numpy array.'''
@@ -206,10 +215,14 @@ def get_random_int8(size):
 def get_random_int32(size):
     return np.random.randint(INT32_MIN, INT32_MAX, size, dtype=np.int32)
 
-def get_random_conv_values(in_channels, out_channels):
+def get_random_conv_values(in_channels, out_channels, zero_biases=False):
     weights = get_random_int8((3, in_channels, out_channels))
-    biases = get_random_int32(out_channels)
-    shift = np.random.randint(32)
+    if zero_biases:
+        biases = np.zeros(out_channels, dtype=np.int32)
+        shift = 0
+    else:
+        biases = get_random_int32(out_channels)
+        shift = np.random.randint(32)
     return weights, biases, shift
 
 def get_random_conv_values2(in_channels, out_channels):
@@ -238,9 +251,12 @@ def get_fixed_conv_values3(in_channels, out_channels):
     shift = 0
     return weights, biases, shift
 
-def get_random_fc_values(in_length, n_classes):
+def get_random_fc_values(in_length, n_classes, zero_biases=False):
     weights = get_random_int8((in_length, n_classes))
-    biases = get_random_int32(n_classes)
+    if zero_biases:
+        biases = np.zeros(n_classes, dtype=np.int32)
+    else:
+        biases = get_random_int32(n_classes)
     return weights, biases
 
 def get_random_fc_values2(in_length, n_classes):
@@ -250,8 +266,6 @@ def get_random_fc_values2(in_length, n_classes):
 
 def get_fixed_fc_values(in_length, n_classes):
     weights = np.ones((in_length, n_classes), dtype=np.int8)
-    # seq = np.arange(in_length, dtype=np.int8).reshape(in_length, 1) - 10
-    # weights = np.hstack((seq, seq))
     biases = np.zeros(n_classes, dtype=np.int32)
     return weights, biases
 
@@ -269,6 +283,10 @@ def get_fixed_input():
     input_features = np.ones((50, 13), dtype=np.int8)
     return input_features
 
+def get_fixed_input2():
+    input_features = np.arange(-128, 50*13 - 128, dtype=np.int8).reshape((50, 13))
+    return input_features
+
 async def write_mem_params(dut, p):
     c1w, c1b, c1s, c2w, c2b, c2s, fcw, fcb = p
     await write_conv_mem(dut, 1, c1w, c1b, c1s)
@@ -281,10 +299,14 @@ async def write_all_mem_random(dut, permutation=1):
         c1w, c1b, c1s = get_random_conv_values(13, 8)
         c2w, c2b, c2s = get_random_conv_values(8, 16)
         fcw, fcb      = get_random_fc_values(208, 2)
-    else:
+    elif permutation == 2:
         c1w, c1b, c1s = get_fixed_conv_values(13, 8)
         c2w, c2b, c2s = get_fixed_conv_values(8, 16)
         fcw, fcb      = get_random_fc_values2(208, 2)
+    else:
+        c1w, c1b, c1s = get_random_conv_values(13, 8, zero_biases=True)
+        c2w, c2b, c2s = get_random_conv_values(8, 16, zero_biases=True)
+        fcw, fcb      = get_random_fc_values(208, 2, zero_biases=True)
 
     p = [c1w, c1b, c1s, c2w, c2b, c2s, fcw, fcb]
     await write_mem_params(dut, p)
@@ -300,8 +322,12 @@ async def write_all_mem_fixed(dut, permutation=1):
         c1w, c1b, c1s = get_fixed_conv_values(13, 8)
         c2w, c2b, c2s = get_fixed_conv_values2(8, 16)
         fcw, fcb      = get_fixed_fc_values(208, 2)
-    else:
+    elif permutation == 3:
         c1w, c1b, c1s = get_fixed_conv_values(13, 8)
+        c2w, c2b, c2s = get_fixed_conv_values(8, 16)
+        fcw, fcb      = get_fixed_fc_values2(208, 2)
+    else:
+        c1w, c1b, c1s = get_fixed_conv_values3(13, 8)
         c2w, c2b, c2s = get_fixed_conv_values(8, 16)
         fcw, fcb      = get_fixed_fc_values2(208, 2)
 
@@ -315,19 +341,26 @@ async def do_random_test(dut, permutation=1):
     fc_exp, c1_exp, c2_exp = na.get_numpy_pred_custom_params(input_features, params)
 
     await write_input_features(dut, input_features)
-    # await read_conv_output(dut, 1, 50, 8, c1_exp)
-    # await read_conv_output(dut, 2, 25, 16, c2_exp)
+    cocotb.fork(read_conv_output(dut, 1, 50, 8, c1_exp))
+    cocotb.fork(read_conv_output(dut, 2, 25, 16, c2_exp))
     await read_fc_output(dut, fc_exp)
 
 async def do_fixed_test(dut, permutation=1):
     params = await write_all_mem_fixed(dut, permutation=permutation)
-    input_features = get_fixed_input()
+    if permutation == 4:
+        input_features = get_fixed_input2()
+    else:
+        input_features = get_fixed_input()
     fc_exp, c1_exp, c2_exp = na.get_numpy_pred_custom_params(input_features, params)
 
     await write_input_features(dut, input_features)
-    # await read_conv_output(dut, 1, 50, 8, c1_exp)
-    # await read_conv_output(dut, 2, 25, 16, c2_exp)
+    cocotb.fork(read_conv_output(dut, 1, 50, 8, c1_exp))
+    cocotb.fork(read_conv_output(dut, 2, 25, 16, c2_exp))
     await read_fc_output(dut, fc_exp)
+
+async def wait_test_finish(dut):
+    for _ in range(int(1e2)):
+        await FallingEdge(dut.clk_i)
 
 
 @cocotb.test()
@@ -367,21 +400,24 @@ async def test_conv1d(dut):
     dut.rst_n_i <= 1
     await FallingEdge(dut.clk_i)
 
-    print('=' * 100)
-    print('Beginning test with fixed weights, biases, and features.')
-    print('=' * 100)
+    n_fixed_tests = 4  # number of different types of fixed tests
+    for i in range(n_fixed_tests):
 
-    # await do_fixed_test(dut, 3)
+        print('=' * 100)
+        print('Beginning fixed test {}/{}.'.format(i+1, n_fixed_tests))
+        print('=' * 100)
 
-    # print('=' * 100)
-    # print('Beginning test with random weights, biases, and features.')
-    # print('=' * 100)
+        await do_fixed_test(dut, i)
+        # await wait_test_finish(dut)
 
-    for testn in range(10):
-# 
-        await do_random_test(dut, 1)
+    n_random_tests = 3  # number of different types of random tests
+    n_repeats = 1  # how many times to repeat each random test
+    for i in range(n_random_tests):
+        for j in range(n_repeats):
+            print('=' * 100)
+            print('Beginning random test {}/{} repeat num {}/{}.' \
+                    .format(i+1, n_fixed_tests, j+1, n_repeats))
+            print('=' * 100)
 
-        for _ in range(int(1e3)):
-            await FallingEdge(dut.clk_i)
-
-    # await do_random_test(dut, 1)
+            await do_random_test(dut, i)
+            # await wait_test_finish(dut)
