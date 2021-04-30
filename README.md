@@ -6,15 +6,52 @@
 
 ## Special Note for 2021-04-30 RTL Submission:
 
-TODO:
-- Completed a full custom DNN accelerator! ANd verified
-- Have functional models for our featurization pipeline
-- We're actively developing our DFE because we are doing this on a real HW dev
-  Vesper mic arrives 2 days ago.
-- CFG - Wishbone from Caravel, trivial.
-- Our RTL not fully finished but our design is all standard cells, on track for
-  tapeout since PD is easy and we've done it already.
+As of 2021-04-30, we've accomplished a great deal. We've managed to design and
+verify a fully custom DNN accelerator for our DNN architecture, tested directly
+against a Python model that we have created and quantized ourselves. Targeting
+the toughest and riskiest part of our design first was a deliberate decision.
 
+We've managed to achieve > 95% test accuracy with our model on detecting the
+word "Yes" against noise and other words like "No" with just around an hour's
+worth of training data. Furthermore, we've implemented this whole model in
+RTL and using `cocotb`'s ability to run testbenches directly with Python, it's
+been a breeze to directly compare our RTL results to the actual Python model
+and verify functionality.
+
+We've then reached out to Vesper, a microphone manufacturer specializing in
+low-power microphones that activate upon voice activity for samples and received
+them as of two days ago. We're excited to work on our microphone interface
+by using an FPGA to direcly test our PDM interface to our microphone samples.
+
+That being said, we still have a few tasks ahead, namely finishing the RTL
+implementation of our acoustic featurization pipeline, completing the PDM
+microphone interface, and adding in a shim layer between Caravel's wishbone
+interface and our the reconfigurable memories in our design.
+
+Overall however, we think we're on track to tapeout. We've already ran critical
+parts of our design through OpenLANE (conv1d to GDS, wrd to LEF LVS) and we're
+confident given the fully standard cell nature of our design that our PD process
+will be straightforward.
+
+Accomplished:
+- Software modeling of our DNN architecture
+- Trained DNN model and passed > 95% accuracy on hours-worth of training data
+- Quantization of our DNN model
+- Full RTL implementation of our DNN model
+- Verification of DNN RTL against software gold model
+- Requested and received HW test board sample for our microphone
+- Ran `conv1d` module end-to-end on the OpenLANE flow to GDS
+- Ran full DNN accelerator, the `wrd` module, on the OpenLANE flow to LEF LVS
+- Completed software model of our feature pipeline, quantized to integers
+
+Things to Wrap Up in RTL:
+- Implement microphone interface and verify on FPGA and test hardware
+- Implement acoustic featurization pipeline in RTL
+- Implement Caravel-Wishbone configuration interface for our configurable params
+
+
+Submission Details
+---
 For your code submission deadline tomorrow please submit a document on canvas
 with the commit hash we should look at in your code repository. At this commit
 in your repo you should have:
@@ -42,7 +79,7 @@ in your repo you should have:
    they compare to your initial targets (similar to how you presented in your
    design reviews).
 
-    Please see `pd/README.md` for a summary of our key design metrics.
+    Please see the [Metrics] section below
 
 We will grade your submission based on:
 
@@ -58,6 +95,7 @@ We will grade your submission based on:
 ## Table of Contents
 
 - [Overview](#overview)
+- [Metrics](#metrics)
 - [References](#references)
 - [Architecture](#architecture)
 - [Contributors](#contributors)
@@ -83,6 +121,21 @@ The project is structured as follows:
 
 - `rtl` contains RTL source files and associated testbenches. Further details on
    RTL architecture and running the testbenches can be found in this repo.
+
+
+## Metrics
+
+TODO
+Metrics were gathered as of 2021-04-30
+
+### Area
+
+### Timing
+
+### Power
+
+### Accuracy
+
 
 ## Architecture
 
