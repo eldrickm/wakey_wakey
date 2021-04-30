@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
-[*] Fri Apr 30 04:57:20 2021
+[*] Fri Apr 30 06:06:16 2021
 [*]
 [dumpfile] "/home/mjpauly/repos/wakey_wakey/rtl/wrd/wrd/wave.vcd"
-[dumpfile_mtime] "Fri Apr 30 04:55:22 2021"
-[dumpfile_size] 43506331
+[dumpfile_mtime] "Fri Apr 30 06:01:14 2021"
+[dumpfile_size] 41084202
 [savefile] "/home/mjpauly/repos/wakey_wakey/rtl/wrd/wrd/wrd.gtkw"
-[timestart] 0
+[timestart] 13930000000
 [size] 1848 1016
 [pos] -1 -1
-*-33.277176 15200000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-33.277176 29750000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] wrd.
 [treeopen] wrd.conv2.vector_multiply[0].
 [treeopen] wrd.conv2.vector_multiply[2].
@@ -124,6 +124,7 @@ wrd.argmax_inst.last_i
 @28
 wrd.argmax_inst.data_o[1:0]
 wrd.argmax_inst.last_o
+@29
 wrd.argmax_inst.valid_o
 @200
 -

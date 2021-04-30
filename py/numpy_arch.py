@@ -123,12 +123,14 @@ def get_numpy_pred_custom_params(x, params, quantize_input=False):
     return x, conv1_out, conv2_out
 
 def get_numpy_pred(x):
+    '''Get the output for an unquantized MFCC featuremap.'''
     params = [conv1_weights, conv1_biases, bitshifts[0],
               conv2_weights, conv2_biases, bitshifts[1],
               fc1_weights, fc1_biases]
     return get_numpy_pred_custom_params(x, params, quantize_input=True)
 
 # Functions for external use in testbench
+# MFCC featurmaps returned are expected to be quantized already
 
 def get_num_train_samples():
     return features.X.shape[0]
@@ -140,6 +142,10 @@ def get_featuremap(index):
     x = x.reshape((int(x.size / 13), 13))
     return x
 
+def get_random_featuremap():
+    index = np.random.randint(get_num_train_samples())
+    return get_featuremap(index), index
+
 def get_numpy_pred_index(index):
     '''Run inference for training sample given its index.'''
     return get_numpy_pred(features.X[index:index+1,:])
@@ -147,3 +153,10 @@ def get_numpy_pred_index(index):
 def output_is_equal(y1, y2):
     diff = y1 - y2
     return np.abs(diff).max() < 1e-9
+
+def get_params():
+    '''Return the trained model weights for writing to dut memory.'''
+    params = [conv1_weights, conv1_biases, bitshifts[0],
+              conv2_weights, conv2_biases, bitshifts[1],
+              fc1_weights, fc1_biases]
+    return params

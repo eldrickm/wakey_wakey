@@ -19,7 +19,6 @@ INT8_MAX = np.iinfo(np.int8).max
 INT32_MIN = np.iinfo(np.int32).min
 INT32_MAX = np.iinfo(np.int32).max
 
-# ENABLE_ASSERTS = False
 ENABLE_ASSERTS = True
 
 def np2bv(int_arr):
@@ -30,6 +29,8 @@ def np2bv(int_arr):
     bin_string = ''.join(binarized)
     return BinaryValue(bin_string)
 
+
+# ==================== Writing to dut ====================
 
 async def write_conv_mem(dut, conv_num, weights, biases, shift):
     '''Write weights and biases to the convolution memory.
@@ -135,6 +136,9 @@ async def write_input_features(dut, x):
     dut.last_i <= 0
     dut.data_i <= 0
 
+
+# ==================== Reading from dut ====================
+
 async def read_conv_output(dut, conv_num, n_frames, n_channels, expected):
     '''Receive the output featuremap and put it in a numpy array.'''
     total_values = n_frames * n_channels
@@ -208,6 +212,19 @@ async def read_fc_output(dut, expected):
     print('Expected output:')
     print(expected)
 
+async def read_wake(dut, wake_expected):
+    '''Check the wake signal is as expected.'''
+    for _ in range(10):
+        await FallingEdge(dut.clk_i)
+    wake = dut.wake_o.value
+    if wake_expected:
+        assert wake == 1, 'Wake not asserted as expected.'
+    else:
+        assert wake == 0, 'Wake asserted unexpectedly.'
+    print('Wake behavior as expected.')
+
+
+# ==================== Generating inputs ====================
 
 def get_random_int8(size):
     return np.random.randint(INT8_MIN, INT8_MAX, size, dtype=np.int8)
@@ -287,6 +304,8 @@ def get_fixed_input2():
     input_features = np.arange(-128, 50*13 - 128, dtype=np.int8).reshape((50, 13))
     return input_features
 
+# ==================== Writing generated inputs ====================
+
 async def write_mem_params(dut, p):
     c1w, c1b, c1s, c2w, c2b, c2s, fcw, fcb = p
     await write_conv_mem(dut, 1, c1w, c1b, c1s)
@@ -335,6 +354,8 @@ async def write_all_mem_fixed(dut, permutation=1):
     await write_mem_params(dut, p)
     return p
 
+# ==================== Individual tests ====================
+
 async def do_random_test(dut, permutation=1):
     params = await write_all_mem_random(dut, permutation=permutation)
     input_features = get_random_input()
@@ -358,9 +379,19 @@ async def do_fixed_test(dut, permutation=1):
     cocotb.fork(read_conv_output(dut, 2, 25, 16, c2_exp))
     await read_fc_output(dut, fc_exp)
 
-async def wait_test_finish(dut):
-    for _ in range(int(1e2)):
-        await FallingEdge(dut.clk_i)
+async def do_mfcc_test(dut):
+    input_features, index = na.get_random_featuremap()
+    fc_exp, c1_exp, c2_exp = na.get_numpy_pred_custom_params(input_features, \
+                                                             na.get_params())
+    wake = (fc_exp[0] > fc_exp[1])
+    assert np.argmax(fc_exp) == na.features.Y[index] - 1, \
+                    'Fc argmax does not match label.'
+
+    await write_input_features(dut, input_features)
+    cocotb.fork(read_conv_output(dut, 1, 50, 8, c1_exp))
+    cocotb.fork(read_conv_output(dut, 2, 25, 16, c2_exp))
+    await read_fc_output(dut, fc_exp)
+    await read_wake(dut, wake)
 
 
 @cocotb.test()
@@ -395,6 +426,7 @@ async def test_conv1d(dut):
     dut.fc_rd_wr_addr_i <= 0
     dut.fc_wr_data_i <= 0
 
+    # wait long enough for reset to be effective
     for _ in range(50):
         await FallingEdge(dut.clk_i)
     dut.rst_n_i <= 1
@@ -402,13 +434,10 @@ async def test_conv1d(dut):
 
     n_fixed_tests = 4  # number of different types of fixed tests
     for i in range(n_fixed_tests):
-
         print('=' * 100)
         print('Beginning fixed test {}/{}.'.format(i+1, n_fixed_tests))
         print('=' * 100)
-
         await do_fixed_test(dut, i)
-        # await wait_test_finish(dut)
 
     n_random_tests = 3  # number of different types of random tests
     n_repeats = 1  # how many times to repeat each random test
@@ -416,8 +445,15 @@ async def test_conv1d(dut):
         for j in range(n_repeats):
             print('=' * 100)
             print('Beginning random test {}/{} repeat num {}/{}.' \
-                    .format(i+1, n_fixed_tests, j+1, n_repeats))
+                    .format(i+1, n_random_tests, j+1, n_repeats))
             print('=' * 100)
-
             await do_random_test(dut, i)
-            # await wait_test_finish(dut)
+
+    n_mfcc_tests = 10  # number of tests to do with real MFCC features
+    for i in range(n_mfcc_tests):
+        print('=' * 100)
+        print('Beginning MFCC test {}/{} '.format(i+1, n_mfcc_tests))
+        print('=' * 100)
+        params = na.get_params()
+        await write_mem_params(dut, params)
+        await do_mfcc_test(dut)
