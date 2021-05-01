@@ -19,6 +19,9 @@ test_results = []
 expected_results = []
 titles = []
 
+OKGREEN = '\033[92m'
+ENDC = '\033[0m'
+
 def np2bv(int_arr):
     """ Convert a 16b integer numpy array in cocotb BinaryValue """
     int_list = int_arr.tolist()
@@ -28,18 +31,18 @@ def np2bv(int_arr):
     return BinaryValue(bin_string)
 
 def constant_sig():
-    titles.append('constant input')
+    titles.append('Constant input')
     return np.ones(256)
 
 def cosine_sig(f):
-    titles.append('cosine input')
+    titles.append('Cosine input')
     t = np.linspace(0, 1, 256)  # test with 1 second sampling at 256 Hz
     f = 5  # 5 Hz
     sig = 100 * np.cos(2*np.pi * f * t)
     return sig
 
 def random_sig():
-    titles.append('random input')
+    titles.append('Random input')
     sig = np.random.randn(256) * 256
     sig = sig.astype(np.int16)
     return sig
@@ -99,6 +102,9 @@ def gen_result_plots():
                   'Max deviation of {}% in result'.format(percent_err.max()))
             if ENABLE_ASSERTS:
                 raise Exception('Output deviation above error threshold')
+        else:
+            print(OKGREEN + titles[i],
+                  'expected output within error threshold.', ENDC)
 
 @cocotb.test()
 async def test_fft(dut):
