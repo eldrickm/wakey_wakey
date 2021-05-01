@@ -79,7 +79,7 @@ in your repo you should have:
    they compare to your initial targets (similar to how you presented in your
    design reviews).
 
-    Please see the [Metrics] section below
+    Please see the [Metrics](#metrics) section below
 
 We will grade your submission based on:
 
@@ -132,14 +132,18 @@ Metrics were gathered as of 2021-04-30
 We have results from the `fastroute` step in `OpenLANE` for our full WRD module,
 the DNN accelerator. We used a target utilization density of 50%.
 
-Our design area clocks in at 2,345,032.8 um^2 or 2.34 mm^2, which is promising
-since this is by far the largest part of our design.
+Our design area clocks in at `2,345,032.8 um^2` or `2.34 mm^2`, which is
+promising since this is by far the largest part of our design.
+
+We expect to be able to meet our area constraint given these promising results.
 
 ### Timing
 
 We were able to met 10 MHz of timing, but slack analysis shows that we can
 likely hit 30 MHz without further optimization, and likely much faster with
 some rudimentary critical path improvement.
+
+This is well within our expectations.
 
 ### Power
 
@@ -150,6 +154,8 @@ TBD
 Please see `py/README` for further details.
 Train: 98.85 %
 Test: 97.18 %
+
+This is well within our expectations.
 
 
 ## Architecture
