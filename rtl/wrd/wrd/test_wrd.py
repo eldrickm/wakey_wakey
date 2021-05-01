@@ -384,8 +384,11 @@ async def do_mfcc_test(dut):
     fc_exp, c1_exp, c2_exp = na.get_numpy_pred_custom_params(input_features, \
                                                              na.get_params())
     wake = (fc_exp[0] > fc_exp[1])
-    assert np.argmax(fc_exp) == na.features.Y[index] - 1, \
-                    'Fc argmax does not match label.'
+    if np.argmax(fc_exp) != na.features.Y[index] - 1:
+        print('Fc argmax not matching expected label.')
+        print('fc:', fc_exp)
+        print('label:', na.features.Y[index] - 1)
+        raise Exception('Fc argmax and label mismatch.')
 
     await write_input_features(dut, input_features)
     cocotb.fork(read_conv_output(dut, 1, 50, 8, c1_exp))

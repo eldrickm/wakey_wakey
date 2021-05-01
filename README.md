@@ -59,7 +59,7 @@ in your repo you should have:
 1. A document in the repo listing all your blocks and a list of tests you ran on
    each block and at the top level.
 
-    Please see `rtl/ARCHITECTURE.md` for a listing of all of our blocks and
+    Please see `rtl/*/ARCHITECTURE.md` for a listing of all of our blocks and
     corresponding tests.
 
 2. For analog blocks that were verified based on a plot, you should 1) provide
