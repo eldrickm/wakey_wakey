@@ -54,8 +54,7 @@
 //
 module	bimpy #(
 		// {{{
-		parameter	BW=18, // Number of bits in i_b
-		localparam	LUTB=2 // Number of bits in i_a for our LUT multiply
+		parameter	BW=18 // Number of bits in i_b
 		// }}}
 	) (
 		// {{{
@@ -65,6 +64,7 @@ module	bimpy #(
 		output	reg	[(BW+LUTB-1):0]	o_r
 		// }}}
 	);
+		localparam	LUTB=2; // Number of bits in i_a for our LUT multiply
 
 	// Local declarations
 	// {{{

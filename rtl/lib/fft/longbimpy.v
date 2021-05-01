@@ -52,16 +52,7 @@
 module	longbimpy #(
 		// {{{
 		parameter	IAW=8,	// The width of i_a, min width is 5
-				IBW=12,	// The width of i_b, can be anything
-			// The following three parameters should not be changed
-			// by any implementation, but are based upon hardware
-			// and the above values:
-			// OW=IAW+IBW;	// The output width
-		localparam	AW = (IAW<IBW) ? IAW : IBW,
-				BW = (IAW<IBW) ? IBW : IAW,
-				IW=(AW+1)&(-2),	// Internal width of A
-				LUTB=2,	// How many bits to mpy at once
-				TLEN=(AW+(LUTB-1))/LUTB // Rows in our tableau
+				IBW=12	// The width of i_b, can be anything
 		// }}}
 	) (
 		// {{{
@@ -76,6 +67,15 @@ module	longbimpy #(
 `endif
 		// }}}
 	);
+			// The following three parameters should not be changed
+			// by any implementation, but are based upon hardware
+			// and the above values:
+			// OW=IAW+IBW;	// The output width
+		localparam	AW = (IAW<IBW) ? IAW : IBW;
+                localparam	BW = (IAW<IBW) ? IBW : IAW;
+	        localparam	IW=(AW+1)&(-2);	// Internal width of A
+		localparam	LUTB=2;	// How many bits to mpy at once
+		localparam	TLEN=(AW+(LUTB-1))/LUTB; // Rows in our tableau
 	// Local declarations
 	// {{{
 	// Swap parameter order, so that AW <= BW -- for performance

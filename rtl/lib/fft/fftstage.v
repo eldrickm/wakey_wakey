@@ -83,14 +83,14 @@ module	fftstage #(
 		parameter	CKPCE = 1,
 		// The COEFFILE parameter contains the name of the file
 		// containing the FFT twiddle factors
-		parameter	COEFFILE="cmem_256.hex",
+		parameter	COEFFILE="cmem_256.hex"
 		// Verilator lint_on  UNUSED
 
-`ifdef	VERILATOR
-		parameter  [0:0]	ZERO_ON_IDLE = 1'b0
-`else
-		localparam [0:0]	ZERO_ON_IDLE = 1'b0
-`endif // VERILATOR
+// `ifdef	VERILATOR
+		// parameter  [0:0]	ZERO_ON_IDLE = 1'b0
+// `else
+		// localparam [0:0]	ZERO_ON_IDLE = 1'b0
+// `endif // VERILATOR
 		// }}}
 	) (
 		// {{{
@@ -102,6 +102,7 @@ module	fftstage #(
 
 		// }}}
 	);
+		localparam [0:0]	ZERO_ON_IDLE = 1'b0;
 
 	// Local signal definitions
 	// {{{

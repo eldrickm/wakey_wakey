@@ -134,9 +134,19 @@ module	butterfly #(
 		// CKPCE is the number of clocks per each i_ce.  The actual
 		// number can be more, but the algorithm depends upon at least
 		// this many for extra internal processing.
-		parameter	CKPCE=1,
+		parameter	CKPCE=1
 		// }}}
 		//
+	) (
+		// {{{
+		input	wire	i_clk, i_reset, i_ce,
+		input	wire	[(2*CWIDTH-1):0] i_coef,
+		input	wire	[(2*IWIDTH-1):0] i_left, i_right,
+		input	wire	i_aux,
+		output	wire	[(2*OWIDTH-1):0] o_left, o_right,
+		output	reg	o_aux
+		// }}}
+	);
 		// Local/derived parameters
 		// {{{
 		// These are calculated from the above params.  Apart from
@@ -150,13 +160,13 @@ module	butterfly #(
 		// the fewest number of bits--to keep the pipeline depth
 		// short.  So, let's find the fewest number of bits here.
 		localparam MXMPYBITS =
-		((IWIDTH+2)>(CWIDTH+1)) ? (CWIDTH+1) : (IWIDTH + 2),
+		((IWIDTH+2)>(CWIDTH+1)) ? (CWIDTH+1) : (IWIDTH + 2);
 		// }}}
 		// MPYDELAY
 		// {{{
 		// Given this "fewest" number of bits, we can calculate
 		// the number of clocks the multiply itself will take.
-		localparam	MPYDELAY=((MXMPYBITS+1)/2)+2,
+		localparam	MPYDELAY=((MXMPYBITS+1)/2)+2;
 		// }}}
 		// LCLDELAY
 		// {{{
@@ -170,7 +180,7 @@ module	butterfly #(
 		// number of slower clock ticks that it takes.
 		localparam	LCLDELAY = (CKPCE == 1) ? MPYDELAY
 			: (CKPCE == 2) ? (MPYDELAY/2+2)
-			: (MPYDELAY/3 + 2),
+			: (MPYDELAY/3 + 2);
 		// }}}
 		// LGDELAY
 		// {{{
@@ -179,22 +189,12 @@ module	butterfly #(
 			: (MPYDELAY > 16) ? 5
 			: (MPYDELAY >  8) ? 4
 			: (MPYDELAY >  4) ? 3
-			: 2,
+			: 2;
 		// }}}
-		localparam	AUXLEN=(LCLDELAY+3),
-		localparam	MPYREMAINDER = MPYDELAY - CKPCE*(MPYDELAY/CKPCE)
+		localparam	AUXLEN=(LCLDELAY+3);
+		localparam	MPYREMAINDER = MPYDELAY - CKPCE*(MPYDELAY/CKPCE);
 		// }}}
 		// }}}
-	) (
-		// {{{
-		input	wire	i_clk, i_reset, i_ce,
-		input	wire	[(2*CWIDTH-1):0] i_coef,
-		input	wire	[(2*IWIDTH-1):0] i_left, i_right,
-		input	wire	i_aux,
-		output	wire	[(2*OWIDTH-1):0] o_left, o_right,
-		output	reg	o_aux
-		// }}}
-	);
 
 	// Local delcarations
 	// {{{
