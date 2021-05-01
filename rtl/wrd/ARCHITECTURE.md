@@ -38,7 +38,7 @@ the top level block:
 
 Dataflow through each top-level processing blocks:
 
-![WRD Block Diagram](../../wrd_block_diagram.png)
+![WRD Block Diagram](../../img/wrd_block_diagram.png)
 
 ### Input
 
@@ -64,7 +64,7 @@ The following is a diagram showing the hardware implementation of the
 `conv_top`, `conv_sipo`, and `fc_top` blocks in terms of basic processing
 elements such as registers, muxes, multipliers, and adders.
 
-![WRD HW Diagram](../../wrd_hw_diagram.png)
+![WRD HW Diagram](../../img/wrd_hw_diagram.png)
 
 ## Tests
 
