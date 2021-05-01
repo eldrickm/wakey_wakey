@@ -2,12 +2,15 @@
 
 """
 ACO (Acoustic Featurization) Software Model
+
+This is used to test our custom acoustic featurization pipeline against
+the speechpy implementation used in EdgeImpulse.
 """
 
 import os
-import speechpy
 import numpy as np
 from scipy.io import wavfile
+import speechpy
 
 # uncomment below to download and unzip keywords dataset
 #  os.system('curl -O https://cdn.edgeimpulse.com/datasets/keywords2.zip')
@@ -26,7 +29,9 @@ p = {'num_mfcc_cof': 13,
      'preemph_cof': 0.98}
 
 
-def get_features(fullfname):
+def get_features(fullfname, custom=False):
+    if custom:
+        return custom_aco(fullfname)
     '''Reads a .wav file and outputs the MFCC features.'''
     try:
         fs, data = wavfile.read(fullfname)
@@ -50,7 +55,7 @@ def get_features(fullfname):
     mfcc_cmvn = speechpy.processing.cmvnw(mfcc2, win_size=p['window_size'],
                                           variance_normalization=True)
 
-    flattened = mfcc_cmvn.flatten()
+    flattened = mfcc_cmvn#.flatten()
     return flattened
 
 
@@ -63,10 +68,7 @@ def get_fnames(group):
     return fullnames
 
 
-def aco(signal):
-    # TODO:
-    # 1) Compute mel filterbank coefficients, quantized
-
+def custom_aco(fullfname):
     # Outstanding Questions:
     # 1) What is our sampling rate? Do we want to anti-alias and downsample?
     #       >> Fs = TODO?
@@ -81,25 +83,65 @@ def aco(signal):
     # 5) Should we buffer the 20ms of data coming in for processing?
     #       >> Buffer the input feature map to the model, after ACO
     #       >> 256 samples?
+    # Get raw 16b audio data
+    fs, signal = wavfile.read(fullfname)
+
+    # Get MFCC Feature
+    FS = fs
+    PERIOD = 1 / FS
+    SIGNAL_LENGTH = len(signal) * PERIOD
+    FRAME_LENGTH = .02  # in seconds
+    NUM_MFCC_COEFF = 13
+    FFT_LENGTH = 256
+
+    # Fs = 16 KHz = 1 / 0.0625 ms
+    # For 20 ms frames, we need 320 samples
 
     # 1) preemphasis
-    # delay by 1, preemphasis coefficient = 31 / 32 = 0.96875
+    # Delay by 1 cycle, multiply 31 and divide by 32 (right bitshift by 5) to get
+    # preemphasis coefficient of 31 / 32 = 0.96875
     rolled_signal = np.roll(signal, 1)
-    preemphasis_out = signal - 31 * rolled_signal / 32
+    scaled_rolled_signal = np.right_shift(31 * rolled_signal, 5)
+    preemphasis_out = signal - scaled_rolled_signal
 
     # 2) framing
+    # Get NUM_SAMPLES_IN_FRAME-sized non-overlapping frames
+    framing_out = np.asarray(np.split(preemphasis_out, SIGNAL_LENGTH / FRAME_LENGTH))
+    # Only take the first 256 samples of each frame
+    framing_out = framing_out[:, :256]
 
     # 3) fft
-    # FFT on each frame
+    # TODO: How do we quantize the FFT output?
+    # seems like we need a 32b output
+    fft_out = np.fft.rfft(framing_out)
+    # Check that we don't overflow 32b representation out
+    assert np.array_equal(fft_out.real.astype(np.int32), fft_out.real.astype(np.int64))
+    assert np.array_equal(fft_out.imag.astype(np.int32), fft_out.imag.astype(np.int64))
+    fft_out_real = fft_out.real.astype(np.int32)
+    fft_out_imag = fft_out.imag.astype(np.int32)
 
     # 4) power spectrum
     # power spectrum = amplitude spectrum squared = real^2 + complex^2 / FFT_PTS
+    # seems like we need a 64b output? can we add a quantization stage here to 32b?
+    power_spectrum_out = (fft_out_real.astype(np.int64) * fft_out_real.astype(np.int64)) + (fft_out_imag.astype(np.int64) * fft_out_imag.astype(np.int64))
+    power_spectrum_out = np.right_shift(power_spectrum_out, int(np.log2(FFT_LENGTH)))
 
-    # 6) mel filterbank elementwise multiplicaton (parallelized x13)
+    # 5) mel filterbank
+    # TODO: What should we make our low or high freq?
+    mfcc_filterbank_raw = speechpy.feature.filterbanks(NUM_MFCC_COEFF, FFT_LENGTH // 2 + 1,
+                                                   FS, low_freq=0, high_freq=FS / 2)
+    mfcc_filterbank = (mfcc_filterbank_raw * (2 ** 15 - 1)).astype(np.int16)
+    mfcc_out = np.right_shift(np.dot(power_spectrum_out, mfcc_filterbank.T), 15)
 
-    # 7) dct
+    # 6) dct
+    pass
 
-    # 8) cmvnw (scaling)
+    # 7) cmvnw (scaling)
+    pass
+
+    features = mfcc_out
+    features = features.flatten()
+    return features
 
 
 # collect a big list of filenames and a big list of labels
@@ -114,24 +156,81 @@ for group in ['yes', 'unknown', 'noise']:
         for i in range(len(fnames)):
             all_labels.append(label)
 
-# get a big list of mfcc features
-N = len(all_fnames)
-print('num samples: ', N)
-all_features = np.zeros((0, 13 * 50))
-for fname in all_fnames:
-    features = get_features(fname)
-    all_features = np.vstack((all_features, features))
-all_labels = np.array(all_labels)
+# sample
+fullfname = all_fnames[0]
 
-# shuffle the data randomly
-idx = np.arange(N, dtype=int)
-np.random.shuffle(idx)
-features_shuffled = all_features[idx, :]
-labels_shuffled = all_labels[idx]
+# original pipeline
+features_raw = get_features(fullfname)
 
-# split the data into train and test sets
-split = int(TRAIN_TEST_SPLIT * N)
-X = features_shuffled[:split, :]
-Y = labels_shuffled[:split]
-Xtest = features_shuffled[split:, :]
-Ytest = labels_shuffled[split:]
+# Get raw 16b audio data
+fs, signal = wavfile.read(fullfname)
+
+# Get MFCC Feature
+FS = fs
+PERIOD = 1 / FS
+SIGNAL_LENGTH = len(signal) * PERIOD
+FRAME_LENGTH = .02  # in seconds
+NUM_MFCC_COEFF = 13
+FFT_LENGTH = 256
+
+# Fs = 16 KHz = 1 / 0.0625 ms
+# For 20 ms frames, we need 320 samples
+
+# 1) preemphasis
+# Delay by 1 cycle, multiply 31 and divide by 32 (right bitshift by 5) to get
+# preemphasis coefficient of 31 / 32 = 0.96875
+rolled_signal = np.roll(signal, 1)
+scaled_rolled_signal = np.right_shift(31 * rolled_signal, 5)
+preemphasis_out = signal - scaled_rolled_signal
+
+# 2) framing
+# Get NUM_SAMPLES_IN_FRAME-sized non-overlapping frames
+framing_out = np.asarray(np.split(preemphasis_out, SIGNAL_LENGTH / FRAME_LENGTH))
+# Only take the first 256 samples of each frame
+framing_out = framing_out[:, :256]
+
+# 3) fft
+# TODO: How do we quantize the FFT output?
+# seems like we need a 32b output
+fft_out = np.fft.rfft(framing_out)
+# Check that we don't overflow 32b representation out
+assert np.array_equal(fft_out.real.astype(np.int32), fft_out.real.astype(np.int64))
+assert np.array_equal(fft_out.imag.astype(np.int32), fft_out.imag.astype(np.int64))
+fft_out_real = fft_out.real.astype(np.int32)
+fft_out_imag = fft_out.imag.astype(np.int32)
+
+# 4) power spectrum
+# power spectrum = amplitude spectrum squared = real^2 + complex^2 / FFT_PTS
+# seems like we need a 64b output? can we add a quantization stage here to 32b?
+power_spectrum_out = (fft_out_real.astype(np.int64) * fft_out_real.astype(np.int64)) + (fft_out_imag.astype(np.int64) * fft_out_imag.astype(np.int64))
+power_spectrum_out = np.right_shift(power_spectrum_out, int(np.log2(FFT_LENGTH)))
+# seems like we can quantize to a 32b stage after the division?
+assert np.array_equal(power_spectrum_out.astype(np.int32), power_spectrum_out.astype(np.int64))
+
+# 5) mel filterbank
+# TODO: What should we make our low or high freq?
+mfcc_filterbank_raw = speechpy.feature.filterbanks(NUM_MFCC_COEFF, FFT_LENGTH // 2 + 1,
+                                               FS, low_freq=0, high_freq=FS / 2)
+mfcc_filterbank = (mfcc_filterbank_raw * (2 ** 15 - 1)).astype(np.int16)
+
+mfcc_out_raw = np.dot(power_spectrum_out, mfcc_filterbank_raw.T)
+mfcc_out = np.right_shift(np.dot(power_spectrum_out, mfcc_filterbank.T), 15)
+
+import matplotlib.pyplot as plt
+for x in mfcc_filterbank_raw:
+    plt.plot(x)
+    plt.title("Original MFCC Filter Bank")
+
+plt.figure()
+for x in mfcc_filterbank:
+    plt.plot(x)
+    plt.title("Quantized MFCC Filter Bank")
+
+
+# 6) dct
+pass
+
+# 7) cmvnw (scaling)
+pass
+
+features = mfcc_out
