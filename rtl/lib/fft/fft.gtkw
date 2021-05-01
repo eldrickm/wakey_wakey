@@ -1,0 +1,28 @@
+[*]
+[*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
+[*] Sat May  1 21:01:02 2021
+[*]
+[dumpfile] "/home/mjpauly/repos/wakey_wakey/rtl/lib/fft/wave.vcd"
+[dumpfile_mtime] "Sat May  1 20:54:50 2021"
+[dumpfile_size] 2687393
+[savefile] "/home/mjpauly/repos/wakey_wakey/rtl/lib/fft/*.gtkw"
+[timestart] 0
+[size] 1848 1016
+[pos] -51 -51
+*-29.000000 526000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 280
+[signals_width] 287
+[sst_expanded] 1
+[sst_vpaned_height] 289
+@28
+fftmain.i_clk
+fftmain.i_reset
+fftmain.i_ce
+@22
+fftmain.i_sample[31:0]
+@23
+fftmain.o_result[41:0]
+@28
+fftmain.o_sync
+[pattern_trace] 1
+[pattern_trace] 0

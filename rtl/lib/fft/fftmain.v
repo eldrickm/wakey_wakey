@@ -187,4 +187,15 @@ module fftmain(i_clk, i_reset, i_ce,
 		o_result  <= br_result;
 
 
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    initial begin
+      $dumpfile ("wave.vcd");
+      $dumpvars (0, fftmain);
+      #1;
+    end
+    `endif
+
 endmodule
