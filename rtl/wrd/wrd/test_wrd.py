@@ -383,6 +383,7 @@ async def do_mfcc_test(dut):
     input_features, index = na.get_random_featuremap()
     fc_exp, c1_exp, c2_exp = na.get_numpy_pred_custom_params(input_features, \
                                                              na.get_params())
+    wake = (fc_exp[0] > fc_exp[1])
 
     await write_input_features(dut, input_features)
     cocotb.fork(read_conv_output(dut, 1, 50, 8, c1_exp))
