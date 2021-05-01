@@ -383,12 +383,6 @@ async def do_mfcc_test(dut):
     input_features, index = na.get_random_featuremap()
     fc_exp, c1_exp, c2_exp = na.get_numpy_pred_custom_params(input_features, \
                                                              na.get_params())
-    wake = (fc_exp[0] > fc_exp[1])
-    if np.argmax(fc_exp) != na.features.Y[index] - 1:
-        print('Fc argmax not matching expected label.')
-        print('fc:', fc_exp)
-        print('label:', na.features.Y[index] - 1)
-        raise Exception('Fc argmax and label mismatch.')
 
     await write_input_features(dut, input_features)
     cocotb.fork(read_conv_output(dut, 1, 50, 8, c1_exp))
@@ -443,7 +437,7 @@ async def test_conv1d(dut):
         await do_fixed_test(dut, i)
 
     n_random_tests = 3  # number of different types of random tests
-    n_repeats = 1  # how many times to repeat each random test
+    n_repeats = 5  # how many times to repeat each random test
     for i in range(n_random_tests):
         for j in range(n_repeats):
             print('=' * 100)
