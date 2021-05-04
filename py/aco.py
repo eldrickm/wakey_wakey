@@ -7,12 +7,92 @@ This is used to test our custom acoustic featurization pipeline against
 the speechpy implementation used in EdgeImpulse.
 """
 !pip install speechpy
+import os
 import speechpy
 import numpy as np
 from scipy.io import wavfile
 from scipy.fft import dct
+from tqdm.auto import tqdm
 
 train_test_split = 0.75  # fraction to have as training data
+pdm_model_type = 'fast'
+# pdm_model_type = 'accurate'  # ~100ms per sample
+
+# ==================== DFE modelling ====================
+
+ratio_in = 250
+ratio_out = 250
+
+def shift_zero_to_one(x):
+    '''Shift an input signal into the range 0-1.'''
+    x = x.astype(np.float64)
+    x = x - x.min()
+    x = x / x.max()
+    return x
+
+def pcm_to_pdm_pwm(x):
+    '''Pack all ones and zeros together during upsampling when generating PDM
+    signal, effectively creating PWM. This results in much less high frequency
+    noise in the signal.'''
+    x = shift_zero_to_one(x)
+    x = x * ratio_in  # scale up by window so that value is # ones
+    x = x.astype(np.uint8)
+    repeats = np.zeros(x.size * 2, dtype=np.uint8)
+    repeats[::2] = x
+    repeats[1::2] = ratio_in - x
+    one_zero = np.ones(x.size * 2, dtype=np.uint8)
+    one_zero[1::2] = 0
+    y = np.repeat(one_zero, repeats)
+    return y
+
+def cic1(x):
+    '''First cic stage treats datatypes differently.'''
+    x = x.astype(np.int64)
+    rolled = np.roll(x, ratio_out)
+    rolled[:ratio_out] = 0
+    x = np.cumsum(x) - np.cumsum(rolled)
+    x = x - int(ratio_out/2)
+    x = x.astype(np.int8)
+    # x = x.astype(np.int16)  # if ratio is >= 256, need this to not overflow
+    return x
+
+def pcm_to_pdm(x, pdm_gen='err'):
+    '''Generate the PDM signal for the sample.'''
+    if pdm_gen == 'pwm':
+        y = pcm_to_pdm_pwm(x)
+    elif pdm_gen == 'random':
+        y = pcm_to_pdm_random(x)
+    elif pdm_gen == 'err':
+        y = pcm_to_pdm_err(x)
+    else:
+        raise ValueError('{} not known')
+    return y
+
+def pdm_to_pcm(x, n_cic):
+    x = cic1(x)
+    x = x[::ratio_out]
+    x[0] = 0
+    return x
+
+def dfe_quantized_model(x):
+    x = shift_zero_to_one(x)
+    x = x * ratio_out
+    x = x - (ratio_out / 2)
+    x = x.astype(np.int8)
+    return x
+
+def pdm_model(x_orig, model_type='fast'):
+    '''Main API interface for the pdm model.
+
+    x_orig: input 16kHz signal
+    model_type: type of PDM model
+        'fast' is fast quantization model and a worst-case scenario
+        'pwm' is the medium-accuracy model which takes ~100ms per sample
+    '''
+    if model_type == 'fast':
+        return dfe_quantized_model(x_orig)
+    x_pdm = pcm_to_pdm(x_orig, pdm_gen='pwm')
+    return pdm_to_pcm(x_pdm, 1)
 
 # parameters
 p = {'num_mfcc_cof': 13,
@@ -27,6 +107,9 @@ p = {'num_mfcc_cof': 13,
 def custom_aco(fullfname):
     # Get raw 16b audio data
     fs, signal = wavfile.read(fullfname)
+
+    # DFE quantization model
+    signal = pdm_model(signal, model_type=pdm_model_type)
 
     # Acoustic Featurization Constants
     FS = fs                                 # 16 KHz
@@ -176,7 +259,8 @@ for group in ['yes', 'unknown', 'noise']:
 n = len(all_fnames)
 print('num samples: ', n)
 all_features = np.zeros((0, 13*50))
-for fname in all_fnames:
+for i in tqdm(range(n)):
+    fname = all_fnames[i]
     features = custom_aco(fname)
     all_features = np.vstack((all_features, features))
 all_labels = np.array(all_labels)

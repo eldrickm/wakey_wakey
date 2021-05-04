@@ -76,7 +76,6 @@ def pcm_to_pdm_err(x):
 
 def pcm_to_pdm(x, pdm_gen='err'):
     '''Generate the PDM signal for the sample.'''
-    # x = read_sample_file(sample_fname)
     if pdm_gen == 'pwm':
         y = pcm_to_pdm_pwm(x)
     elif pdm_gen == 'random':
@@ -95,8 +94,6 @@ def cic1(x):
     rolled = np.roll(x, ratio_out)
     rolled[:ratio_out] = 0
     x = np.cumsum(x) - np.cumsum(rolled)
-    print('max of cic1 out: ', x.max())
-    print('min of cic1 out: ', x.min())
     x = x - int(ratio_out/2)
     x = x.astype(np.int8)
     # x = x.astype(np.int16)  # if ratio is >= 256, need this to not overflow
@@ -143,21 +140,50 @@ def plot_power_spectrum_difference(x1, x2, dt):
     idx = np.argsort(freqs)
     plt.plot(freqs[idx], diff[idx])
     plt.title('Difference')
-    plt.ylim(-.01, .01)
+    # plt.ylim(-.01, .01)
+    plt.ylim(-.03, .03)
 
 # =========== Higher Level Functions ============
 
+def dfe_quantized_model(x):
+    '''Just expected quantization without PDM modelling. This is a fast,
+    worst-case scenario.'''
+    x = shift_zero_to_one(x)
+    x = x * ratio_out
+    x = x - (ratio_out / 2)
+    x = x.astype(np.int8)
+    return x
+
+def pdm_model(x_orig, model_type='fast'):
+    '''Main API interface for the pdm model.
+
+    x_orig: input 16kHz signal
+    model_type: type of PDM model
+        'fast' is fast quantization model and a worst-case scenario
+        'pwm' is the medium-accuracy model which takes ~100ms per sample
+    '''
+    if model_type == 'fast':
+        return dfe_quantized_model(x_orig)
+    x_pdm = pcm_to_pdm(x_orig, pdm_gen='pwm')
+    return pdm_to_pcm(x_pdm, 1)
+
 def main():
+    '''Main function for modeling and plotting the PDM interface.
+    '''
     if not os.path.isdir(OUTDIR):
         os.mkdir(OUTDIR)
     x_orig = read_sample_file(sample_fname)
-    for pdm_gen in ['err', 'pwm']:
-        x_pdm = pcm_to_pdm(x_orig, pdm_gen=pdm_gen)
+    for pdm_gen in ['err', 'pwm', 'quant']:
+        if pdm_gen != 'quant':
+            x_pdm = pcm_to_pdm(x_orig, pdm_gen=pdm_gen)
         # for n_cic in [1, 2, 4, 8]:
         for n_cic in [1]:
             x_decoded = pdm_to_pcm(x_pdm, n_cic)
-
-            fname_out = OUTDIR + '{}_cic{}_{}'.format(pdm_gen, n_cic, f_pcm_out)
+            if pdm_gen == 'quant':
+                x_decoded = dfe_quantized_model(x_orig)
+                fname_out = OUTDIR + '{}_{}'.format(pdm_gen, f_pcm_out)
+            else:
+                fname_out = OUTDIR + '{}_cic{}_{}'.format(pdm_gen, n_cic, f_pcm_out)
             if PLOT:
                 plt.figure(figsize=(8,8))
                 plt.subplots_adjust(hspace=0.4)
