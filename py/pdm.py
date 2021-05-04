@@ -3,15 +3,18 @@
 import os
 import numpy as np
 from scipy.io import wavfile
+import matplotlib.pyplot as plt
 
 OUTDIR = 'outputs/'
+PLOT = True
 
 f_pcm_in = 16000
-ratio_in = 256
+# ratio_in = 256
+ratio_in = 250
 f_pdm = f_pcm_in * ratio_in  # 4.096 MHz
 f_pcm_out = 16000
 # f_pcm_out = 32000
-ratio_out = int(f_pdm / f_pcm_out)  # 256
+ratio_out = int(f_pdm / f_pcm_out)  # 250
 sample_fname = 'sample_sound.wav'
 
 def read_sample_file(fname):
@@ -45,10 +48,10 @@ def pcm_to_pdm_pwm(x):
     signal, effectively creating PWM. This results in much less high frequency
     noise in the signal.'''
     x = shift_zero_to_one(x)
-    x = x * (ratio_in - 1)  # scale up by window so that value is # ones
+    x = x * ratio_in  # scale up by window so that value is # ones
     y = np.zeros(len(x) * ratio_in, dtype=np.uint8)
     for i in range(len(x)):
-        xi = int(x[i])
+        xi = int(round(x[i]))
         ones = np.ones(xi)
         zeros = np.zeros(ratio_in - xi)
         subseq = np.hstack((ones, zeros))
@@ -70,9 +73,10 @@ def pcm_to_pdm_err(x):
     # return y, error[0:n]
     return y
 
-def gen_pdm(pdm_gen='err'):
+
+def pcm_to_pdm(x, pdm_gen='err'):
     '''Generate the PDM signal for the sample.'''
-    x = read_sample_file(sample_fname)
+    # x = read_sample_file(sample_fname)
     if pdm_gen == 'pwm':
         y = pcm_to_pdm_pwm(x)
     elif pdm_gen == 'random':
@@ -95,6 +99,7 @@ def cic1(x):
     print('min of cic1 out: ', x.min())
     x = x - int(ratio_out/2)
     x = x.astype(np.int8)
+    # x = x.astype(np.int16)  # if ratio is >= 256, need this to not overflow
     return x
 
 def cicn(x):
@@ -105,6 +110,7 @@ def cicn(x):
     x = np.cumsum(x) - np.cumsum(rolled)
     x = x / ratio_out
     x = x.astype(np.int8)
+    # x = x.astype(np.int16)  # same here
     return x
 
 def pdm_to_pcm(x, n_cic):
@@ -115,21 +121,58 @@ def pdm_to_pcm(x, n_cic):
     x[0] = 0
     return x
 
-def decode(x, n_cic, pdm_gen='err'):
-    '''Take a PDM input and output the PCM'''
-    x = pdm_to_pcm(x, n_cic)
-    fname_out = OUTDIR + '{}_cic{}_{}.wav'.format(pdm_gen, n_cic, f_pcm_out)
-    wavfile.write(fname_out, f_pcm_out, x.astype(np.int16) * 256)
-    return x
+# =========== Plotting ============
+
+def get_power_spectrum(x):
+    ps = np.abs(np.fft.fft(x)) ** 2
+    ps = ps / ps.max()
+    return ps
+
+def plot_power_spectrum(x, dt, title):
+    X = get_power_spectrum(x)
+    freqs = np.fft.fftfreq(x.size, dt)
+    idx = np.argsort(freqs)
+    plt.plot(freqs[idx], X[idx])
+    plt.title(title)
+
+def plot_power_spectrum_difference(x1, x2, dt):
+    X1 = get_power_spectrum(x1)
+    X2 = get_power_spectrum(x2)
+    diff = X1 - X2
+    freqs = np.fft.fftfreq(x1.size, dt)
+    idx = np.argsort(freqs)
+    plt.plot(freqs[idx], diff[idx])
+    plt.title('Difference')
+    plt.ylim(-.01, .01)
 
 # =========== Higher Level Functions ============
 
 def main():
     if not os.path.isdir(OUTDIR):
         os.mkdir(OUTDIR)
-    x = gen_pdm()
-    for n_cic in [1, 2, 4, 8]:
-        decode(x, n_cic, pdm_gen='err')
+    x_orig = read_sample_file(sample_fname)
+    for pdm_gen in ['err', 'pwm']:
+        x_pdm = pcm_to_pdm(x_orig, pdm_gen=pdm_gen)
+        # for n_cic in [1, 2, 4, 8]:
+        for n_cic in [1]:
+            x_decoded = pdm_to_pcm(x_pdm, n_cic)
+
+            fname_out = OUTDIR + '{}_cic{}_{}'.format(pdm_gen, n_cic, f_pcm_out)
+            if PLOT:
+                plt.figure(figsize=(8,8))
+                plt.subplots_adjust(hspace=0.4)
+                plt.subplot(311)
+                plot_power_spectrum(x_orig, 1/f_pcm_in, 'Input Power Spectum')
+                plt.subplot(312)
+                plot_power_spectrum(x_decoded, 1/f_pcm_out, 'Output Power Spectrum')
+                plt.subplot(313)
+                assert f_pcm_in == f_pcm_out
+                plot_power_spectrum_difference(x_orig, x_decoded, 1/f_pcm_in)
+                fname_out_plt = fname_out + '_ps' + '.png'
+                plt.savefig(fname_out_plt)
+                plt.close()
+            fname_out_wav = fname_out + '.wav'
+            wavfile.write(fname_out_wav, f_pcm_out, x_decoded.astype(np.int16) * 256)
     to_8_bits_test()
 
 def to_8_bits_test():
