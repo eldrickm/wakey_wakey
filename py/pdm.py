@@ -49,13 +49,13 @@ def pcm_to_pdm_pwm(x):
     noise in the signal.'''
     x = shift_zero_to_one(x)
     x = x * ratio_in  # scale up by window so that value is # ones
-    y = np.zeros(len(x) * ratio_in, dtype=np.uint8)
-    for i in range(len(x)):
-        xi = int(round(x[i]))
-        ones = np.ones(xi)
-        zeros = np.zeros(ratio_in - xi)
-        subseq = np.hstack((ones, zeros))
-        y[i * ratio_in : (i + 1) * ratio_in] = subseq
+    x = x.astype(np.uint8)
+    repeats = np.zeros(x.size * 2, dtype=np.uint8)
+    repeats[::2] = x
+    repeats[1::2] = ratio_in - x
+    one_zero = np.ones(x.size * 2, dtype=np.uint8)
+    one_zero[1::2] = 0
+    y = np.repeat(one_zero, repeats)
     return y
 
 def pcm_to_pdm_err(x):
