@@ -6,7 +6,7 @@ ACO (Acoustic Featurization) Software Model
 This is used to test our custom acoustic featurization pipeline against
 the speechpy implementation used in EdgeImpulse.
 """
-!pip install speechpy
+# !pip install speechpy
 import os
 import speechpy
 import numpy as np
@@ -15,8 +15,6 @@ from scipy.fft import dct
 from tqdm.auto import tqdm
 
 train_test_split = 0.75  # fraction to have as training data
-pdm_model_type = 'fast'
-# pdm_model_type = 'accurate'  # ~100ms per sample
 
 # ==================== DFE modelling ====================
 
@@ -24,10 +22,10 @@ ratio_in = 250
 ratio_out = 250
 
 def shift_zero_to_one(x):
-    '''Shift an input signal into the range 0-1.'''
+    '''Shift a 16b signed input signal into the range 0-1.'''
     x = x.astype(np.float64)
-    x = x - x.min()
-    x = x / x.max()
+    x = x + 2**15
+    x = x / 2**16
     return x
 
 def pcm_to_pdm_pwm(x):
@@ -86,7 +84,7 @@ def pdm_model(x_orig, model_type='fast'):
 
     x_orig: input 16kHz signal
     model_type: type of PDM model
-        'fast' is fast quantization model and a worst-case scenario
+        'fast' is fast quantization model and a worst-case distortion scenario
         'pwm' is the medium-accuracy model which takes ~100ms per sample
     '''
     if model_type == 'fast':
@@ -104,12 +102,22 @@ p = {'num_mfcc_cof': 13,
      'low_frequency': 300,
      'preemph_cof': 0.98}
 
+maxes = {}
+def detect_max(arr, name):
+    '''Detect the maximum bit width at various stages of the pipeline.'''
+    global maxes
+    val = np.log2(np.abs(arr).max())  # consider absolute magnitude bits
+    if (name not in maxes) or (maxes[name] < val):
+        maxes[name] = val
+
 def custom_aco(fullfname):
     # Get raw 16b audio data
     fs, signal = wavfile.read(fullfname)
 
     # DFE quantization model
-    signal = pdm_model(signal, model_type=pdm_model_type)
+    signal = pdm_model(signal, model_type='fast')
+    signal = signal.astype(np.int16)
+    detect_max(signal, 'signal')
 
     # Acoustic Featurization Constants
     FS = fs                                 # 16 KHz
@@ -127,8 +135,10 @@ def custom_aco(fullfname):
 
     # preemphasis coefficient of 31 / 32 = 0.96875, quantize via right shift
     scaled_rolled_signal = np.right_shift(31 * rolled_signal, 5)
+    detect_max(scaled_rolled_signal, 'scaled_rolled_signal')
 
     preemphasis_out = signal - scaled_rolled_signal
+    detect_max(preemphasis_out, 'preemphasis_out')
 
     # 2) framing
     # =========================================================================
@@ -145,6 +155,8 @@ def custom_aco(fullfname):
     # split into real and imag
     fft_out_real = fft_out.real
     fft_out_imag = fft_out.imag
+    detect_max(fft_out_real, 'fft_out_real')
+    detect_max(fft_out_imag, 'fft_out_imag')
 
     # quantize
     fft_out_real = fft_out_real.astype(np.int32)
@@ -161,8 +173,9 @@ def custom_aco(fullfname):
                            fft_out_real.astype(np.int64)) +
                           (fft_out_imag.astype(np.int64) *
                            fft_out_imag.astype(np.int64)))
-    power_spectrum_out = np.right_shift(power_spectrum_out,
-                                        int(np.log2(FFT_LENGTH)))
+    detect_max(power_spectrum_out, 'power_spectrum_out')
+    # power_spectrum_out = np.right_shift(power_spectrum_out,
+                                        # int(np.log2(FFT_LENGTH)))
 
 
     # 5) mel filterbank construction
@@ -179,6 +192,7 @@ def custom_aco(fullfname):
     # shift by 15 to cancel initial quantization in step 5)
     mfcc_out = np.dot(power_spectrum_out, mfcc_filterbank.T)
     mfcc_out = np.right_shift(mfcc_out, 15)
+    detect_max(mfcc_out, 'mfcc_out')
 
     # 7) log
     # =========================================================================
@@ -191,6 +205,7 @@ def custom_aco(fullfname):
     # quantize, max value is 64, so can use 8b
     log_out = np.floor(log_out)
     log_out = log_out.astype(np.int8)
+    detect_max(log_out, 'log_out')
 
 
     # 8) dct
@@ -201,6 +216,7 @@ def custom_aco(fullfname):
 
     # quantize
     dct_out = dct_out_raw.astype(np.int16)
+    detect_max(dct_out, 'dct_out')
 
     # check 16b quantization
     assert np.array_equal(dct_out_raw.astype(np.int64), dct_out)
@@ -257,6 +273,7 @@ for group in ['yes', 'unknown', 'noise']:
 
 # get a big list of mfcc features
 n = len(all_fnames)
+# n = 1
 print('num samples: ', n)
 all_features = np.zeros((0, 13*50))
 for i in tqdm(range(n)):
@@ -264,6 +281,8 @@ for i in tqdm(range(n)):
     features = custom_aco(fname)
     all_features = np.vstack((all_features, features))
 all_labels = np.array(all_labels)
+
+print('max bitwidths detected: ', maxes)
 
 # shuffle the data randomly
 idx = np.arange(n, dtype=int)

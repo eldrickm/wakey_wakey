@@ -23,8 +23,8 @@ def read_sample_file(fname):
 def shift_zero_to_one(x):
     '''Shift an input signal into the range 0-1.'''
     x = x.astype(np.float64)
-    x = x - x.min()
-    x = x / x.max()
+    x = x + 2**15
+    x = x / 2**16
     return x
 
 # =========== PDM computing methods ============
@@ -141,7 +141,7 @@ def plot_power_spectrum_difference(x1, x2, dt):
     plt.plot(freqs[idx], diff[idx])
     plt.title('Difference')
     # plt.ylim(-.01, .01)
-    plt.ylim(-.03, .03)
+    # plt.ylim(-.03, .03)
 
 # =========== Higher Level Functions ============
 
