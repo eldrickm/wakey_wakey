@@ -10,8 +10,6 @@
 // configuration.
 // =============================================================================
 
-// module sampler #(
-// ) (
 module sampler (
     // clock and reset
     input                       clk_i,
@@ -26,13 +24,6 @@ module sampler (
     output                      data_o,
     output                      valid_o
 );
-
-    // =========================================================================
-    // Local Parameters
-    // =========================================================================
-    // localparam COUNTER_PERIOD = F_SYSTEM_CLK / 4000000;  // 4 cycles
-    // localparam HALF_PERIOD    = COUNTER_PERIOD / 2;      // 2 cycles
-    // localparam COUNTER_BW     = $clog2(COUNTER_PERIOD);  // 2 bits
 
     // =========================================================================
     // PDM Clock Positive Edge Detection

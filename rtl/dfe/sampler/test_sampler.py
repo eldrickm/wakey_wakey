@@ -32,7 +32,7 @@ async def check_output(dut, en):
     dut.pdm_clk_i <= 0
 
 @cocotb.test()
-async def test_pdm_clk(dut):
+async def test_sampler(dut):
     """ Test Rectified Linear Unit """
     # Create a 10us period clock on port clk
     clock = Clock(dut.clk_i, 10, units="us")
