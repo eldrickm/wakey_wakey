@@ -7,17 +7,29 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import FallingEdge, Timer
 
-WINDOW_LEN = 250
+# import sys
+# sys.path.append('../py/')
+# import pdm
 
 def get_msg(i, received, expected):
     return 'idx {}, dut output of {}, expected {}'.format(i, received, expected)
 
 def get_test_vector():
-    x = np.random.randint(2, size=(WINDOW_LEN * 3))
-    rolled = np.roll(x, WINDOW_LEN)
-    rolled[:WINDOW_LEN] = 0
-    y = x - rolled
-    return x, y
+    n = 2000
+    y = np.zeros(n+1)
+    x = np.zeros(n+1)
+    current = 0
+    for i in range(n):
+        if y[i] == 0:
+            new = np.random.randint(0, 2)  # 0 or 1
+        elif y[i] == 250:
+            new = np.random.randint(-1, 1)  # -1 or 0
+        else:
+            new = np.random.randint(-1, 2)  # -1, 0, or 1
+        x[i+1] = new
+        y[i+1] = y[i] + new
+    return x[1:], y[1:]
+
 
 async def check_output(dut):
     print('Beginning test with random input data.')
@@ -32,7 +44,7 @@ async def check_output(dut):
         if (valid):
             assert dut.valid_o == 1
             expected_val = y[i]
-            received_val = dut.data_o.value.signed_integer
+            received_val = dut.data_o.value.integer
             assert received_val == expected_val, get_msg(i, received_val,
                                                          expected_val)
             i += 1

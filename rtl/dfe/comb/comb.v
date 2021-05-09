@@ -56,7 +56,7 @@ module comb (
     // =========================================================================
     assign data_o  = (!fifo_full_n) ? data_i - fifo_dout
                                     : data_i;
-    assign valid_o = (en_i) ? valid_i : 'd0;
+    assign valid_o = (en_i & valid_i);
 
     // =========================================================================
     // Simulation Only Waveform Dump (.vcd export)

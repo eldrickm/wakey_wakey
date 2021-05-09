@@ -25,7 +25,7 @@ async def check_output(dut, en):
         await FallingEdge(dut.clk_i)
 
 @cocotb.test()
-async def test_pdm_clk(dut):
+async def main(dut):
     """ Test Rectified Linear Unit """
     # Create a 10us period clock on port clk
     clock = Clock(dut.clk_i, 10, units="us")
