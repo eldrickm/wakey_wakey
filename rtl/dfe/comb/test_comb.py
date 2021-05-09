@@ -20,12 +20,13 @@ def get_test_vector():
     return x, y
 
 async def check_output(dut):
+    print('Beginning test with random input data.')
     x, y = get_test_vector()
     for i in range(len(x)):
         dut.data_i <= int(x[i])
         valid = True
         dut.valid_i <= 1 if valid else 0
-        # give control to simulator for combinational logic:
+        # give control to simulator briefly for combinational logic
         await Timer(1, units='us')
         if (valid):
             assert dut.valid_o == 1
@@ -39,6 +40,8 @@ async def check_output(dut):
 
 async def check_output_no_en(dut):
     '''Check that dut doesn't output valid data if en if off.'''
+    print('Beginning test with random input data but en_i is low.')
+    await Timer(1, units='us')
     for i in range(20):
         dut.data_i <= int(np.random.randint(2))  # feed in garbage data
         dut.valid_i <= 1
@@ -59,17 +62,18 @@ async def test_sampler(dut):
     dut.data_i <= 0
     dut.valid_i <= 0
 
+    # reset
     await FallingEdge(dut.clk_i)
     dut.rst_n_i <= 1
 
+    # test 1
     dut.en_i <= 1
-    await FallingEdge(dut.clk_i)
     await check_output(dut)
 
+    # test 2
     dut.en_i <= 0
-    await FallingEdge(dut.clk_i)
     await check_output_no_en(dut)
 
+    # test 3
     dut.en_i <= 1
-    await FallingEdge(dut.clk_i)
-    await check_output(dut)  # TODO: fails here. Why?
+    await check_output(dut)

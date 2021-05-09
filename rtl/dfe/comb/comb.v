@@ -54,8 +54,8 @@ module comb (
     // =========================================================================
     // Output Assignment
     // =========================================================================
-    assign data_o  = (fifo_deq) ? data_i - fifo_dout
-                                : data_i;
+    assign data_o  = (!fifo_full_n) ? data_i - fifo_dout
+                                    : data_i;
     assign valid_o = (en_i) ? valid_i : 'd0;
 
     // =========================================================================

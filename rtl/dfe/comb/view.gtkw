@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
-[*] Fri May  7 06:37:04 2021
+[*] Sun May  9 03:12:55 2021
 [*]
 [dumpfile] "/home/mjpauly/repos/wakey_wakey/rtl/dfe/comb/wave.vcd"
-[dumpfile_mtime] "Fri May  7 06:30:55 2021"
-[dumpfile_size] 120825
+[dumpfile_mtime] "Sun May  9 03:04:20 2021"
+[dumpfile_size] 3766
 [savefile] "/home/mjpauly/repos/wakey_wakey/rtl/dfe/comb/view.gtkw"
-[timestart] 0
+[timestart] 208300000
 [size] 1848 1016
 [pos] -1 -1
-*-30.000000 20003000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-25.000000 390300000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] comb.
 [sst_width] 233
 [signals_width] 212
@@ -19,6 +19,7 @@
 comb.clk_i
 comb.rst_n_i
 comb.en_i
+[color] 3
 comb.data_i
 comb.valid_i
 @200
@@ -30,10 +31,11 @@ comb.valid_o
 -
 @28
 comb.fifo_dout
+@29
 comb.fifo_deq
+@28
 comb.valid_i
 comb.fifo_full_n
-@29
 comb.comb_fifo_inst.empty_o_n
 [pattern_trace] 1
 [pattern_trace] 0
