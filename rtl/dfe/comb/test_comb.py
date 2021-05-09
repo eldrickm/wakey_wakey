@@ -22,10 +22,11 @@ def get_test_vector():
 async def check_output(dut):
     print('Beginning test with random input data.')
     x, y = get_test_vector()
-    for i in range(len(x)):
+    i = 0
+    while i < len(x):
         dut.data_i <= int(x[i])
-        valid = True
-        dut.valid_i <= 1 if valid else 0
+        valid = np.random.randint(2)  # randomly de-assert valid
+        dut.valid_i <= (1 if valid else 0)
         # give control to simulator briefly for combinational logic
         await Timer(1, units='us')
         if (valid):
@@ -34,6 +35,7 @@ async def check_output(dut):
             received_val = dut.data_o.value.signed_integer
             assert received_val == expected_val, get_msg(i, received_val,
                                                          expected_val)
+            i += 1
         else:
             assert dut.valid_o == 0
         await FallingEdge(dut.clk_i)
