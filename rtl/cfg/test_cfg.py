@@ -393,8 +393,7 @@ async def do_mfcc_test(dut):
 
 
 @cocotb.test()
-async def test_conv1d(dut):
-    """ Test Conv1D Module """
+async def test_cfg(dut):
     # Create a 10us period clock on port clk
     clock = Clock(dut.clk_i, 10, units="us")
     cocotb.fork(clock.start())
