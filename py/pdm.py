@@ -94,7 +94,9 @@ def cic1(x):
     rolled = np.roll(x, ratio_out)
     rolled[:ratio_out] = 0
     x = np.cumsum(x) - np.cumsum(rolled)
+    print('x before dc cancel', x[:10])
     x = x - int(ratio_out/2)
+    print('x after dc cancel', x[:10])
     x = x.astype(np.int8)
     # x = x.astype(np.int16)  # if ratio is >= 256, need this to not overflow
     return x
@@ -111,11 +113,14 @@ def cicn(x):
     return x
 
 def pdm_to_pcm(x, n_cic):
+    '''n_cic is fixed to 1 stage for Wakey Wakey.'''
+    assert n_cic == 1
     x = cic1(x)
     for i in range(n_cic - 1):
         x = cicn(x)
     x = x[::ratio_out]
-    x[0] = 0
+    # x[0] = 0
+    x = x[1:]  # skip first value, which is garbage
     return x
 
 # =========== Plotting ============
