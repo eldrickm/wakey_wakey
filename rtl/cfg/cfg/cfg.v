@@ -99,10 +99,10 @@ module cfg #(
     localparam FC_WEIGHT0_END      = 'h1CF;
     localparam FC_WEIGHT1_START    = 'h200;
     localparam FC_WEIGHT1_END      = 'h2CF;
-    localparam FC_BIAS_0_START     = 'h2D0;
-    localparam FC_BIAS_0_END       = 'h2D0;
-    localparam FC_BIAS_1_START     = 'h2D1;
-    localparam FC_BIAS_1_END       = 'h2D1;
+    localparam FC_BIAS_0_START     = 'h300;
+    localparam FC_BIAS_0_END       = 'h300;
+    localparam FC_BIAS_1_START     = 'h400;
+    localparam FC_BIAS_1_END       = 'h400;
 
 
     // =========================================================================

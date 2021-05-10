@@ -1,17 +1,17 @@
 [*]
 [*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
-[*] Mon May 10 17:16:06 2021
+[*] Mon May 10 20:01:49 2021
 [*]
 [dumpfile] "/home/eldrick/wakey_wakey/rtl/cfg/cfg/wave.vcd"
-[dumpfile_mtime] "Mon May 10 07:22:25 2021"
-[dumpfile_size] 3513
+[dumpfile_mtime] "Mon May 10 20:01:30 2021"
+[dumpfile_size] 1317595
 [savefile] "/home/eldrick/wakey_wakey/rtl/cfg/cfg/cfg.gtkw"
 [timestart] 0
-[size] 1244 1271
+[size] 2488 1271
 [pos] -1 -1
-*-25.402588 46500000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-33.790680 60883900000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [sst_width] 233
-[signals_width] 214
+[signals_width] 535
 [sst_expanded] 1
 [sst_vpaned_height] 377
 @28
@@ -39,7 +39,6 @@ cfg.wbs_ack_o
 -Conv1 Memory Ports
 @28
 cfg.conv1_rd_en_o
-@29
 cfg.conv1_wr_en_o
 @24
 cfg.conv1_rd_wr_bank_o[2:0]
@@ -91,9 +90,81 @@ cfg.fc_rd_data_i[31:0]
 @22
 cfg.addr[31:0]
 cfg.ctrl[31:0]
-cfg.data_0[31:0]
-cfg.data_1[31:0]
-cfg.data_2[31:0]
 cfg.data_3[31:0]
+cfg.data_2[31:0]
+@c00023
+cfg.data_1[31:0]
+@29
+(0)cfg.data_1[31:0]
+(1)cfg.data_1[31:0]
+(2)cfg.data_1[31:0]
+(3)cfg.data_1[31:0]
+(4)cfg.data_1[31:0]
+(5)cfg.data_1[31:0]
+(6)cfg.data_1[31:0]
+(7)cfg.data_1[31:0]
+(8)cfg.data_1[31:0]
+(9)cfg.data_1[31:0]
+(10)cfg.data_1[31:0]
+(11)cfg.data_1[31:0]
+(12)cfg.data_1[31:0]
+(13)cfg.data_1[31:0]
+(14)cfg.data_1[31:0]
+(15)cfg.data_1[31:0]
+(16)cfg.data_1[31:0]
+(17)cfg.data_1[31:0]
+(18)cfg.data_1[31:0]
+(19)cfg.data_1[31:0]
+(20)cfg.data_1[31:0]
+(21)cfg.data_1[31:0]
+(22)cfg.data_1[31:0]
+(23)cfg.data_1[31:0]
+(24)cfg.data_1[31:0]
+(25)cfg.data_1[31:0]
+(26)cfg.data_1[31:0]
+(27)cfg.data_1[31:0]
+(28)cfg.data_1[31:0]
+(29)cfg.data_1[31:0]
+(30)cfg.data_1[31:0]
+(31)cfg.data_1[31:0]
+@1401201
+-group_end
+@c00022
+cfg.data_0[31:0]
+@28
+(0)cfg.data_0[31:0]
+(1)cfg.data_0[31:0]
+(2)cfg.data_0[31:0]
+(3)cfg.data_0[31:0]
+(4)cfg.data_0[31:0]
+(5)cfg.data_0[31:0]
+(6)cfg.data_0[31:0]
+(7)cfg.data_0[31:0]
+(8)cfg.data_0[31:0]
+(9)cfg.data_0[31:0]
+(10)cfg.data_0[31:0]
+(11)cfg.data_0[31:0]
+(12)cfg.data_0[31:0]
+(13)cfg.data_0[31:0]
+(14)cfg.data_0[31:0]
+(15)cfg.data_0[31:0]
+(16)cfg.data_0[31:0]
+(17)cfg.data_0[31:0]
+(18)cfg.data_0[31:0]
+(19)cfg.data_0[31:0]
+(20)cfg.data_0[31:0]
+(21)cfg.data_0[31:0]
+(22)cfg.data_0[31:0]
+(23)cfg.data_0[31:0]
+(24)cfg.data_0[31:0]
+(25)cfg.data_0[31:0]
+(26)cfg.data_0[31:0]
+(27)cfg.data_0[31:0]
+(28)cfg.data_0[31:0]
+(29)cfg.data_0[31:0]
+(30)cfg.data_0[31:0]
+(31)cfg.data_0[31:0]
+@1401200
+-group_end
 [pattern_trace] 1
 [pattern_trace] 0

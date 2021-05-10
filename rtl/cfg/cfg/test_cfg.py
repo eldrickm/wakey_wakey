@@ -516,14 +516,91 @@ async def test_cfg(dut):
 
     await FallingEdge(dut.clk_i)
     dut.rst_n_i <= 1
-    #  await wishbone_write(dut, 0x30000000, 0xDEADBEEF)
-    await store(dut, 0x07F, 0x4, 0x3, 0x2, 0x1)
-    await load(dut, 0x07F)
-    await FallingEdge(dut.clk_i)
-    await FallingEdge(dut.clk_i)
-    await FallingEdge(dut.clk_i)
 
-    #
+    # Store Test
+    # Sequential Store - Conv 1 Memory Bank 0
+    for i in range(8):
+        await store(dut, i, i + 3, i + 2, i + 1, i)
+    # Sequential Store - Conv 1 Memory Bank 1
+    for i in range(8):
+        await store(dut, i + 0x10, i + 3, i + 2, i + 1, i)
+    # Sequential Store - Conv 1 Memory Bank 2
+    for i in range(8):
+        await store(dut, i + 0x20, i + 3, i + 2, i + 1, i)
+    # Sequential Store - Conv 1 Memory Bank 3
+    for i in range(8):
+        await store(dut, i + 0x30, i + 3, i + 2, i + 1, i)
+    # Sequential Store - Conv 1 Memory Bank 4
+    await store(dut, 0x40, i + 3, i + 2, i + 1, i)
+
+    # Sequential Store - Conv 2 Memory Bank 0
+    for i in range(16):
+        await store(dut, i + 0x50, i + 3, i + 2, i + 1, i)
+    # Sequential Store - Conv 2 Memory Bank 1
+    for i in range(16):
+        await store(dut, i + 0x60, i + 3, i + 2, i + 1, i)
+    # Sequential Store - Conv 2 Memory Bank 2
+    for i in range(16):
+        await store(dut, i + 0x70, i + 3, i + 2, i + 1, i)
+    # Sequential Store - Conv 2 Memory Bank 3
+    for i in range(16):
+        await store(dut, i + 0x80, i + 3, i + 2, i + 1, i)
+    # Sequential Store - Conv 2 Memory Bank 4
+    await store(dut, 0x90, i + 3, i + 2, i + 1, i)
+
+    # Sequential Store - FC Memory Bank 0
+    for i in range(208):
+        await store(dut, i + 0x100, i + 3, i + 2, i + 1, i)
+    # Sequential Store - FC Memory Bank 1
+    for i in range(208):
+        await store(dut, i + 0x200, i + 3, i + 2, i + 1, i)
+    # Sequential Store - FC Memory Bank 3
+    await store(dut, 0x300, i + 3, i + 2, i + 1, i)
+    # Sequential Store - FC Memory Bank 3
+    await store(dut, 0x400, i + 3, i + 2, i + 1, i)
+
+    # Load Test
+    # Sequential Load - Conv 1 Memory Bank 0
+    for i in range(8):
+        await load(dut, i)
+    # Sequential Load - Conv 1 Memory Bank 1
+    for i in range(8):
+        await load(dut, i + 0x10)
+    # Sequential Load - Conv 1 Memory Bank 2
+    for i in range(8):
+        await load(dut, i + 0x20)
+    # Sequential Load - Conv 1 Memory Bank 3
+    for i in range(8):
+        await load(dut, i + 0x30)
+    # Sequential Load - Conv 1 Memory Bank 4
+    await load(dut, 0x40)
+
+    # Sequential Load - Conv 2 Memory Bank 0
+    for i in range(16):
+        await load(dut, i + 0x50)
+    # Sequential Load - Conv 2 Memory Bank 1
+    for i in range(16):
+        await load(dut, i + 0x60)
+    # Sequential Load - Conv 2 Memory Bank 2
+    for i in range(16):
+        await load(dut, i + 0x70)
+    # Sequential Load - Conv 2 Memory Bank 3
+    for i in range(16):
+        await load(dut, i + 0x80)
+    # Sequential Load - Conv 2 Memory Bank 4
+    await load(dut, 0x90)
+
+    # Sequential Load - FC Memory Bank 0
+    for i in range(208):
+        await load(dut, i + 0x100)
+    # Sequential Load - FC Memory Bank 1
+    for i in range(208):
+        await load(dut, i + 0x200)
+    # Sequential Load - FC Memory Bank 3
+    await load(dut, 0x300)
+    # Sequential Load - FC Memory Bank 3
+    await load(dut, 0x400)
+
     #  n_fixed_tests = 4  # number of different types of fixed tests
     #  for i in range(n_fixed_tests):
     #      print('=' * 100)
