@@ -29,7 +29,8 @@ def np2bv(int_arr):
     bin_string = ''.join(binarized)
     return BinaryValue(bin_string)
 
-async def store(dut, addr, data_0, data_1, data_2, data_3):
+
+async def store(dut, addr, data_3, data_2, data_1, data_0):
     '''Store to Wakey Wakey Memory
 
     addr is a 32b address in the Wakey Wakey address space
@@ -39,11 +40,28 @@ async def store(dut, addr, data_0, data_1, data_2, data_3):
     data_0 LSB
     '''
     await wishbone_write(dut, 0x30000000, addr)
-    await wishbone_write(dut, 0x30000004, data_0)
-    await wishbone_write(dut, 0x30000008, data_1)
-    await wishbone_write(dut, 0x3000000C, data_2)
-    await wishbone_write(dut, 0x30000010, data_3)
-    await wishbone_write(dut, 0x30000014, 0x1)
+    await wishbone_write(dut, 0x30000008, data_0)
+    await wishbone_write(dut, 0x3000000C, data_1)
+    await wishbone_write(dut, 0x30000010, data_2)
+    await wishbone_write(dut, 0x30000014, data_3)
+    await wishbone_write(dut, 0x30000004, 0x1)
+
+
+async def load(dut, addr):
+    '''Load from Wakey Wakey Memory
+
+    addr is a 32b address in the Wakey Wakey address space
+    returns a list of values in the following order:
+    [data_0, data_1, data_2, data_3]
+    '''
+    await wishbone_write(dut, 0x30000000, addr)
+    await wishbone_write(dut, 0x30000004, 0x2)
+    data_0 = await wishbone_read(dut, 0x30000008)
+    data_1 = await wishbone_read(dut, 0x3000000C)
+    data_2 = await wishbone_read(dut, 0x30000010)
+    data_3 = await wishbone_read(dut, 0x30000014)
+    return [data_0, data_1, data_2, data_3]
+
 
 async def wishbone_write(dut, addr, data):
     '''A single wishbone write transaction
@@ -57,8 +75,8 @@ async def wishbone_write(dut, addr, data):
     wbs_sel_i = dut.wbs_sel_i
     wbs_dat_i = dut.wbs_dat_i
     wbs_adr_i = dut.wbs_adr_i
+    wbs_ack_o = dut.wbs_ack_o
 
-    
     await FallingEdge(dut.clk_i)
     wbs_stb_i <= 1
     wbs_cyc_i <= 1
@@ -74,6 +92,46 @@ async def wishbone_write(dut, addr, data):
     wbs_sel_i <= 0x0
     wbs_dat_i <= data
     wbs_adr_i <= addr
+
+    while not wbs_ack_o.value:
+        await FallingEdge(dut.clk_i)
+
+
+async def wishbone_read(dut, addr):
+    '''A single wishbone read transaction
+
+    addr is the 32b wishbone address
+    '''
+    wbs_stb_i = dut.wbs_stb_i
+    wbs_cyc_i = dut.wbs_cyc_i
+    wbs_we_i  = dut.wbs_we_i
+    wbs_sel_i = dut.wbs_sel_i
+    wbs_dat_i = dut.wbs_dat_i
+    wbs_adr_i = dut.wbs_adr_i
+    wbs_dat_o = dut.wbs_dat_o
+    wbs_ack_o = dut.wbs_ack_o
+
+    await FallingEdge(dut.clk_i)
+    wbs_stb_i <= 1
+    wbs_cyc_i <= 1
+    wbs_we_i  <= 0
+    wbs_sel_i <= 0xF
+    wbs_dat_i <= 0
+    wbs_adr_i <= addr
+    await FallingEdge(dut.clk_i)
+    # unset signals
+    wbs_stb_i <= 0
+    wbs_cyc_i <= 0
+    wbs_we_i  <= 0
+    wbs_sel_i <= 0x0
+    wbs_dat_i <= 0
+    wbs_adr_i <= addr
+
+    while not wbs_ack_o.value:
+        await FallingEdge(dut.clk_i)
+
+    return wbs_dat_o.value
+
 
 # ==================== Writing to dut ====================
 
@@ -459,7 +517,8 @@ async def test_cfg(dut):
     await FallingEdge(dut.clk_i)
     dut.rst_n_i <= 1
     #  await wishbone_write(dut, 0x30000000, 0xDEADBEEF)
-    await store(dut, 0x07F, 0x0, 0x0, 0xDEADBEEF, 0x12345678)
+    await store(dut, 0x07F, 0x4, 0x3, 0x2, 0x1)
+    await load(dut, 0x07F)
     await FallingEdge(dut.clk_i)
     await FallingEdge(dut.clk_i)
     await FallingEdge(dut.clk_i)

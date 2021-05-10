@@ -5,7 +5,7 @@
 // Notes:
 // User address space goes from 0x3000_0000 to 0x7FFF_FFFF
 // TODO: Sensitize to cyc_i?
-// TODO: Figure out register writes using a mux?
+// TODO: Adjust wishbone ack for Store and Load on CTRL?
 // =============================================================================
 
 module cfg #(
@@ -119,8 +119,10 @@ module cfg #(
     // =========================================================================
     // Wishbone Addressing Logic
     // =========================================================================
+    // shorthand for this peripheral is selected and we're writing
     wire wr_active  = wbs_stb_i && wbs_we_i;
 
+    // shorthand for wishbone addressable registers being addressed
     wire adr_addr   = wbs_adr_i == ADDR;
     wire adr_ctrl   = wbs_adr_i == CTRL;
     wire adr_data_0 = wbs_adr_i == DATA_0;
@@ -191,31 +193,13 @@ module cfg #(
     end
 
     // =========================================================================
-    // Data Registers
-    // =========================================================================
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            data_0 <= 'h0;
-            data_1 <= 'h0;
-            data_2 <= 'h0;
-            data_3 <= 'h0;
-        end else begin
-            data_0 <= (wr_active && adr_data_0) ? wbs_dat_i : data_0;
-            data_1 <= (wr_active && adr_data_1) ? wbs_dat_i : data_1;
-            data_2 <= (wr_active && adr_data_2) ? wbs_dat_i : data_2;
-            data_3 <= (wr_active && adr_data_3) ? wbs_dat_i : data_3;
-        end
-    end
-
-
-    // =========================================================================
     // Wishbone Read
     // =========================================================================
     always @(posedge clk_i) begin
         if (!rst_n_i) begin
             wbs_dat_o <= 'h0;
         end else begin
-            if ((wbs_stb_i) && (~wbs_we_i)) begin
+            if (wbs_stb_i) begin
                 case (wbs_adr_i)
                     ADDR: begin
                         wbs_dat_o <= addr;
@@ -243,6 +227,7 @@ module cfg #(
         end
     end
 
+
     // =========================================================================
     // Wishbone Acknowledge
     // =========================================================================
@@ -263,10 +248,63 @@ module cfg #(
     assign fc_wr_en_o    = (ctrl == 'h1) && (fc_sel);
 
 
-    // handle load instruction
-    assign conv1_rd_en_o = 1'b0;
-    assign conv2_rd_en_o = 1'b0;
-    assign fc_rd_en_o    = 1'b0;
+    // =========================================================================
+    // Load
+    // =========================================================================
+    assign conv1_rd_en_o = (ctrl == 'h2) && (conv1_sel);
+    assign conv2_rd_en_o = (ctrl == 'h2) && (conv2_sel);
+    assign fc_rd_en_o    = (ctrl == 'h2) && (fc_sel);
+
+    reg conv1_rd_en_d;
+    reg conv2_rd_en_d;
+    reg fc_rd_en_d;
+
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            conv1_rd_en_d <= 1'b0;
+            conv2_rd_en_d <= 1'b0;
+            fc_rd_en_d    <= 1'b0;
+        end else begin
+            conv1_rd_en_d <= conv1_rd_en_o;
+            conv2_rd_en_d <= conv2_rd_en_o;
+            fc_rd_en_d    <= fc_rd_en_o;
+        end
+    end
+
+
+    // =========================================================================
+    // Data Registers
+    // =========================================================================
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            data_0 <= 'h0;
+            data_1 <= 'h0;
+            data_2 <= 'h0;
+            data_3 <= 'h0;
+        end else begin
+            data_0 <= (wr_active && adr_data_0) ?   wbs_dat_i:
+                      (conv1_rd_en_d) ? conv1_rd_data_i[31:0]:
+                      (conv2_rd_en_d) ? conv2_rd_data_i[31:0]:
+                      (fc_rd_en_d)    ?    fc_rd_data_i[31:0]:
+                      data_0;
+            data_1 <= (wr_active && adr_data_1) ?    wbs_dat_i:
+                      (conv1_rd_en_d) ? conv1_rd_data_i[63:32]:
+                      (conv2_rd_en_d) ? conv2_rd_data_i[63:32]:
+                      // (fc_rd_en_d)    ?                    'h0:
+                      data_1;
+            data_2 <= (wr_active && adr_data_2) ?    wbs_dat_i:
+                      (conv1_rd_en_d) ? conv1_rd_data_i[95:64]:
+                      // (conv2_rd_en_d) ? conv2_rd_data_i[95:64]:
+                      // (fc_rd_en_d)    ?    fc_rd_data_i[95:64]:
+                      data_2;
+            data_3 <= (wr_active && adr_data_3) ?     wbs_dat_i:
+                      (conv1_rd_en_d) ? {24'b0, conv1_rd_data_i[103:96]}:
+                      // (conv2_rd_en_d) ? conv2_rd_data_i[127:96]:
+                      // (fc_rd_en_d)    ?    fc_rd_data_i[127:96]:
+                      data_3;
+        end
+    end
+
 
     // =========================================================================
     // Simulation Only Waveform Dump (.vcd export)

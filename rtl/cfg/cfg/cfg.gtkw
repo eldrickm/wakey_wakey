@@ -1,19 +1,19 @@
 [*]
 [*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
-[*] Mon May 10 07:05:27 2021
+[*] Mon May 10 17:16:06 2021
 [*]
 [dumpfile] "/home/eldrick/wakey_wakey/rtl/cfg/cfg/wave.vcd"
-[dumpfile_mtime] "Mon May 10 07:05:03 2021"
-[dumpfile_size] 2391
+[dumpfile_mtime] "Mon May 10 07:22:25 2021"
+[dumpfile_size] 3513
 [savefile] "/home/eldrick/wakey_wakey/rtl/cfg/cfg/cfg.gtkw"
 [timestart] 0
-[size] 1244 1376
+[size] 1244 1271
 [pos] -1 -1
-*-24.058634 24110000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-25.402588 46500000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [sst_width] 233
 [signals_width] 214
 [sst_expanded] 1
-[sst_vpaned_height] 415
+[sst_vpaned_height] 377
 @28
 cfg.clk_i
 cfg.rst_n_i
@@ -26,7 +26,6 @@ cfg.wbs_adr_i[31:0]
 cfg.wbs_stb_i
 cfg.wbs_we_i
 cfg.wbs_cyc_i
-@29
 cfg.wbs_sel_i[3:0]
 @200
 -
@@ -40,6 +39,7 @@ cfg.wbs_ack_o
 -Conv1 Memory Ports
 @28
 cfg.conv1_rd_en_o
+@29
 cfg.conv1_wr_en_o
 @24
 cfg.conv1_rd_wr_bank_o[2:0]
@@ -85,5 +85,15 @@ cfg.fc_rd_wr_addr_o[7:0]
 @22
 cfg.fc_wr_data_o[31:0]
 cfg.fc_rd_data_i[31:0]
+@200
+-
+-Wishbone Registers
+@22
+cfg.addr[31:0]
+cfg.ctrl[31:0]
+cfg.data_0[31:0]
+cfg.data_1[31:0]
+cfg.data_2[31:0]
+cfg.data_3[31:0]
 [pattern_trace] 1
 [pattern_trace] 0
