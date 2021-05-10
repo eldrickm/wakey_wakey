@@ -29,34 +29,44 @@ module comb (
     localparam WINDOW_LEN = 250;
 
     // =========================================================================
-    // Fifo
+    // Delay Block
     // =========================================================================
-    wire fifo_dout;
-    wire fifo_full_n;
-    wire fifo_deq = (valid_i & !fifo_full_n);  // only dequeue when fifo is full
-    fifo #(
-        .DATA_WIDTH('d1),
-        .FIFO_DEPTH(WINDOW_LEN - 'd1)
-    ) comb_fifo_inst (
-        .clk_i(clk_i),
-        .rst_n_i(rst_n_i & en_i),  // reset fifo on low rst_n_i or low en_i
-
-        .enq_i(valid_i),
-        .deq_i(fifo_deq),
-
-        .din_i(data_i),
-        .dout_o(fifo_dout),
-
-        .full_o_n(fifo_full_n),
-        .empty_o_n()
-    );
+    reg [WINDOW_LEN - 1 : 0] reg_fifo;
+    // First register
+    always @(posedge clk_i) begin
+        if (!rst_n_i | !en_i) begin
+            reg_fifo[0] <= 'd0;
+        end else begin
+            if (valid_i) begin
+                reg_fifo[0] <= data_i;
+            end else begin
+                reg_fifo[0] <= reg_fifo[0];
+            end
+        end
+    end
+    // Subsequent registers
+    genvar i;
+    generate
+        for (i = 1; i < WINDOW_LEN; i = i + 1) begin
+            always @(posedge clk_i) begin
+                if (!rst_n_i | !en_i) begin
+                    reg_fifo[i] <= 'd0;
+                end else begin
+                    if (valid_i) begin
+                        reg_fifo[i] <= reg_fifo[i-1];
+                    end else begin
+                        reg_fifo[i] <= reg_fifo[i];
+                    end
+                end
+            end
+        end
+    endgenerate
     
     // =========================================================================
     // Output Assignment
     // =========================================================================
-    assign data_o  = (!fifo_full_n) ? data_i - fifo_dout
-                                    : data_i;
     assign valid_o = (en_i & valid_i);
+    assign data_o  = data_i - reg_fifo[WINDOW_LEN - 1];
 
     // =========================================================================
     // Simulation Only Waveform Dump (.vcd export)
