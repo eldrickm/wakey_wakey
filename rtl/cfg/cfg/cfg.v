@@ -58,8 +58,9 @@ module cfg #(
     output signed [FC_BIAS_BW - 1 : 0]      fc_wr_data_o,
     input  signed [FC_BIAS_BW - 1 : 0]      fc_rd_data_i
 );
+
     // =========================================================================
-    // Local Parameters
+    // Wishbone Address Space
     // =========================================================================
     localparam ADDR   = WISHBONE_BASE_ADDR + 'h00;
     localparam CTRL   = WISHBONE_BASE_ADDR + 'h04;
@@ -68,18 +69,40 @@ module cfg #(
     localparam DATA_2 = WISHBONE_BASE_ADDR + 'h10;
     localparam DATA_3 = WISHBONE_BASE_ADDR + 'h14;
 
-    localparam CONV1_WEIGHT0_END = 'h007;
-    localparam CONV1_WEIGHT1_END = 'h00F;
-    localparam CONV1_WEIGHT2_END = 'h017;
-    localparam CONV1_BIAS_END    = 'h01F;
-    localparam CONV1_SHIFT_END   = 'h020;
 
-    localparam CONV2_WEIGHT0_END = 'h03F;
-    localparam CONV2_WEIGHT1_END = 'h04F;
-    localparam CONV2_WEIGHT2_END = 'h05F;
-    localparam CONV2_BIAS_END    = 'h06F;
-    localparam CONV2_SHIFT_END   = 'h070;
+    // =========================================================================
+    // Wakey Wakey Address Space
+    // =========================================================================
+    localparam CONV1_WEIGHT0_START = 'h000;
+    localparam CONV1_WEIGHT0_END   = 'h007;
+    localparam CONV1_WEIGHT1_START = 'h010;
+    localparam CONV1_WEIGHT1_END   = 'h017;
+    localparam CONV1_WEIGHT2_START = 'h020;
+    localparam CONV1_WEIGHT2_END   = 'h027;
+    localparam CONV1_BIAS_START    = 'h030;
+    localparam CONV1_BIAS_END      = 'h037;
+    localparam CONV1_SHIFT_START   = 'h040;
+    localparam CONV1_SHIFT_END     = 'h040;
 
+    localparam CONV2_WEIGHT0_START = 'h050;
+    localparam CONV2_WEIGHT0_END   = 'h05F;
+    localparam CONV2_WEIGHT1_START = 'h060;
+    localparam CONV2_WEIGHT1_END   = 'h06F;
+    localparam CONV2_WEIGHT2_START = 'h070;
+    localparam CONV2_WEIGHT2_END   = 'h07F;
+    localparam CONV2_BIAS_START    = 'h080;
+    localparam CONV2_BIAS_END      = 'h08F;
+    localparam CONV2_SHIFT_START   = 'h090;
+    localparam CONV2_SHIFT_END     = 'h090;
+
+    localparam FC_WEIGHT0_START    = 'h100;
+    localparam FC_WEIGHT0_END      = 'h1CF;
+    localparam FC_WEIGHT1_START    = 'h200;
+    localparam FC_WEIGHT1_END      = 'h2CF;
+    localparam FC_BIAS_0_START     = 'h2D0;
+    localparam FC_BIAS_0_END       = 'h2D0;
+    localparam FC_BIAS_1_START     = 'h2D1;
+    localparam FC_BIAS_1_END       = 'h2D1;
 
 
     // =========================================================================
@@ -92,25 +115,57 @@ module cfg #(
     reg [31 : 0] data_2;
     reg [31 : 0] data_3;
 
-    wire wr_active;
-    wire adr_addr;
-    wire adr_ctrl;
-    wire adr_data_0;
-    wire adr_addr_1;
-    wire adr_addr_2;
-    wire adr_addr_3;
 
-    assign wr_active  = wbs_stb_i && wbs_we_i;
-    assign adr_addr   = wbs_adr_i == ADDR;
-    assign adr_ctrl   = wbs_adr_i == CTRL;
-    assign adr_data_0 = wbs_adr_i == DATA_0;
-    assign adr_addr_1 = wbs_adr_i == DATA_1;
-    assign adr_addr_2 = wbs_adr_i == DATA_2;
-    assign adr_addr_3 = wbs_adr_i == DATA_3;
+    // =========================================================================
+    // Wishbone Addressing Logic
+    // =========================================================================
+    wire wr_active  = wbs_stb_i && wbs_we_i;
 
-    wire conv1_sel = addr < ;
-    wire conv2_sel = ;
-    wire fc_sel = ;
+    wire adr_addr   = wbs_adr_i == ADDR;
+    wire adr_ctrl   = wbs_adr_i == CTRL;
+    wire adr_data_0 = wbs_adr_i == DATA_0;
+    wire adr_data_1 = wbs_adr_i == DATA_1;
+    wire adr_data_2 = wbs_adr_i == DATA_2;
+    wire adr_data_3 = wbs_adr_i == DATA_3;
+
+
+    // =========================================================================
+    // Module Selection Logic
+    // =========================================================================
+    wire conv1_sel = (addr >= CONV1_WEIGHT0_START) && (addr <= CONV1_SHIFT_END);
+    wire conv2_sel = (addr >= CONV2_WEIGHT0_START) && (addr <= CONV2_SHIFT_END);
+    wire fc_sel    = (addr >= FC_WEIGHT0_START)    && (addr <= FC_BIAS_1_END);
+
+
+    // =========================================================================
+    // Bank Selection Logic
+    // =========================================================================
+    // conv1 address space is laid out so we can use the upper 4 bits in the
+    // LSB to select the bank
+    assign conv1_rd_wr_bank_o = addr[6:4];
+
+    // conv2 address space is laid out so we can use the upper 4 bits in the
+    // LSB, minus 5, to select the bank
+    assign conv2_rd_wr_bank_o = addr[6:4] - 3'd5;
+
+    // fc address space is laid out so we can use the lower 4 bits in the 2nd
+    // byte, minus 1, to select the bank
+    assign fc_rd_wr_bank_o = addr[11:8] - 4'd1;
+
+
+    // =========================================================================
+    // Address Assignment
+    // =========================================================================
+    assign conv1_rd_wr_addr_o = addr[2:0];
+    assign conv2_rd_wr_addr_o = addr[3:0];
+    assign fc_rd_wr_addr_o    = addr[7:0];
+
+    // =========================================================================
+    // Data Assignment
+    // =========================================================================
+    assign conv1_wr_data_o = {data_3[7:0], data_2, data_1, data_0};
+    assign conv2_wr_data_o =                      {data_1, data_0};
+    assign fc_wr_data_o    =                              {data_0};
 
     // =========================================================================
     // Address Register
@@ -141,85 +196,17 @@ module cfg #(
     always @(posedge clk_i) begin
         if (!rst_n_i) begin
             data_0 <= 'h0;
-        end else begin
-            data_0 <= (wr_active && adr_data_0) ? wbs_dat_i : 0;
-        end
-    end
-
-    // =========================================================================
-    // Wishbone Write
-    // =========================================================================
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            addr   <= 'h0;
-            ctrl   <= 'h0;
-            data_0 <= 'h0;
             data_1 <= 'h0;
             data_2 <= 'h0;
             data_3 <= 'h0;
         end else begin
-            if ((wbs_stb_i) && (wbs_we_i)) begin
-                case (wbs_adr_i)
-                    ADDR: begin
-                        addr   <= wbs_dat_i;
-                        ctrl   <= ctrl;
-                        data_0 <= data_0;
-                        data_1 <= data_1;
-                        data_2 <= data_2;
-                        data_3 <= data_3;
-                    end
-                    CTRL: begin
-                        addr   <= addr;
-                        ctrl   <= wbs_dat_i;
-                        data_0 <= data_0;
-                        data_1 <= data_1;
-                        data_2 <= data_2;
-                        data_3 <= data_3;
-                    end
-                    DATA_0: begin
-                        addr   <= addr;
-                        ctrl   <= ctrl;
-                        data_0 <= wbs_dat_i;
-                        data_1 <= data_1;
-                        data_2 <= data_2;
-                        data_3 <= data_3;
-                    end
-                    DATA_1: begin
-                        addr   <= addr;
-                        ctrl   <= ctrl;
-                        data_0 <= data_0;
-                        data_1 <= wbs_dat_i;
-                        data_2 <= data_2;
-                        data_3 <= data_3;
-                    end
-                    DATA_2: begin
-                        addr   <= addr;
-                        ctrl   <= ctrl;
-                        data_0 <= data_0;
-                        data_1 <= data_1;
-                        data_2 <= wbs_dat_i;
-                        data_3 <= data_3;
-                    end
-                    DATA_3: begin
-                        addr   <= addr;
-                        ctrl   <= ctrl;
-                        data_0 <= data_0;
-                        data_1 <= data_1;
-                        data_2 <= data_2;
-                        data_3 <= wbs_dat_i;
-                    end
-                    default: begin
-                        addr   <= addr;
-                        ctrl   <= ctrl;
-                        data_0 <= data_0;
-                        data_1 <= data_1;
-                        data_2 <= data_2;
-                        data_3 <= data_3;
-                    end
-                endcase
-            end
+            data_0 <= (wr_active && adr_data_0) ? wbs_dat_i : data_0;
+            data_1 <= (wr_active && adr_data_1) ? wbs_dat_i : data_1;
+            data_2 <= (wr_active && adr_data_2) ? wbs_dat_i : data_2;
+            data_3 <= (wr_active && adr_data_3) ? wbs_dat_i : data_3;
         end
     end
+
 
     // =========================================================================
     // Wishbone Read
@@ -261,16 +248,25 @@ module cfg #(
     // =========================================================================
     always @(posedge clk_i) begin
         if (!rst_n_i) begin
-            o_wb_ack <= 1'b0;
+            wbs_ack_o <= 1'b0;
         end else begin
-            o_wb_ack <= i_wb_stb;
+            wbs_ack_o <= wbs_stb_i;
+        end
     end
 
-    // ctrl should be self clearing
 
-    // handle store instruction
+    // =========================================================================
+    // Store
+    // =========================================================================
+    assign conv1_wr_en_o = (ctrl == 'h1) && (conv1_sel);
+    assign conv2_wr_en_o = (ctrl == 'h1) && (conv2_sel);
+    assign fc_wr_en_o    = (ctrl == 'h1) && (fc_sel);
+
 
     // handle load instruction
+    assign conv1_rd_en_o = 1'b0;
+    assign conv2_rd_en_o = 1'b0;
+    assign fc_rd_en_o    = 1'b0;
 
     // =========================================================================
     // Simulation Only Waveform Dump (.vcd export)

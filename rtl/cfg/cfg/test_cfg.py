@@ -29,6 +29,51 @@ def np2bv(int_arr):
     bin_string = ''.join(binarized)
     return BinaryValue(bin_string)
 
+async def store(dut, addr, data_0, data_1, data_2, data_3):
+    '''Store to Wakey Wakey Memory
+
+    addr is a 32b address in the Wakey Wakey address space
+    data_3 MSB
+    data_2
+    data_1
+    data_0 LSB
+    '''
+    await wishbone_write(dut, 0x30000000, addr)
+    await wishbone_write(dut, 0x30000004, data_0)
+    await wishbone_write(dut, 0x30000008, data_1)
+    await wishbone_write(dut, 0x3000000C, data_2)
+    await wishbone_write(dut, 0x30000010, data_3)
+    await wishbone_write(dut, 0x30000014, 0x1)
+
+async def wishbone_write(dut, addr, data):
+    '''A single wishbone write transaction
+
+    addr is the 32b wishbone address
+    data is a 32b value
+    '''
+    wbs_stb_i = dut.wbs_stb_i
+    wbs_cyc_i = dut.wbs_cyc_i
+    wbs_we_i  = dut.wbs_we_i
+    wbs_sel_i = dut.wbs_sel_i
+    wbs_dat_i = dut.wbs_dat_i
+    wbs_adr_i = dut.wbs_adr_i
+
+    
+    await FallingEdge(dut.clk_i)
+    wbs_stb_i <= 1
+    wbs_cyc_i <= 1
+    wbs_we_i  <= 1
+    wbs_sel_i <= 0xF
+    wbs_dat_i <= data
+    wbs_adr_i <= addr
+    await FallingEdge(dut.clk_i)
+    # unset signals
+    wbs_stb_i <= 0
+    wbs_cyc_i <= 0
+    wbs_we_i  <= 0
+    wbs_sel_i <= 0x0
+    wbs_dat_i <= data
+    wbs_adr_i <= addr
 
 # ==================== Writing to dut ====================
 
@@ -401,56 +446,47 @@ async def test_cfg(dut):
     # Reset DUT
     await FallingEdge(dut.clk_i)
     dut.rst_n_i <= 0
-    dut.data_i <= 0
-    dut.valid_i <= 0
-    dut.last_i <= 0
+    dut.wbs_stb_i <= 0
+    dut.wbs_cyc_i <= 0
+    dut.wbs_we_i <= 0
+    dut.wbs_sel_i <= 0
+    dut.wbs_dat_i <= 0
+    dut.wbs_adr_i <= 0
+    dut.conv1_rd_data_i <= 0
+    dut.conv2_rd_data_i <= 0
+    dut.fc_rd_data_i <= 0
 
-    dut.conv1_rd_en_i <= 0
-    dut.conv1_wr_en_i <= 0
-    dut.conv1_rd_wr_bank_i <= 0
-    dut.conv1_rd_wr_addr_i <= 0
-    dut.conv1_wr_data_i <= 0
-
-    dut.conv2_rd_en_i <= 0
-    dut.conv2_wr_en_i <= 0
-    dut.conv2_rd_wr_bank_i <= 0
-    dut.conv2_rd_wr_addr_i <= 0
-    dut.conv2_wr_data_i <= 0
-
-    dut.fc_rd_en_i <= 0
-    dut.fc_wr_en_i <= 0
-    dut.fc_rd_wr_bank_i <= 0
-    dut.fc_rd_wr_addr_i <= 0
-    dut.fc_wr_data_i <= 0
-
-    # wait long enough for reset to be effective
-    for _ in range(50):
-        await FallingEdge(dut.clk_i)
+    await FallingEdge(dut.clk_i)
     dut.rst_n_i <= 1
+    #  await wishbone_write(dut, 0x30000000, 0xDEADBEEF)
+    await store(dut, 0x07F, 0x0, 0x0, 0xDEADBEEF, 0x12345678)
+    await FallingEdge(dut.clk_i)
+    await FallingEdge(dut.clk_i)
     await FallingEdge(dut.clk_i)
 
-    n_fixed_tests = 4  # number of different types of fixed tests
-    for i in range(n_fixed_tests):
-        print('=' * 100)
-        print('Beginning fixed test {}/{}.'.format(i+1, n_fixed_tests))
-        print('=' * 100)
-        await do_fixed_test(dut, i)
-
-    n_random_tests = 3  # number of different types of random tests
-    n_repeats = 5  # how many times to repeat each random test
-    for i in range(n_random_tests):
-        for j in range(n_repeats):
-            print('=' * 100)
-            print('Beginning random test {}/{} repeat num {}/{}.' \
-                    .format(i+1, n_random_tests, j+1, n_repeats))
-            print('=' * 100)
-            await do_random_test(dut, i)
-
-    n_mfcc_tests = 10  # number of tests to do with real MFCC features
-    for i in range(n_mfcc_tests):
-        print('=' * 100)
-        print('Beginning MFCC test {}/{} '.format(i+1, n_mfcc_tests))
-        print('=' * 100)
-        params = na.get_params()
-        await write_mem_params(dut, params)
-        await do_mfcc_test(dut)
+    #
+    #  n_fixed_tests = 4  # number of different types of fixed tests
+    #  for i in range(n_fixed_tests):
+    #      print('=' * 100)
+    #      print('Beginning fixed test {}/{}.'.format(i+1, n_fixed_tests))
+    #      print('=' * 100)
+    #      await do_fixed_test(dut, i)
+    #
+    #  n_random_tests = 3  # number of different types of random tests
+    #  n_repeats = 5  # how many times to repeat each random test
+    #  for i in range(n_random_tests):
+    #      for j in range(n_repeats):
+    #          print('=' * 100)
+    #          print('Beginning random test {}/{} repeat num {}/{}.' \
+    #                  .format(i+1, n_random_tests, j+1, n_repeats))
+    #          print('=' * 100)
+    #          await do_random_test(dut, i)
+    #
+    #  n_mfcc_tests = 10  # number of tests to do with real MFCC features
+    #  for i in range(n_mfcc_tests):
+    #      print('=' * 100)
+    #      print('Beginning MFCC test {}/{} '.format(i+1, n_mfcc_tests))
+    #      print('=' * 100)
+    #      params = na.get_params()
+    #      await write_mem_params(dut, params)
+    #      await do_mfcc_test(dut)

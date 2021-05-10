@@ -1,0 +1,89 @@
+[*]
+[*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
+[*] Mon May 10 07:05:27 2021
+[*]
+[dumpfile] "/home/eldrick/wakey_wakey/rtl/cfg/cfg/wave.vcd"
+[dumpfile_mtime] "Mon May 10 07:05:03 2021"
+[dumpfile_size] 2391
+[savefile] "/home/eldrick/wakey_wakey/rtl/cfg/cfg/cfg.gtkw"
+[timestart] 0
+[size] 1244 1376
+[pos] -1 -1
+*-24.058634 24110000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 233
+[signals_width] 214
+[sst_expanded] 1
+[sst_vpaned_height] 415
+@28
+cfg.clk_i
+cfg.rst_n_i
+@200
+-Wishbone Input
+@22
+cfg.wbs_dat_i[31:0]
+cfg.wbs_adr_i[31:0]
+@28
+cfg.wbs_stb_i
+cfg.wbs_we_i
+cfg.wbs_cyc_i
+@29
+cfg.wbs_sel_i[3:0]
+@200
+-
+-Wishbone Output
+@22
+cfg.wbs_dat_o[31:0]
+@28
+cfg.wbs_ack_o
+@200
+-
+-Conv1 Memory Ports
+@28
+cfg.conv1_rd_en_o
+cfg.conv1_wr_en_o
+@24
+cfg.conv1_rd_wr_bank_o[2:0]
+cfg.conv1_rd_wr_addr_o[2:0]
+@22
+cfg.conv1_wr_data_o[103:0]
+cfg.conv1_rd_data_i[103:0]
+@200
+-
+-Conv2 Memory Ports
+@28
+cfg.conv2_rd_en_o
+cfg.conv2_wr_en_o
+@c00024
+cfg.conv2_rd_wr_bank_o[2:0]
+@28
+(0)cfg.conv2_rd_wr_bank_o[2:0]
+(1)cfg.conv2_rd_wr_bank_o[2:0]
+(2)cfg.conv2_rd_wr_bank_o[2:0]
+@1401200
+-group_end
+@c00024
+cfg.conv2_rd_wr_addr_o[3:0]
+@28
+(0)cfg.conv2_rd_wr_addr_o[3:0]
+(1)cfg.conv2_rd_wr_addr_o[3:0]
+(2)cfg.conv2_rd_wr_addr_o[3:0]
+(3)cfg.conv2_rd_wr_addr_o[3:0]
+@1401200
+-group_end
+@22
+cfg.conv2_wr_data_o[63:0]
+cfg.conv2_rd_data_i[63:0]
+@200
+-
+-FC Memory Ports
+@28
+cfg.fc_rd_en_o
+cfg.fc_wr_en_o
+@24
+cfg.fc_rd_wr_bank_o[3:0]
+cfg.fc_rd_wr_addr_o[7:0]
+@22
+cfg.fc_wr_data_o[31:0]
+cfg.fc_rd_data_i[31:0]
+[pattern_trace] 1
+[pattern_trace] 0
