@@ -8,7 +8,6 @@ TOPLEVEL_LANG   ?= verilog			# hdl (verilog, vhdl)
 # source files
 # ==============================================================================
 VERILOG_SOURCES += ./*.v
-VERILOG_SOURCES += ../../lib/fifo/*.v
 VERILOG_SOURCES += ../comb/*.v
 VERILOG_SOURCES += ../integrator/*.v
 VERILOG_SOURCES += ../decimator/*.v

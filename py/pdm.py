@@ -94,9 +94,7 @@ def cic1(x):
     rolled = np.roll(x, ratio_out)
     rolled[:ratio_out] = 0
     x = np.cumsum(x) - np.cumsum(rolled)
-    print('x before dc cancel', x[:10])
     x = x - int(ratio_out/2)
-    print('x after dc cancel', x[:10])
     x = x.astype(np.int8)
     # x = x.astype(np.int16)  # if ratio is >= 256, need this to not overflow
     return x
