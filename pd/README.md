@@ -23,6 +23,11 @@ You should do this every time you start a new session.
 ```
 
 ### Step 2 - Import Wakey-Wakey Design Files
+Concatenate all RTL files and move them over to verilog/rtl/
+
+```
+./pull_rtl.sh
+```
 
 ### Step 3 - Integrate into Wakey-Waky into verilog/rtl/user_proj_example.v
 
