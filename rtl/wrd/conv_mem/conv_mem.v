@@ -168,6 +168,31 @@ module conv_mem #(
     end
 
     // ========================================================================
+    // Read Data Assignment
+    // ========================================================================
+    reg [BANK_BW - 1 : 0] rd_wr_bank_q;
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            rd_wr_bank_q <= 'b0;
+        end else begin
+            rd_wr_bank_q <= rd_wr_bank_i;
+        end
+    end
+
+    // build array of all the output data, properly padded, to mux to rd_data_o
+    wire [VECTOR_BW - 1 : 0] out_data_arr [FILTER_LEN + 1 : 0];
+
+    for (i = 0; i < FILTER_LEN; i = i + 1) begin: weight_banks_out_data_arr
+        assign out_data_arr[i] = weight_data_out[i];
+    end
+    assign out_data_arr[FILTER_LEN] = {{{VECTOR_BW - BIAS_BW}{1'b0}},
+                                       bias_data_out};
+    assign out_data_arr[FILTER_LEN + 1] = {{{VECTOR_BW - SHIFT_BW}{1'b0}},
+                                           shift_data_out};
+
+    assign rd_data_o = out_data_arr[rd_wr_bank_q];
+
+    // ========================================================================
     // Output Assignment
     // ========================================================================
     reg cycle_en_i_q;
