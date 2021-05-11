@@ -34,7 +34,7 @@ async def test_fc_mem(dut):
     await FallingEdge(dut.clk_i)
 
     # Sequential Write Weights
-    for i in range(208 * 3):
+    for i in range(208 * 2):
         dut.cycle_en_i <= 0
         dut.wr_en_i <= 1
         dut.rd_en_i <= 0
@@ -44,22 +44,32 @@ async def test_fc_mem(dut):
         await FallingEdge(dut.clk_i)
 
     # Sequential Write Bias
-    for i in range(3):
+    for i in range(2):
         dut.cycle_en_i <= 0
         dut.wr_en_i <= 1
         dut.rd_en_i <= 0
-        dut.rd_wr_bank_i <= i + 3
+        dut.rd_wr_bank_i <= i + 2
         dut.rd_wr_addr_i <= 0
         dut.wr_data_i <= i
         await FallingEdge(dut.clk_i)
 
-    # Sequential Read
-    for i in range(208 * 3):
+    # Sequential Read Weight
+    for i in range(208 * 2):
         dut.cycle_en_i <= 0
         dut.wr_en_i <= 0
         dut.rd_en_i <= 1
         dut.rd_wr_bank_i <= i // 208
         dut.rd_wr_addr_i <= i % 208
+        dut.wr_data_i <= 0
+        await FallingEdge(dut.clk_i)
+
+    # Sequential Read Bias
+    for i in range(2):
+        dut.cycle_en_i <= 0
+        dut.wr_en_i <= 0
+        dut.rd_en_i <= 1
+        dut.rd_wr_bank_i <= i + 2
+        dut.rd_wr_addr_i <= 0
         dut.wr_data_i <= 0
         await FallingEdge(dut.clk_i)
 

@@ -1,38 +1,37 @@
 [*]
 [*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
-[*] Thu Apr 22 06:47:22 2021
+[*] Tue May 11 19:18:24 2021
 [*]
 [dumpfile] "/home/eldrick/wakey_wakey/rtl/wrd/fc_mem/wave.vcd"
-[dumpfile_mtime] "Thu Apr 22 06:39:45 2021"
-[dumpfile_size] 298235
+[dumpfile_mtime] "Tue May 11 19:15:32 2021"
+[dumpfile_size] 165590
 [savefile] "/home/eldrick/wakey_wakey/rtl/wrd/fc_mem/fc_mem.gtkw"
-[timestart] 0
-[size] 1848 1016
-[pos] -84 -84
-*-31.059126 170000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[timestart] 6653800000
+[size] 2488 1376
+[pos] -51 -51
+*-25.059126 6726100000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] fc_mem.
 [sst_width] 233
 [signals_width] 190
 [sst_expanded] 1
-[sst_vpaned_height] 289
+[sst_vpaned_height] 830
 @200
 -Clock and Reset
 @28
 fc_mem.clk_i
 fc_mem.rst_n_i
-@201
--
 @200
+-
 -Memory Configuration
 @28
 fc_mem.rd_en_i
 fc_mem.wr_en_i
+fc_mem.rd_wr_bank_i[1:0]
 @22
 fc_mem.rd_wr_addr_i[7:0]
-@28
-fc_mem.rd_wr_bank_i[2:0]
-@22
 fc_mem.wr_data_i[15:0]
+@23
+fc_mem.rd_data_o[15:0]
 @200
 -
 @28
@@ -41,8 +40,8 @@ fc_mem.cycle_en_i
 -
 -Output
 @22
-fc_mem.data_w_o[23:0]
-fc_mem.data_b_o[47:0]
+fc_mem.data_b_o[31:0]
+fc_mem.data_w_o[15:0]
 @28
 fc_mem.valid_o
 fc_mem.last_o
