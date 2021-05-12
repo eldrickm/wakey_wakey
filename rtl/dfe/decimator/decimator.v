@@ -1,72 +1,58 @@
 // =============================================================================
-// Module:       Comb
+// Module:       Decimator
 // Design:       Matthew Pauly
 // Verification: Eldrick Millares
 // Notes:
 //
-// Comb element of the integrator-comb filter. Produces the input delayed by
-// WINDOW_LEN subtracted from the input.
+// Decimates input by a given rate. This component is used after the integrator-
+// comb filter
 // =============================================================================
 
-module comb (
+module decimator (
     // clock and reset
-    input               clk_i,
-    input               rst_n_i,
+    input                       clk_i,
+    input                       rst_n_i,
 
     // streaming input
-    input               en_i,
-    input               data_i,
-    input               valid_i,
+    input                       en_i,
+    input [DATA_BW - 1 : 0]     data_i,
+    input                       valid_i,
 
     // streaming output
-    output signed [1:0] data_o,
-    output              valid_o
+    output [DATA_BW - 1 : 0]    data_o,
+    output                      valid_o
 );
 
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam WINDOW_LEN = 250;
+    localparam DATA_BW = 8;
+    localparam DECIM_FACTOR = 250;
+    localparam COUNTER_BW = $clog2(DECIM_FACTOR);
 
     // =========================================================================
-    // Delay Block
+    // Counter
     // =========================================================================
-    reg [WINDOW_LEN - 1 : 0] reg_fifo;
-    // First register
+    reg [COUNTER_BW - 1 : 0] counter;  // counts 0 to 249
     always @(posedge clk_i) begin
         if (!rst_n_i | !en_i) begin
-            reg_fifo[0] <= 'd0;
+            counter <= 'd0;
         end else begin
-            if (valid_i) begin
-                reg_fifo[0] <= data_i;
+            if (valid_i & (counter == DECIM_FACTOR - 1)) begin
+                counter <= 'd0;
+            end else if (valid_i) begin
+                counter <= counter + 'd1;
             end else begin
-                reg_fifo[0] <= reg_fifo[0];
+                counter <= counter;
             end
         end
     end
-    // Subsequent registers
-    genvar i;
-    generate
-        for (i = 1; i < WINDOW_LEN; i = i + 1) begin
-            always @(posedge clk_i) begin
-                if (!rst_n_i | !en_i) begin
-                    reg_fifo[i] <= 'd0;
-                end else begin
-                    if (valid_i) begin
-                        reg_fifo[i] <= reg_fifo[i-1];
-                    end else begin
-                        reg_fifo[i] <= reg_fifo[i];
-                    end
-                end
-            end
-        end
-    endgenerate
     
     // =========================================================================
     // Output Assignment
     // =========================================================================
-    assign valid_o = (en_i & valid_i);
-    assign data_o  = data_i - reg_fifo[WINDOW_LEN - 1];
+    assign data_o  = data_i;
+    assign valid_o = (en_i & valid_i & (counter == 'd0));
 
     // =========================================================================
     // Simulation Only Waveform Dump (.vcd export)
@@ -74,7 +60,7 @@ module comb (
     `ifdef COCOTB_SIM
     initial begin
         $dumpfile ("wave.vcd");
-        $dumpvars (0, comb);
+        $dumpvars (0, decimator);
         #1;
     end
     `endif

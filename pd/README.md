@@ -1,57 +1,48 @@
 # Wakey-Wakey - Physical Design
 
-This document covers how to use the `OpenLANE` flow for RTL-to-GDS generation.
+This document covers how to integrate the Wakey-Wakey design for the Skywater
+MPW-TWO shuttle.
 
 ## Setup
+This assumes you are on the Stanford `caddy` compute cluster.
 
-### Step 1 - Install OpenLANE
-Install [OpenLANE](https://github.com/efabless/openlane).
-`OpenLANE` has been tricky to install. We are using Stanford's `caddy` computer
-cluster on which we were able to get OpenLANE running.
+Install the necessary tools (RISC-V toolchain,`caravel_user_project`, pdk,
+precheck, openlane, etc) using the script below. You only need to do this once.
 
-### Step 2 - Create a new OpenLANE design
-Please see the [full instructions here](https://openlane.readthedocs.io/en/latest/designs/README.html)
-Quick start command for use in the OpenLANE top level directory in Docker:
 ```
-./flow.tcl -design wakey_wakey -init_design_config
+./install.sh
 ```
-
-### Step 3 - Export RTL to the OpenLANE design
-Navigate to `rtl/` from the top level and run `make`. This should create a
-`design.v` file that has the full verilog source. Copy `design.v` to
-```
-openlane/designs/wakey_wakey/src/
-```
-
-### Step 4 - Set configuration parameters
-Set the desired configuration parameters values in
-```
-openlane/designs/wakey_wakey/config.tcl
-```
-You can use the `config.tcl` in this directory as a starting point.
-
-
-### Step 5 - Start OpenLANE Docker container
-In `openlane/` run
-```
-make mount
-```
-
 
 ## Usage
 
-To run the full flow hands-free, you can run the following in the running Docker
-container, in `openlane/`
-```
-./flow.tcl -design wakey_wakey -tag NAME_THIS_RUN
+### Step 1 - Set Environment Variables
+You should do this every time you start a new session.
 
 ```
+./setup.sh
+```
+
+### Step 2 - Import Wakey-Wakey Design Files
+Concatenate all RTL files and move them over to verilog/rtl/
+
+```
+./pull_rtl.sh
+```
+
+### Step 3 - Integrate into Wakey-Waky into verilog/rtl/user_proj_example.v
+
+### Step 4 - Configure uprj_netlists
+
+### Step 5 - Import Wakey-Wakey Design Verification Files
+
+### Step 6 - Configure Design Verification Makefile
 
 
-## Tool Documentation
-- [OpenLANE](https://openlane.readthedocs.io/en/latest/)
-- [OpenLANE Configuration Parameters](https://github.com/efabless/openlane/tree/master/configuration)
+## Updating caravel_user_project
 
+```
+./update_caravel.sh
+```
 
 ## Contributors
 - [Eldrick Millares (@eldrickm)](https://github.com/eldrickm)

@@ -4,18 +4,18 @@ import os
 import numpy as np
 from scipy.io import wavfile
 import matplotlib.pyplot as plt
+import pathlib
 
-OUTDIR = 'outputs/'
+PARENT_DIR = pathlib.Path(__file__).parent.absolute()
+OUTDIR = PARENT_DIR / 'outputs/'
+SAMPLE_FNAME = PARENT_DIR / 'sample_sound.wav'
 PLOT = True
 
 f_pcm_in = 16000
-# ratio_in = 256
 ratio_in = 250
 f_pdm = f_pcm_in * ratio_in  # 4.096 MHz
 f_pcm_out = 16000
-# f_pcm_out = 32000
 ratio_out = int(f_pdm / f_pcm_out)  # 250
-sample_fname = 'sample_sound.wav'
 
 def read_sample_file(fname):
     return wavfile.read(fname)[1]
@@ -111,11 +111,14 @@ def cicn(x):
     return x
 
 def pdm_to_pcm(x, n_cic):
+    '''n_cic is fixed to 1 stage for Wakey Wakey.'''
+    assert n_cic == 1
     x = cic1(x)
     for i in range(n_cic - 1):
         x = cicn(x)
     x = x[::ratio_out]
-    x[0] = 0
+    # x[0] = 0
+    x = x[1:]  # skip first value, which is garbage
     return x
 
 # =========== Plotting ============
@@ -172,7 +175,7 @@ def main():
     '''
     if not os.path.isdir(OUTDIR):
         os.mkdir(OUTDIR)
-    x_orig = read_sample_file(sample_fname)
+    x_orig = read_sample_file(SAMPLE_FNAME)
     for pdm_gen in ['err', 'pwm', 'quant']:
         if pdm_gen != 'quant':
             x_pdm = pcm_to_pdm(x_orig, pdm_gen=pdm_gen)
@@ -203,7 +206,7 @@ def main():
 
 def to_8_bits_test():
     '''Try quantizing the input signal to 8 bits and see what quality is.'''
-    x = read_sample_file(sample_fname)
+    x = read_sample_file(SAMPLE_FNAME)
     x = x / 256
     x = x + 128
     x = x.astype(np.int8)

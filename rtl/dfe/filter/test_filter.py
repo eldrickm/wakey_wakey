@@ -7,52 +7,51 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import FallingEdge, Timer
 
+import sys
+sys.path.append('../../../py/')
+import pdm
+
+WINDOW_LEN = 250
+
 def get_msg(i, received, expected):
     return 'idx {}, dut output of {}, expected {}'.format(i, received, expected)
 
 def get_test_vector():
-    n = 2000
-    y = np.zeros(n+1)
-    x = np.zeros(n+1)
-    current = 0
-    for i in range(n):
-        if y[i] == 0:
-            new = np.random.randint(0, 2)  # 0 or 1
-        elif y[i] == 250:
-            new = np.random.randint(-1, 1)  # -1 or 0
-        else:
-            new = np.random.randint(-1, 2)  # -1, 0, or 1
-        x[i+1] = new
-        y[i+1] = y[i] + new
-    return x[1:], y[1:]
-
+    n = 10
+    x = np.random.randint(2**15, size=n)
+    x = pdm.pcm_to_pdm_pwm(x)
+    print('generated pdm sig', x[10:])
+    print('len x', len(x))
+    y = pdm.pdm_to_pcm(x, 1)
+    print('expected values', y)
+    print('len y', len(y))
+    return x, y
 
 async def check_output(dut):
     print('Beginning test with random input data.')
     x, y = get_test_vector()
-    i = 0
+    i = 0  # index into x
+    j = 0  # index into y
     while i < len(x):
         dut.data_i <= int(x[i])
         valid = np.random.randint(2)  # randomly de-assert valid
         dut.valid_i <= (1 if valid else 0)
-        # give control to simulator briefly for combinational logic
-        await Timer(1, units='us')
-        if (valid):
-            assert dut.valid_o == 1
-            expected_val = y[i]
-            received_val = dut.data_o.value.integer
+        await Timer(1, units='us')  # let combinational logic work
+        if (dut.valid_o.value.integer):
+            expected_val = y[j]
+            received_val = dut.data_o.value.signed_integer
             assert received_val == expected_val, get_msg(i, received_val,
                                                          expected_val)
+            j += 1
+        if (valid):
             i += 1
-        else:
-            assert dut.valid_o == 0
         await FallingEdge(dut.clk_i)
 
 async def check_output_no_en(dut):
     '''Check that dut doesn't output valid data if en if off.'''
     print('Beginning test with random input data but en_i is low.')
     await Timer(1, units='us')
-    for i in range(20):
+    for i in range(1000):
         dut.data_i <= int(np.random.randint(2))  # feed in garbage data
         dut.valid_i <= 1
         assert dut.valid_o == 0

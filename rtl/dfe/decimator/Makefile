@@ -12,8 +12,8 @@ VERILOG_SOURCES += ./*.v
 # ==============================================================================
 # modules
 # ==============================================================================
-MODULE	 = test_comb 			# Python cocotb tests
-TOPLEVEL = comb	        		# Top level RTL module
+MODULE	 = test_decimator 			# Python cocotb tests
+TOPLEVEL = decimator	        		# Top level RTL module
 
 # ==============================================================================
 # cocotb magic

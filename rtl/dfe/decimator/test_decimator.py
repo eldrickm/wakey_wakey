@@ -7,29 +7,23 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import FallingEdge, Timer
 
+DECIM_FACTOR = 250
+
 def get_msg(i, received, expected):
     return 'idx {}, dut output of {}, expected {}'.format(i, received, expected)
 
 def get_test_vector():
     n = 2000
-    y = np.zeros(n+1)
-    x = np.zeros(n+1)
-    current = 0
-    for i in range(n):
-        if y[i] == 0:
-            new = np.random.randint(0, 2)  # 0 or 1
-        elif y[i] == 250:
-            new = np.random.randint(-1, 1)  # -1 or 0
-        else:
-            new = np.random.randint(-1, 2)  # -1, 0, or 1
-        x[i+1] = new
-        y[i+1] = y[i] + new
-    return x[1:], y[1:]
-
+    x = np.random.randint(256, size=n)
+    y = np.zeros(n, dtype=bool)  # y is bool array of when valid_o should be 1
+    y[::DECIM_FACTOR] = True
+    return x, y
 
 async def check_output(dut):
     print('Beginning test with random input data.')
     x, y = get_test_vector()
+    print('x', x)
+    print('y', y)
     i = 0
     while i < len(x):
         dut.data_i <= int(x[i])
@@ -37,15 +31,16 @@ async def check_output(dut):
         dut.valid_i <= (1 if valid else 0)
         # give control to simulator briefly for combinational logic
         await Timer(1, units='us')
-        if (valid):
+        if (valid and y[i]):
             assert dut.valid_o == 1
-            expected_val = y[i]
+            expected_val = x[i]
             received_val = dut.data_o.value.integer
             assert received_val == expected_val, get_msg(i, received_val,
                                                          expected_val)
-            i += 1
         else:
-            assert dut.valid_o == 0
+            assert dut.valid_o == 0, 'expected low valid at index {}'.format(i)
+        if (valid):
+            i += 1
         await FallingEdge(dut.clk_i)
 
 async def check_output_no_en(dut):
