@@ -23,19 +23,33 @@ You should do this every time you start a new session.
 ```
 
 ### Step 2 - Import Wakey-Wakey Design Files
-Concatenate all RTL files and move them over to verilog/rtl/
+Concatenate all RTL files into `design.v` and move them over to verilog/rtl/
+This uses the Makefile in the `rtl/` folder.
 
 ```
 ./pull_rtl.sh
 ```
 
-### Step 3 - Integrate into Wakey-Waky into verilog/rtl/user_proj_example.v
+### Step 3 - Integrate Wakey-Wakey into verilog/rtl/user_proj_example.v
+`wakey_wakey` needs to be instantiated.
 
-### Step 4 - Configure uprj_netlists
+This is manually done. The source file is in
+`caravel_integratin/user_proj_example.v` and is copied over when Step 2 is
+executed.
+
+
+### Step 4 - Configure uprj_netlists.v
+The netlists needs to include the exported `design.v`
+
+This is manually done. The source file is in
+`caravel_integratin/uprj_netlists.v` and is copied over when Step 2 is
+executed.
 
 ### Step 5 - Import Wakey-Wakey Design Verification Files
+TODO
 
 ### Step 6 - Configure Design Verification Makefile
+TODO
 
 
 ## Updating caravel_user_project
