@@ -5,6 +5,8 @@ MPW-TWO shuttle.
 
 ## Setup
 This assumes you are on the Stanford `caddy` compute cluster.
+Be sure to use the `/tmp` directory on `caddy`.
+This setup was validated in `/tmp/eldrick/wakey_wakey/pd` on `caddy09`
 
 Install the necessary tools (RISC-V toolchain,`caravel_user_project`, pdk,
 precheck, openlane, etc) using the script below. You only need to do this once.
