@@ -15,7 +15,7 @@ precheck, openlane, etc) using the script below. You only need to do this once.
 ./install.sh
 ```
 
-## Usage
+## Usage - RTL to GDS
 
 ### Step 1 - Set Environment Variables
 You should do this every time you start a new session.
@@ -47,10 +47,20 @@ This is manually done. The source file is in
 `caravel_integratin/uprj_netlists.v` and is copied over when Step 2 is
 executed.
 
-### Step 5 - Import Wakey-Wakey Design Verification Files
+### Step 5 - Make
+In `caravel_user_project/` run the following
+
+```
+make user_proj_example
+```
+
+## Usage - Design Verification
 TODO
 
-### Step 6 - Configure Design Verification Makefile
+### Step X - Import Wakey-Wakey Design Verification Files
+TODO
+
+### Step X - Configure Design Verification Makefile
 TODO
 
 
