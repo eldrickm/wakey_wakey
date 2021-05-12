@@ -6,7 +6,7 @@ ACO (Acoustic Featurization) Software Model
 This is used to test our custom acoustic featurization pipeline against
 the speechpy implementation used in EdgeImpulse.
 """
-# !pip install speechpy
+!pip install speechpy
 import os
 import speechpy
 import numpy as np
@@ -106,16 +106,25 @@ maxes = {}
 def detect_max(arr, name):
     '''Detect the maximum bit width at various stages of the pipeline.'''
     global maxes
-    val = np.log2(np.abs(arr).max())  # consider absolute magnitude bits
+    val = np.log2(np.abs(arr.astype(np.float64)).max())  # consider absolute magnitude bits
     if (name not in maxes) or (maxes[name] < val):
         maxes[name] = val
+
+def print_maxes():
+    print('Max bit values detected during featurisation:')
+    for k in maxes:
+        print('\t{:20} {}'.format(k, maxes[k]))
 
 def custom_aco(fullfname):
     # Get raw 16b audio data
     fs, signal = wavfile.read(fullfname)
 
+    # use to estimate required bit widths, it scales up each training example to take the maximum range
+    # signal = signal.astype(np.float64) * (2**15) / np.abs(signal).max()
+
     # DFE quantization model
     signal = pdm_model(signal, model_type='fast')
+    #signal = pdm_model(signal, model_type='accurate')
     signal = signal.astype(np.int16)
     detect_max(signal, 'signal')
 
@@ -282,9 +291,10 @@ for i in tqdm(range(n)):
     all_features = np.vstack((all_features, features))
 all_labels = np.array(all_labels)
 
-print('max bitwidths detected: ', maxes)
+print_maxes()
 
 # shuffle the data randomly
+np.random.seed(1)
 idx = np.arange(n, dtype=int)
 np.random.shuffle(idx)
 features_shuffled = all_features[idx,:]
