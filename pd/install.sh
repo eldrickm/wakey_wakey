@@ -5,7 +5,7 @@ scp -r $USER@caddy18:/tmp/kprabhu7/riscv-tools-install .
 git clone https://github.com/eldrickm/caravel_user_project.git
 
 # source setup script
-source setup.sh
+source ./setup.sh
 
 # cd into the project following commands
 cd caravel_user_project/
