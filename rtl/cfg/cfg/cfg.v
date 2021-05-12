@@ -15,7 +15,7 @@ module cfg #(
     parameter CONV2_BANK_BW = 3,
     parameter CONV2_ADDR_BW = 4,
     parameter CONV2_VECTOR_BW = 64,
-    parameter FC_BANK_BW = 4,
+    parameter FC_BANK_BW = 2,
     parameter FC_ADDR_BW = 8,
     parameter FC_BIAS_BW = 32,
     parameter WISHBONE_BASE_ADDR = 32'h30000000
