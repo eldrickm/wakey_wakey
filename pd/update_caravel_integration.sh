@@ -1,0 +1,3 @@
+cp caravel_user_project/verilog/rtl/user_proj_example.v caravel_integration
+cp caravel_user_project/verilog/rtl/uprj_netlists.v caravel_integration
+cp caravel_user_project/openlane/user_proj_example/config.tcl caravel_integration

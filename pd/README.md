@@ -54,6 +54,14 @@ In `caravel_user_project/` run the following
 make user_proj_example
 ```
 
+### Pulling caravel_user_project changes into wakey_wakey
+If you make a modification to the source files to be configured above,
+you can pull in the changes into `caravel_integration/` by running
+
+```
+./update_caravel_integration
+```
+
 ## Usage - Design Verification
 TODO
 
