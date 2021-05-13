@@ -21,7 +21,7 @@ precheck, openlane, etc) using the script below. You only need to do this once.
 You should do this every time you start a new session.
 
 ```
-./setup.sh
+source setup.sh
 ```
 
 ### Step 2 - Import Wakey-Wakey Design Files
