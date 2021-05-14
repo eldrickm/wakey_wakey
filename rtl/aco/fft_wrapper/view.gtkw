@@ -1,0 +1,55 @@
+[*]
+[*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
+[*] Fri May 14 05:42:26 2021
+[*]
+[dumpfile] "/home/mjpauly/repos/wakey_wakey/rtl/aco/fft_wrapper/wave.vcd"
+[dumpfile_mtime] "Thu May 13 06:33:54 2021"
+[dumpfile_size] 1799772
+[savefile] "/home/mjpauly/repos/wakey_wakey/rtl/aco/fft_wrapper/view.gtkw"
+[timestart] 7556000000
+[size] 1848 1016
+[pos] -1 -1
+*-29.000000 16806000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] fft_wrapper.
+[treeopen] fft_wrapper.fft_inst.
+[sst_width] 233
+[signals_width] 216
+[sst_expanded] 1
+[sst_vpaned_height] 289
+@28
+fft_wrapper.clk_i
+@22
+fft_wrapper.data_i[15:0]
+@28
+fft_wrapper.valid_i
+@200
+-
+@22
+fft_wrapper.data_o[41:0]
+@28
+fft_wrapper.valid_o
+fft_wrapper.last_o
+@200
+-
+@28
+fft_wrapper.valid_i_latch
+@200
+-
+-
+-
+-FFT Core
+@28
+fft_wrapper.fft_inst.i_clk
+fft_wrapper.fft_inst.i_reset
+fft_wrapper.fft_inst.i_ce
+fft_wrapper.fft_inst.o_sync
+@23
+fft_wrapper.fft_inst.i_sample[31:0]
+@22
+fft_wrapper.fft_inst.o_result[41:0]
+@200
+-
+-
+-
+[pattern_trace] 1
+[pattern_trace] 0
