@@ -50,7 +50,7 @@ async def write_input(dut, sig):
         dut.data_i <= int(sig[i])
         await FallingEdge(dut.clk_i)
     dut.valid_i <= 0
-    dut.data_i <= 0
+    dut.data_i <= 1
     expected_results.append(np.fft.rfft(sig))
 
 async def read_output_once(dut):

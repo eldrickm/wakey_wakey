@@ -127,6 +127,8 @@ async def test_fft(dut):
 
     await write_input(dut, cosine_sig(5))
     await write_input(dut, constant_sig())
+    await write_input(dut, constant_sig())
+    await write_input(dut, constant_sig())
     await write_input(dut, cosine_sig(5))
     await write_input(dut, random_sig())
 
