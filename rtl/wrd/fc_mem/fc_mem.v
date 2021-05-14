@@ -11,7 +11,7 @@ module fc_mem #(
     parameter BW          = 8,
     parameter BIAS_BW     = 16,
     parameter FRAME_LEN   = 208,
-    parameter NUM_CLASSES = 3
+    parameter NUM_CLASSES = 2
 ) (
     // clock and reset
     input                                           clk_i,
@@ -129,6 +129,30 @@ module fc_mem #(
             .data_o(bias_data_out[i])
         );
     end
+
+    // ========================================================================
+    // Read Data Assignment
+    // ========================================================================
+    reg [BANK_BW - 1 : 0] rd_wr_bank_q;
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            rd_wr_bank_q <= 'b0;
+        end else begin
+            rd_wr_bank_q <= rd_wr_bank_i;
+        end
+    end
+
+    // build array of all the output data, properly padded, to mux to rd_data_o
+    wire [BIAS_BW - 1 : 0] out_data_arr [(NUM_CLASSES * 2) - 1 : 0];
+
+    for (i = 0; i < NUM_CLASSES; i = i + 1) begin: weight_banks_out_data_arr
+        assign out_data_arr[i] = {{{BIAS_BW - BW}{1'b0}}, weight_data_out[i]};
+    end
+    for (i = 0; i < NUM_CLASSES; i = i + 1) begin: bias_banks_out_data_arr
+        assign out_data_arr[i + NUM_CLASSES] = bias_data_out[i];
+    end
+
+    assign rd_data_o = out_data_arr[rd_wr_bank_q];
 
     // ========================================================================
     // Output Assignment

@@ -36,17 +36,21 @@ async def test_conv_mem(dut):
     await FallingEdge(dut.clk_i)
 
     # Sequential Write
-    for i in range(32):
+    for i in range(33):
         dut.cycle_en_i <= 0
         dut.wr_en_i <= 1
         dut.rd_en_i <= 0
         dut.rd_wr_bank_i <= i // 8
         dut.rd_wr_addr_i <= i
-        dut.wr_data_i <= i
+        # handle shift not having enough bits to represent '32'
+        if i == 32:
+            dut.wr_data_i <= 4
+        else:
+            dut.wr_data_i <= i
         await FallingEdge(dut.clk_i)
 
     # Sequential Read
-    for i in range(32):
+    for i in range(33):
         dut.cycle_en_i <= 0
         dut.wr_en_i <= 0
         dut.rd_en_i <= 1
@@ -60,10 +64,21 @@ async def test_conv_mem(dut):
             observed = dut.data1_o.value
         elif i // 8 == 2:
             observed = dut.data2_o.value
-        else:
+        elif i // 8 == 3:
             observed = dut.bias_o.value
+        else:
+            observed = dut.shift_o.value
 
-        expected = i
+        observed_read = dut.rd_data_o.value
+
+        # handle shift not having enough bits to represent '32'
+        if i == 32:
+            expected = 4
+        else:
+            expected = i
+        # check that read output is the same as the bank's output
+        assert observed == observed_read, "observed = %d, expected = %d," %\
+                                          (observed, expected)
         assert observed == expected, "observed = %d, expected = %d," %\
                                      (observed, expected)
     await FallingEdge(dut.clk_i)
