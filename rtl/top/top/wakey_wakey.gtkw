@@ -1,0 +1,47 @@
+[*]
+[*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
+[*] Fri May 14 06:42:44 2021
+[*]
+[dumpfile] "/home/eldrick/wakey_wakey/rtl/top/top/wave.vcd"
+[dumpfile_mtime] "Wed May 12 07:19:23 2021"
+[dumpfile_size] 4102275
+[savefile] "/home/eldrick/wakey_wakey/rtl/top/top/*.gtkw"
+[timestart] 0
+[size] 2488 1311
+[pos] -51 -51
+*-25.843563 44500000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] wakey_wakey.
+[sst_width] 678
+[signals_width] 150
+[sst_expanded] 1
+[sst_vpaned_height] 392
+@200
+-Clock and Reset
+@28
+wakey_wakey.clk_i
+wakey_wakey.rst_n_i
+@200
+-
+-Wishbone Input
+@22
+wakey_wakey.wbs_adr_i[31:0]
+@28
+wakey_wakey.wbs_cyc_i
+wakey_wakey.wbs_stb_i
+wakey_wakey.wbs_we_i
+@22
+wakey_wakey.wbs_dat_i[31:0]
+wakey_wakey.wbs_sel_i[3:0]
+@201
+-Wishbone Output
+@22
+wakey_wakey.wbs_dat_o[31:0]
+@28
+wakey_wakey.wbs_ack_o
+@200
+-
+-Wake Output
+@28
+wakey_wakey.wake_o
+[pattern_trace] 1
+[pattern_trace] 0

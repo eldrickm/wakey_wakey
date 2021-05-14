@@ -56,11 +56,13 @@ async def load(dut, addr):
     '''
     await wishbone_write(dut, 0x30000000, addr)
     await wishbone_write(dut, 0x30000004, 0x2)
+    # TODO: Need to wait one clock cycle before read starts?
+    await FallingEdge(dut.clk_i)
     data_0 = await wishbone_read(dut, 0x30000008)
     data_1 = await wishbone_read(dut, 0x3000000C)
     data_2 = await wishbone_read(dut, 0x30000010)
     data_3 = await wishbone_read(dut, 0x30000014)
-    return [data_0, data_1, data_2, data_3]
+    return [data_3, data_2, data_1, data_0]
 
 
 async def wishbone_write(dut, addr, data):
@@ -515,62 +517,72 @@ async def test_cfg(dut):
     dut.rst_n_i <= 1
 
     # Store Test
-    # Sequential Store - Conv 1 Memory Bank 0
+    # Sequential Store - Conv 1 Memory Bank 0 (Weight - 104b)
     for i in range(8):
         await store(dut, i, i + 3, i + 2, i + 1, i)
-    # Sequential Store - Conv 1 Memory Bank 1
+    # Sequential Store - Conv 1 Memory Bank 1 (Weight - 104b)
     for i in range(8):
         await store(dut, i + 0x10, i + 3, i + 2, i + 1, i)
-    # Sequential Store - Conv 1 Memory Bank 2
+    # Sequential Store - Conv 1 Memory Bank 2 (Weight - 104b)
     for i in range(8):
         await store(dut, i + 0x20, i + 3, i + 2, i + 1, i)
-    # Sequential Store - Conv 1 Memory Bank 3
+    # Sequential Store - Conv 1 Memory Bank 3 (Bias - 32b)
     for i in range(8):
         await store(dut, i + 0x30, i + 3, i + 2, i + 1, i)
-    # Sequential Store - Conv 1 Memory Bank 4
+    # Sequential Store - Conv 1 Memory Bank 4 (Shift - 5b)
     await store(dut, 0x40, i + 3, i + 2, i + 1, i)
 
-    # Sequential Store - Conv 2 Memory Bank 0
+    # Sequential Store - Conv 2 Memory Bank 0 (Weight - 64b)
     for i in range(16):
         await store(dut, i + 0x50, i + 3, i + 2, i + 1, i)
-    # Sequential Store - Conv 2 Memory Bank 1
+    # Sequential Store - Conv 2 Memory Bank 1 (Weight - 64b)
     for i in range(16):
         await store(dut, i + 0x60, i + 3, i + 2, i + 1, i)
-    # Sequential Store - Conv 2 Memory Bank 2
+    # Sequential Store - Conv 2 Memory Bank 2 (Weight - 64b)
     for i in range(16):
         await store(dut, i + 0x70, i + 3, i + 2, i + 1, i)
-    # Sequential Store - Conv 2 Memory Bank 3
+    # Sequential Store - Conv 2 Memory Bank 3 (Bias - 32b)
     for i in range(16):
         await store(dut, i + 0x80, i + 3, i + 2, i + 1, i)
-    # Sequential Store - Conv 2 Memory Bank 4
+    # Sequential Store - Conv 2 Memory Bank 4 (Shift - 5b)
     await store(dut, 0x90, i + 3, i + 2, i + 1, i)
 
-    # Sequential Store - FC Memory Bank 0
+    # Sequential Store - FC Memory Bank 0 (Weight - 8b)
     for i in range(208):
         await store(dut, i + 0x100, i + 3, i + 2, i + 1, i)
-    # Sequential Store - FC Memory Bank 1
+    # Sequential Store - FC Memory Bank 1 (Weight - 8b)
     for i in range(208):
         await store(dut, i + 0x200, i + 3, i + 2, i + 1, i)
-    # Sequential Store - FC Memory Bank 3
+    # Sequential Store - FC Memory Bank 3 (Bias - 32b)
     await store(dut, 0x300, i + 3, i + 2, i + 1, i)
-    # Sequential Store - FC Memory Bank 3
+    # Sequential Store - FC Memory Bank 3 (Bias - 32b)
     await store(dut, 0x400, i + 3, i + 2, i + 1, i)
 
     # Load Test
     # Sequential Load - Conv 1 Memory Bank 0
     for i in range(8):
-        await load(dut, i)
+        observed = await load(dut, i)
+        expected = [i + 3, i + 2, i + 1, i]
+        assert observed == expected
     # Sequential Load - Conv 1 Memory Bank 1
     for i in range(8):
-        await load(dut, i + 0x10)
+        observed = await load(dut, i + 0x10)
+        expected = [i + 3, i + 2, i + 1, i]
+        assert observed == expected
     # Sequential Load - Conv 1 Memory Bank 2
     for i in range(8):
-        await load(dut, i + 0x20)
+        observed = await load(dut, i + 0x20)
+        expected = [i + 3, i + 2, i + 1, i]
+        assert observed == expected
     # Sequential Load - Conv 1 Memory Bank 3
     for i in range(8):
-        await load(dut, i + 0x30)
+        observed = await load(dut, i + 0x30)
+        expected = [0, 0, 0, i]
+        assert observed == expected
     # Sequential Load - Conv 1 Memory Bank 4
-    await load(dut, 0x40)
+    observed = await load(dut, 0x40)
+    expected = [0, 0, 0, i]
+    assert observed == expected
 
     # Sequential Load - Conv 2 Memory Bank 0
     for i in range(16):
