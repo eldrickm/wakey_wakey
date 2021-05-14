@@ -290,17 +290,17 @@ module cfg #(
             data_1 <= (wr_active && adr_data_1) ?    wbs_dat_i:
                       (conv1_rd_en_d) ? conv1_rd_data_i[63:32]:
                       (conv2_rd_en_d) ? conv2_rd_data_i[63:32]:
-                      // (fc_rd_en_d)    ?                    'h0:
+                      // (fc_rd_en_d)    ? 'h0:
                       data_1;
             data_2 <= (wr_active && adr_data_2) ?    wbs_dat_i:
                       (conv1_rd_en_d) ? conv1_rd_data_i[95:64]:
-                      // (conv2_rd_en_d) ? conv2_rd_data_i[95:64]:
-                      // (fc_rd_en_d)    ?    fc_rd_data_i[95:64]:
+                      // (conv2_rd_en_d) ? 'h0:
+                      // (fc_rd_en_d)    ? 'h0:
                       data_2;
             data_3 <= (wr_active && adr_data_3) ?     wbs_dat_i:
                       (conv1_rd_en_d) ? {24'b0, conv1_rd_data_i[103:96]}:
-                      // (conv2_rd_en_d) ? conv2_rd_data_i[127:96]:
-                      // (fc_rd_en_d)    ?    fc_rd_data_i[127:96]:
+                      // (conv2_rd_en_d) ? 'h0:
+                      // (fc_rd_en_d)    ? 'h0:
                       data_3;
         end
     end

@@ -60,7 +60,7 @@ async def load(dut, addr):
     data_1 = await wishbone_read(dut, 0x3000000C)
     data_2 = await wishbone_read(dut, 0x30000010)
     data_3 = await wishbone_read(dut, 0x30000014)
-    return [data_0, data_1, data_2, data_3]
+    return [data_3, data_2, data_1, data_0]
 
 
 async def wishbone_write(dut, addr, data):
