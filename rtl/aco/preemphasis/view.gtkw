@@ -1,0 +1,40 @@
+[*]
+[*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
+[*] Fri May 14 18:54:08 2021
+[*]
+[dumpfile] "/home/mjpauly/repos/wakey_wakey/rtl/aco/preemphasis/wave.vcd"
+[dumpfile_mtime] "Fri May 14 18:53:11 2021"
+[dumpfile_size] 34781
+[savefile] "/home/mjpauly/repos/wakey_wakey/rtl/aco/preemphasis/view.gtkw"
+[timestart] 0
+[size] 1848 1016
+[pos] -1 -1
+*-25.000000 26500000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 233
+[signals_width] 379
+[sst_expanded] 1
+[sst_vpaned_height] 289
+@28
+preemphasis.clk_i
+@420
+preemphasis.data_i[7:0]
+@28
+preemphasis.valid_i
+@200
+-
+@421
+preemphasis.data_o[8:0]
+@28
+preemphasis.valid_o
+@200
+-
+@420
+preemphasis.data_q[7:0]
+preemphasis.data_scaled[8:0]
+@200
+-
+-
+-
+-
+[pattern_trace] 1
+[pattern_trace] 0
