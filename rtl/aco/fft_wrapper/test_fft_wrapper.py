@@ -29,7 +29,7 @@ def constant_sig():
     titles.append('Constant input')
     return np.ones(FFT_LEN)
 
-def cosine_sig(f):
+def cosine_sig():
     titles.append('Cosine input')
     t = np.linspace(0, 1, FFT_LEN)  # test with 1 second sampling at 256 Hz
     f = 5  # 5 Hz
@@ -42,6 +42,26 @@ def random_sig():
     sig = np.random.randn(FFT_LEN) * FFT_LEN
     sig = sig.astype(np.int16)
     return sig
+
+def double_cosine_sig():
+    titles.append('Double Cosine input')
+    t = np.linspace(0, 1, FFT_LEN)  # test with 1 second sampling at 256 Hz
+    f = 5  # 5 Hz
+    sig = 50 * np.cos(2*np.pi * f * t)
+    sig += 50 * np.cos(2*np.pi * f * t * 2)
+    sig = sig.astype(np.int16)
+    return sig
+
+def multi_cosine_sig():
+    titles.append('Multi Cosine input')
+    t = np.linspace(0, 1, FFT_LEN)  # test with 1 second sampling at 256 Hz
+    f = 5  # 5 Hz
+    sig = 10 * np.cos(2*np.pi * f * t)
+    for i in range(0, 25, 2):
+        sig += 10 * np.cos(2*np.pi * f * t * i)
+    sig = sig.astype(np.int16)
+    return sig
+    
 
 async def write_input(dut, sig):
     '''Send inputs into the dut and save the expected output.'''
@@ -121,23 +141,24 @@ async def main(dut):
     dut.rst_n_i <= 1
     dut.en_i <= 1
 
-    await write_input(dut, cosine_sig(5))
-    await read_output_once(dut)
-    await Timer(5000, units='us')
-
     await write_input(dut, constant_sig())
     await read_output_once(dut)
-    await Timer(5000, units='us')  # wait enough time for the fft core to reset
+    await Timer(5001, units='us')  # wait enough time for the fft core to reset
 
-    await write_input(dut, constant_sig())
+    await write_input(dut, cosine_sig())
     await read_output_once(dut)
-    await Timer(5000, units='us')  # wait enough time for the fft core to reset
-    # await write_input(dut, cosine_sig(5))
-    # await read_output_once(dut)
-    # await Timer(5000, units='us')
+    await Timer(5001, units='us')
+
+    await write_input(dut, double_cosine_sig())
+    await read_output_once(dut)
+    await Timer(5001, units='us')
+
+    await write_input(dut, multi_cosine_sig())
+    await read_output_once(dut)
+    await Timer(5001, units='us')
 
     await write_input(dut, random_sig())
     await read_output_once(dut)
-    await Timer(5000, units='us')
+    await Timer(5001, units='us')
 
     gen_result_plots()

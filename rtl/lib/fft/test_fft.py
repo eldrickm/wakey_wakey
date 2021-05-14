@@ -47,6 +47,16 @@ def random_sig():
     sig = sig.astype(np.int16)
     return sig
 
+def multi_cosine_sig():
+    titles.append('Multi Cosine input')
+    t = np.linspace(0, 1, 256)  # test with 1 second sampling at 256 Hz
+    f = 5  # 5 Hz
+    sig = 10 * np.cos(2*np.pi * f * t)
+    for i in range(0, 25, 2):
+        sig += 10 * np.cos(2*np.pi * f * t * i)
+    sig = sig.astype(np.int16)
+    return sig
+
 async def write_input(dut, sig):
     '''Send inputs into the dut and save the expected output.'''
     for i in range(256):
@@ -125,11 +135,9 @@ async def test_fft(dut):
 
     reader = cocotb.fork(read_output_multiple(dut, 3))
 
-    await write_input(dut, cosine_sig(5))
-    await write_input(dut, constant_sig())
-    await write_input(dut, constant_sig())
     await write_input(dut, constant_sig())
     await write_input(dut, cosine_sig(5))
+    await write_input(dut, multi_cosine_sig())
     await write_input(dut, random_sig())
 
     await reader

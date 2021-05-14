@@ -10,6 +10,8 @@ TOPLEVEL_LANG   ?= verilog			# hdl (verilog, vhdl)
 VERILOG_SOURCES += ./*.v
 VERILOG_SOURCES += ../../lib/fft/*.v
 
+$(shell cp ../../lib/fft/*.hex .)  # copy over fft hex files
+
 # ==============================================================================
 # modules
 # ==============================================================================
@@ -28,6 +30,7 @@ clean::
 	rm -f results.xml
 	rm -f *.vcd
 	rm -rf __pycache__/
+	rm *.hex
 
 wave:
 	gtkwave *.vcd -a view.gtkw
