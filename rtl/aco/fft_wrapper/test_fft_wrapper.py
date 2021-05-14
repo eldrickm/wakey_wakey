@@ -50,6 +50,7 @@ async def write_input(dut, sig):
         dut.data_i <= int(sig[i])
         await FallingEdge(dut.clk_i)
     dut.valid_i <= 0
+    dut.data_i <= 0
     expected_results.append(np.fft.rfft(sig))
 
 async def read_output_once(dut):
@@ -119,6 +120,10 @@ async def main(dut):
 
     dut.rst_n_i <= 1
     dut.en_i <= 1
+
+    await write_input(dut, cosine_sig(5))
+    await read_output_once(dut)
+    await Timer(5000, units='us')
 
     await write_input(dut, constant_sig())
     await read_output_once(dut)
