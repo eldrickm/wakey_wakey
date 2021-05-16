@@ -6,17 +6,24 @@ import numpy as np
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import FallingEdge, Timer
+from cocotb.binary import BinaryValue
+
+def np2bv(int_list):
+    """ Convert a 8b integer numpy array in cocotb BinaryValue """
+    # int_list = int_arr.tolist()
+    binarized = [format(x & 0x1fffff, '021b') if x < 0 else format(x, '021b')
+                 for x in int_list]
+    bin_string = ''.join(binarized)
+    return BinaryValue(bin_string)
 
 def get_msg(i, received, expected):
     return 'idx {}, dut output of {}, expected {}'.format(i, received, expected)
 
 def get_test_vector():
     n = 200
-    x = np.random.randint(-128, 128, size=n)
-    rolled = np.roll(x, 1)
-    rolled[0] = 0
-    scaled = np.right_shift(31 * rolled, 5)
-    y = x - scaled
+    x = np.random.randint(-128, 128, size=n).astype(np.complex128)
+    x += np.random.randint(-128, 128, size=n) * 1j
+    y = x.real ** 2 + x.imag ** 2
     return x, y
 
 async def check_output(dut):
@@ -24,10 +31,13 @@ async def check_output(dut):
     x, y = get_test_vector()
     i = 0
     while i < len(x):
-        dut.data_i <= int(x[i])
+        dut.data_i <= np2bv([int(x[i].real), int(x[i].imag)])
         valid = np.random.randint(2)  # randomly de-assert valid
         # valid = 1
+        last = 1 if np.random.randint(10) == 0 else 0
+        # last = 0
         dut.valid_i <= (1 if valid else 0)
+        dut.last_i <= last
         # give control to simulator briefly for combinational logic
         await Timer(1, units='us')
         if (valid):
@@ -39,6 +49,10 @@ async def check_output(dut):
             i += 1
         else:
             assert dut.valid_o == 0
+        if last:
+            assert dut.last_o == 1
+        else:
+            assert dut.last_o == 0
         await FallingEdge(dut.clk_i)
 
 async def check_output_no_en(dut):
@@ -53,7 +67,7 @@ async def check_output_no_en(dut):
 
 @cocotb.test()
 async def main(dut):
-    """ Test Rectified Linear Unit """
+    """ Test Power Spectrum """
     # Create a 10us period clock on port clk
     clock = Clock(dut.clk_i, 10, units="us")
     cocotb.fork(clock.start())
@@ -64,6 +78,7 @@ async def main(dut):
     dut.en_i <= 0
     dut.data_i <= 0
     dut.valid_i <= 0
+    dut.last_i <= 0
 
     # reset
     await FallingEdge(dut.clk_i)
