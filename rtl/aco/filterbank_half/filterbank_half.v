@@ -67,6 +67,8 @@ module filterbank_half # (
         end else begin
             if (last_i) begin
                 boundary_counter <= 'd0;
+            end else if (at_boundary & (boundary_counter == NUM_BOUNDARY - 1)) begin
+                boundary_counter <= 'd0;
             end else if (at_boundary) begin
                 boundary_counter <= boundary_counter + 'd1;
             end else begin
@@ -105,18 +107,20 @@ module filterbank_half # (
     assign last_o = last_i;
 
     // =========================================================================
-    // Simulation Only Waveform Dump (.vcd export)
+    // ROM Memories for filterbank coefficients and boundary indices
     // =========================================================================
     reg [COEF_BW - 1 : 0] coef [0 : INPUT_LEN - 1];  // filters 0,2,...30 (even)
                                                      // or      1,3,...31 (odd)
     reg [BOUNDARY_BW - 1 : 0] boundary [0 : NUM_BOUNDARY - 1];  // boundaries
-    reg [8:0] i;
     initial begin
         $display("reading from: %s", COEFFILE);
         $display("reading from: %s", BOUNDARYFILE);
         $readmemh(COEFFILE, coef);
         $readmemh(BOUNDARYFILE, boundary);
 
+        // =====================================================================
+        // Simulation Only Waveform Dump (.vcd export)
+        // =====================================================================
         `ifdef COCOTB_SIM
         $dumpfile ("wave.vcd");
         $dumpvars (0, filterbank_half);

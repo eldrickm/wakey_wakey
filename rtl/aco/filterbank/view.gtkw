@@ -1,0 +1,68 @@
+[*]
+[*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
+[*] Mon May 17 06:31:28 2021
+[*]
+[dumpfile] "/home/mjpauly/repos/wakey_wakey/rtl/aco/filterbank/wave.vcd"
+[dumpfile_mtime] "Mon May 17 06:30:24 2021"
+[dumpfile_size] 438939
+[savefile] "/home/mjpauly/repos/wakey_wakey/rtl/aco/filterbank/view.gtkw"
+[timestart] 0
+[size] 1848 1016
+[pos] -1 -1
+*-28.000000 540000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] filterbank.
+[sst_width] 233
+[signals_width] 363
+[sst_expanded] 1
+[sst_vpaned_height] 289
+@28
+filterbank.clk_i
+filterbank.rst_n_i
+filterbank.en_i
+@200
+-
+@22
+filterbank.data_i[31:0]
+@28
+filterbank.valid_i
+filterbank.last_i
+@200
+-
+@22
+filterbank.data_o[31:0]
+@28
+filterbank.valid_o
+filterbank.last_o
+@200
+-
+-EVEN
+@29
+filterbank.even_filterbanks.at_boundary
+@24
+filterbank.even_filterbanks.boundary_counter[7:0]
+filterbank.even_filterbanks.elem_counter[7:0]
+@22
+filterbank.even_filterbanks.sum[63:0]
+filterbank.even_filterbanks.data_o[31:0]
+@28
+filterbank.even_filterbanks.valid_o
+@200
+-
+-
+-ODD
+@28
+filterbank.odd_filterbanks.at_boundary
+@24
+filterbank.odd_filterbanks.boundary_counter[7:0]
+filterbank.odd_filterbanks.elem_counter[7:0]
+@22
+filterbank.odd_filterbanks.sum[63:0]
+filterbank.odd_filterbanks.sum_result[63:0]
+filterbank.odd_filterbanks.data_o[31:0]
+@28
+filterbank.odd_filterbanks.valid_o
+@200
+-
+-
+[pattern_trace] 1
+[pattern_trace] 0
