@@ -21,23 +21,21 @@ INT32_MAX = np.iinfo(np.int32).max
 
 ENABLE_ASSERTS = True
 
-def np2bv(int_arr):
-    """ Convert a 8b integer numpy array in cocotb BinaryValue """
+def np2bv(int_arr, n_bits=8):
+    """ Convert a n_bits integer numpy array to cocotb BinaryValue """
+    # Step 1: Turn ndarray into a list of integers
     int_list = int_arr.tolist()
-    binarized = [format(x & 0xFF, '08b') if x < 0 else format(x, '08b')
-                 for x in int_list]
-    bin_string = ''.join(binarized)
-    return BinaryValue(bin_string)
 
-#  async def store_conv1_weight(dut, bank, values):
-#      assert bank >= 0 and bank <= 3
-#      assert values.shape == (8, 13)
-#      bank_offset = 0x10 * bank
-#      for i in range(8):
-#          await store(dut, i + bank_offset, values[i][, i + 2, i + 1, i)
-#
-#  async def store_conv1_bias(dut, values):
-#  async def store_conv1_shift(dut, values):
+    # Step 2: Format each number as two's complement strings
+    binarized = [format(x & 2 ** n_bits - 1, f'0{n_bits}b') if x < 0 else
+                 format(x, f'0{n_bits}b')
+                 for x in int_list]
+
+    # Step 3: Join all strings into one large binary string
+    bin_string = ''.join(binarized)
+
+    # Step 4: Convert to cocotb BinaryValue and return
+    return BinaryValue(bin_string)
 
 
 async def store(dut, addr, data_3, data_2, data_1, data_0):
