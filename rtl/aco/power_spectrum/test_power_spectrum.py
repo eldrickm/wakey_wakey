@@ -8,13 +8,22 @@ from cocotb.clock import Clock
 from cocotb.triggers import FallingEdge, Timer
 from cocotb.binary import BinaryValue
 
-def np2bv(int_list):
-    """ Convert a 8b integer numpy array in cocotb BinaryValue """
-    # int_list = int_arr.tolist()
-    binarized = [format(x & 0x1fffff, '021b') if x < 0 else format(x, '021b')
+def np2bv(int_arr, n_bits=8):
+    """ Convert a n_bits integer numpy array to cocotb BinaryValue """
+    # Step 1: Turn ndarray into a list of integers
+    int_list = int_arr.tolist()
+
+    # Step 2: Format each number as two's complement strings
+    binarized = [format(x & 2 ** n_bits - 1, f'0{n_bits}b') if x < 0 else
+                 format(x, f'0{n_bits}b')
                  for x in int_list]
+
+    # Step 3: Join all strings into one large binary string
     bin_string = ''.join(binarized)
+
+    # Step 4: Convert to cocotb BinaryValue and return
     return BinaryValue(bin_string)
+
 
 def get_msg(i, received, expected):
     return 'idx {}, dut output of {}, expected {}'.format(i, received, expected)
@@ -31,7 +40,7 @@ async def check_output(dut):
     x, y = get_test_vector()
     i = 0
     while i < len(x):
-        dut.data_i <= np2bv([int(x[i].real), int(x[i].imag)])
+        dut.data_i <= np2bv(np.array([int(x[i].real), int(x[i].imag)]), n_bits=21)
         valid = np.random.randint(2)  # randomly de-assert valid
         # valid = 1
         last = 1 if np.random.randint(10) == 0 else 0
