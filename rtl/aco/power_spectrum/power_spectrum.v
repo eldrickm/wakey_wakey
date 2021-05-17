@@ -19,7 +19,7 @@ module power_spectrum (
     input                                   last_i,
 
     // streaming output
-    output  signed [O_BW - 1 : 0]           data_o,
+    output [O_BW - 1 : 0]                   data_o,
     output                                  valid_o,
     output                                  last_o
 );

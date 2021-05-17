@@ -1,0 +1,74 @@
+[*]
+[*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
+[*] Mon May 17 04:12:47 2021
+[*]
+[dumpfile] "/home/mjpauly/repos/wakey_wakey/rtl/aco/filterbank_half/wave.vcd"
+[dumpfile_mtime] "Mon May 17 04:12:35 2021"
+[dumpfile_size] 13393
+[savefile] "/home/mjpauly/repos/wakey_wakey/rtl/aco/filterbank_half/view.gtkw"
+[timestart] 5000
+[size] 1848 1016
+[pos] -1 -1
+*-24.000000 45300000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 233
+[signals_width] 234
+[sst_expanded] 1
+[sst_vpaned_height] 289
+@28
+filterbank_half.clk_i
+filterbank_half.rst_n_i
+filterbank_half.en_i
+@200
+-
+@24
+filterbank_half.data_i[31:0]
+@28
+filterbank_half.valid_i
+filterbank_half.last_i
+@200
+-
+@22
+filterbank_half.data_o[31:0]
+@28
+filterbank_half.valid_o
+filterbank_half.last_o
+@200
+-
+@24
+filterbank_half.sum[47:0]
+@28
+filterbank_half.at_boundary
+@24
+filterbank_half.elem_counter[7:0]
+filterbank_half.boundary_counter[7:0]
+@25
+filterbank_half.sum_result[47:0]
+@200
+-
+@c00024
+filterbank_half.curr_coef[15:0]
+@28
+(0)filterbank_half.curr_coef[15:0]
+(1)filterbank_half.curr_coef[15:0]
+(2)filterbank_half.curr_coef[15:0]
+(3)filterbank_half.curr_coef[15:0]
+(4)filterbank_half.curr_coef[15:0]
+(5)filterbank_half.curr_coef[15:0]
+(6)filterbank_half.curr_coef[15:0]
+(7)filterbank_half.curr_coef[15:0]
+(8)filterbank_half.curr_coef[15:0]
+(9)filterbank_half.curr_coef[15:0]
+(10)filterbank_half.curr_coef[15:0]
+(11)filterbank_half.curr_coef[15:0]
+(12)filterbank_half.curr_coef[15:0]
+(13)filterbank_half.curr_coef[15:0]
+(14)filterbank_half.curr_coef[15:0]
+(15)filterbank_half.curr_coef[15:0]
+@1401200
+-group_end
+@200
+-
+-
+-
+[pattern_trace] 1
+[pattern_trace] 0
