@@ -29,6 +29,16 @@ def np2bv(int_arr):
     bin_string = ''.join(binarized)
     return BinaryValue(bin_string)
 
+#  async def store_conv1_weight(dut, bank, values):
+#      assert bank >= 0 and bank <= 3
+#      assert values.shape == (8, 13)
+#      bank_offset = 0x10 * bank
+#      for i in range(8):
+#          await store(dut, i + bank_offset, values[i][, i + 2, i + 1, i)
+#
+#  async def store_conv1_bias(dut, values):
+#  async def store_conv1_shift(dut, values):
+
 
 async def store(dut, addr, data_3, data_2, data_1, data_0):
     '''Store to Wakey Wakey Memory
@@ -559,56 +569,74 @@ async def test_cfg(dut):
     await store(dut, 0x400, i + 3, i + 2, i + 1, i)
 
     # Load Test
-    # Sequential Load - Conv 1 Memory Bank 0
+    # Sequential Load - Conv 1 Memory Bank 0 (Weight - 104b)
     for i in range(8):
         observed = await load(dut, i)
         expected = [i + 3, i + 2, i + 1, i]
         assert observed == expected
-    # Sequential Load - Conv 1 Memory Bank 1
+    # Sequential Load - Conv 1 Memory Bank 1 (Weight - 104b)
     for i in range(8):
         observed = await load(dut, i + 0x10)
         expected = [i + 3, i + 2, i + 1, i]
         assert observed == expected
-    # Sequential Load - Conv 1 Memory Bank 2
+    # Sequential Load - Conv 1 Memory Bank 2 (Weight - 104b)
     for i in range(8):
         observed = await load(dut, i + 0x20)
         expected = [i + 3, i + 2, i + 1, i]
         assert observed == expected
-    # Sequential Load - Conv 1 Memory Bank 3
+    # Sequential Load - Conv 1 Memory Bank 3 (Bias - 32b)
     for i in range(8):
         observed = await load(dut, i + 0x30)
         expected = [0, 0, 0, i]
         assert observed == expected
-    # Sequential Load - Conv 1 Memory Bank 4
+    # Sequential Load - Conv 1 Memory Bank 4 (Shift - 5b)
     observed = await load(dut, 0x40)
     expected = [0, 0, 0, i]
     assert observed == expected
 
-    # Sequential Load - Conv 2 Memory Bank 0
+    # Sequential Load - Conv 2 Memory Bank 0 (Weight - 64b)
     for i in range(16):
-        await load(dut, i + 0x50)
-    # Sequential Load - Conv 2 Memory Bank 1
+        observed = await load(dut, i + 0x50)
+        expected = [0, 0, i + 1, i]
+        assert observed == expected
+    # Sequential Load - Conv 2 Memory Bank 1 (Weight - 64b)
     for i in range(16):
-        await load(dut, i + 0x60)
-    # Sequential Load - Conv 2 Memory Bank 2
+        observed = await load(dut, i + 0x60)
+        expected = [0, 0, i + 1, i]
+        assert observed == expected
+    # Sequential Load - Conv 2 Memory Bank 2 (Weight - 64b)
     for i in range(16):
-        await load(dut, i + 0x70)
-    # Sequential Load - Conv 2 Memory Bank 3
+        observed = await load(dut, i + 0x70)
+        expected = [0, 0, i + 1, i]
+        assert observed == expected
+    # Sequential Load - Conv 2 Memory Bank 3 (Bias - 32b)
     for i in range(16):
-        await load(dut, i + 0x80)
-    # Sequential Load - Conv 2 Memory Bank 4
-    await load(dut, 0x90)
+        observed = await load(dut, i + 0x80)
+        expected = [0, 0, 0, i]
+        assert observed == expected
+    # Sequential Load - Conv 2 Memory Bank 4 (Shift - 5b)
+    observed = await load(dut, 0x90)
+    expected = [0, 0, 0, i]
+    assert observed == expected
 
-    # Sequential Load - FC Memory Bank 0
+    # Sequential Load - FC Memory Bank 0 (Weight - 8b)
     for i in range(208):
-        await load(dut, i + 0x100)
-    # Sequential Load - FC Memory Bank 1
+        observed = await load(dut, i + 0x100)
+        expected = [0, 0, 0, i]
+        assert observed == expected
+    # Sequential Load - FC Memory Bank 1 (Weight - 8b)
     for i in range(208):
-        await load(dut, i + 0x200)
-    # Sequential Load - FC Memory Bank 3
-    await load(dut, 0x300)
-    # Sequential Load - FC Memory Bank 3
-    await load(dut, 0x400)
+        observed = await load(dut, i + 0x200)
+        expected = [0, 0, 0, i]
+        assert observed == expected
+    # Sequential Load - FC Memory Bank 3 (Bias - 32b)
+    observed = await load(dut, 0x300)
+    expected = [0, 0, 0, i]
+    assert observed == expected
+    # Sequential Load - FC Memory Bank 3 (Bias - 32b)
+    observed = await load(dut, 0x400)
+    expected = [0, 0, 0, i]
+    assert observed == expected
 
     #  n_fixed_tests = 4  # number of different types of fixed tests
     #  for i in range(n_fixed_tests):
