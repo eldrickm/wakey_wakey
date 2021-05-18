@@ -98,7 +98,7 @@ module framing # (
         if (!rst_n_i | !en_i) begin
             cadence <= 'd0;
         end else begin
-            if (cadence == CADENCE_CYC - 'd1) begin  // reset to 0
+            if (next_elem) begin  // reset to 0
                 cadence <= 'd0;
             end else if (state == STATE_UNLOAD) begin
                 cadence <= cadence + 'd1;
