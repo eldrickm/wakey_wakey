@@ -30,7 +30,6 @@ module dct (
     // =========================================================================
     localparam I_BW          = 8;
     localparam O_BW          = 16;
-    // localparam O_BW          = 64;
     localparam INTERNAL_BW   = 32;
     localparam COEF_BW       = 16;
     localparam FRAME_LEN     = 32;  // length of the DCT
@@ -85,9 +84,7 @@ module dct (
     // =========================================================================
     wire [ADDR_BW - 1 : 0] addr = N_COEF * elem_counter + coef_counter;
     wire signed [INTERNAL_BW - 1 : 0] mult;
-    // wire signed [COEF_BW - 1 : 0] curr_coef = coefs[addr]; 
     wire signed [I_BW : 0] data_i_signed = data_i;
-    // assign mult = data_i * coefs[addr];
     assign mult = data_i_signed * coefs[addr];
 
     // =========================================================================
@@ -110,27 +107,11 @@ module dct (
     end
 
     // =========================================================================
-    // Delay 1 cycle
-    // =========================================================================
-    // reg last_q;
-    // reg valid_q;
-    // reg last_elem_q;
-    // always @(posedge clk_i) begin
-        // last_q <= last_i;
-        // valid_q <= valid_i;
-        // last_elem_q <= last_elem;
-    // end
-
-    // =========================================================================
     // Output Assignment
     // =========================================================================
-    // assign valid_o = (en_i & last_elem_q);
-    // assign data_o = (last_elem_q) ? acc_arr[;
-    // assign last_o = last_i;
     wire signed [INTERNAL_BW - 1 : 0] pre_shift = acc_arr[coef_counter] + mult;
     assign valid_o = (en_i & last_elem);
     assign data_o = pre_shift >> SHIFT;
-    // assign data_o = pre_shift;
     assign last_o = last_i;
 
     // =========================================================================
