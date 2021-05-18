@@ -21,12 +21,20 @@ INT32_MAX = np.iinfo(np.int32).max
 
 ENABLE_ASSERTS = True
 
-def np2bv(int_arr):
-    """ Convert a 8b integer numpy array in cocotb BinaryValue """
+def np2bv(int_arr, n_bits=8):
+    """ Convert a n_bits integer numpy array to cocotb BinaryValue """
+    # Step 1: Turn ndarray into a list of integers
     int_list = int_arr.tolist()
-    binarized = [format(x & 0xFF, '08b') if x < 0 else format(x, '08b')
+
+    # Step 2: Format each number as two's complement strings
+    binarized = [format(x & 2 ** n_bits - 1, f'0{n_bits}b') if x < 0 else
+                 format(x, f'0{n_bits}b')
                  for x in int_list]
+
+    # Step 3: Join all strings into one large binary string
     bin_string = ''.join(binarized)
+
+    # Step 4: Convert to cocotb BinaryValue and return
     return BinaryValue(bin_string)
 
 

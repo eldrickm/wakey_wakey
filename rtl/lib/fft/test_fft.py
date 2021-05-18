@@ -22,12 +22,20 @@ titles = []
 OKGREEN = '\033[92m'
 ENDC = '\033[0m'
 
-def np2bv(int_arr):
-    """ Convert a 16b integer numpy array in cocotb BinaryValue """
+def np2bv(int_arr, n_bits=8):
+    """ Convert a n_bits integer numpy array to cocotb BinaryValue """
+    # Step 1: Turn ndarray into a list of integers
     int_list = int_arr.tolist()
-    binarized = [format(x & 0xFFFF, '016b') if x < 0 else format(x, '016b')
+
+    # Step 2: Format each number as two's complement strings
+    binarized = [format(x & 2 ** n_bits - 1, f'0{n_bits}b') if x < 0 else
+                 format(x, f'0{n_bits}b')
                  for x in int_list]
+
+    # Step 3: Join all strings into one large binary string
     bin_string = ''.join(binarized)
+
+    # Step 4: Convert to cocotb BinaryValue and return
     return BinaryValue(bin_string)
 
 def constant_sig():
@@ -60,7 +68,7 @@ def multi_cosine_sig():
 async def write_input(dut, sig):
     '''Send inputs into the dut and save the expected output.'''
     for i in range(256):
-        bv = np2bv(np.array([int(sig[i]), 0]))
+        bv = np2bv(np.array([int(sig[i]), 0]), n_bits=16)
         dut.i_sample <= bv
         await FallingEdge(dut.i_clk)
     expected_results.append(np.fft.fft(sig))

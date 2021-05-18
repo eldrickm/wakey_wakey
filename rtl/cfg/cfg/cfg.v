@@ -6,6 +6,7 @@
 // User address space goes from 0x3000_0000 to 0x7FFF_FFFF
 // TODO: Sensitize to cyc_i?
 // TODO: Adjust wishbone ack for Store and Load on CTRL?
+// TODO: Remove technically unecessary mux to zeros in Data Registers
 // =============================================================================
 
 module cfg #(
@@ -290,17 +291,17 @@ module cfg #(
             data_1 <= (wr_active && adr_data_1) ?    wbs_dat_i:
                       (conv1_rd_en_d) ? conv1_rd_data_i[63:32]:
                       (conv2_rd_en_d) ? conv2_rd_data_i[63:32]:
-                      // (fc_rd_en_d)    ? 'h0:
+                      (fc_rd_en_d)    ? 'h0:
                       data_1;
             data_2 <= (wr_active && adr_data_2) ?    wbs_dat_i:
                       (conv1_rd_en_d) ? conv1_rd_data_i[95:64]:
-                      // (conv2_rd_en_d) ? 'h0:
-                      // (fc_rd_en_d)    ? 'h0:
+                      (conv2_rd_en_d) ? 'h0:
+                      (fc_rd_en_d)    ? 'h0:
                       data_2;
             data_3 <= (wr_active && adr_data_3) ?     wbs_dat_i:
                       (conv1_rd_en_d) ? {24'b0, conv1_rd_data_i[103:96]}:
-                      // (conv2_rd_en_d) ? 'h0:
-                      // (fc_rd_en_d)    ? 'h0:
+                      (conv2_rd_en_d) ? 'h0:
+                      (fc_rd_en_d)    ? 'h0:
                       data_3;
         end
     end
