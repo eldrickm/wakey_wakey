@@ -13,6 +13,9 @@ module aco (
     input                                   rst_n_i,
     input                                   en_i,
 
+    input  [QUANT_SHIFT_BW - 1 : 0]         shift_i,
+    input                                   wr_en,
+
     // streaming input
     input signed  [I_BW - 1 : 0]            data_i,
     input                                   valid_i,
@@ -57,6 +60,7 @@ module aco (
     localparam DCT_O_BW                 = 16;
 
     localparam QUANT_I_BW               = 16;
+    localparam QUANT_SHIFT_BW           = 8;
     localparam QUANT_O_BW               = 8;
 
     localparam PACKING_I_BW             = 8;
@@ -243,8 +247,8 @@ module aco (
         .rst_n_i(rst_n_i),
         .en_i(en_i),
 
-        .shift(),  // shift amount
-        .wr_en(),
+        .shift_i(shift_i),
+        .wr_en(wr_en),
 
         .data_i(dct_data_o),
         .valid_i(dct_valid_o),
