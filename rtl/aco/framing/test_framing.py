@@ -24,12 +24,13 @@ async def write_input(dut, x):
     i = 0
     while i < len(x):
         dut.data_i <= int(x[i])
-        valid = np.random.randint(2)  # randomly de-assert valid
+        valid = 1 if (np.random.randint(5) == 0) else 0  # randomly de-assert valid
         # valid = 1
         dut.valid_i <= (1 if valid else 0)
         if (valid):
             i += 1
         await FallingEdge(dut.clk_i)
+    dut.valid_i <= 0
 
 async def check_output(dut, expected_frames):
     for i in range(len(expected_frames)):
@@ -39,16 +40,17 @@ async def check_output(dut, expected_frames):
         while (dut.valid_o != 1):
             await FallingEdge(dut.clk_i)
         for j in range(FRAME_LEN):
-            assert dut.valid_o == 1
-            if j == FRAME_LEN - 1:
-                assert dut.last_o == 1
-            else:
-                assert dut.last_o == 0
-            expected_val = expected_frame[j]
-            received_val = dut.data_o.value.signed_integer
-            assert received_val == expected_val, get_msg(j, received_val,
-                                                         expected_val)
-            await FallingEdge(dut.clk_i)
+            for k in range(2):  # check cadence
+                assert dut.valid_o == 1
+                if j == FRAME_LEN - 1 and k == 1:
+                    assert dut.last_o == 1
+                else:
+                    assert dut.last_o == 0
+                expected_val = expected_frame[j]
+                received_val = dut.data_o.value.signed_integer
+                assert received_val == expected_val, get_msg(j, received_val,
+                                                             expected_val)
+                await FallingEdge(dut.clk_i)
     print('Received frames as expected.')
 
 async def check_output_no_en(dut):

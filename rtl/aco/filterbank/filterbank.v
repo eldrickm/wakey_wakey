@@ -27,13 +27,7 @@ module filterbank (
     // Local Parameters
     // =========================================================================
     localparam I_BW         = 32;
-    localparam INTERNAL_BW  = 64;   // 48 would be sufficient but why not
     localparam O_BW         = 32;
-    localparam COEF_BW      = 16;   // bitwidth of the filterbank coefficients
-    localparam INPUT_LEN    = 129;  // length of the power spectrum
-    localparam NUM_BOUNDARY = 16;   // number of triangle boundary indices
-                                    // Signals when a MFCC coefficient is done
-    localparam BOUNDARY_BW  = 8;
 
     localparam EVEN_COEFFILE            = "coef_even.hex";
     localparam ODD_COEFFILE             = "coef_odd.hex";

@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
-[*] Sun May 16 04:18:13 2021
+[*] Tue May 18 03:21:56 2021
 [*]
 [dumpfile] "/home/mjpauly/repos/wakey_wakey/rtl/aco/framing/wave.vcd"
-[dumpfile_mtime] "Sun May 16 04:16:35 2021"
-[dumpfile_size] 80337
+[dumpfile_mtime] "Tue May 18 03:20:38 2021"
+[dumpfile_size] 364576
 [savefile] "/home/mjpauly/repos/wakey_wakey/rtl/aco/framing/view.gtkw"
-[timestart] 4711400000
+[timestart] 12648200000
 [size] 1848 1016
 [pos] -1 -1
-*-26.000000 5144900000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-26.000000 12870000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [sst_width] 233
 [signals_width] 247
 [sst_expanded] 1
@@ -26,14 +26,14 @@ framing.data_i[8:0]
 framing.valid_i
 @200
 -
-@22
+@25
 framing.data_o[15:0]
 @28
 framing.valid_o
 framing.last_o
 @200
 -
-@29
+@28
 framing.state
 @24
 framing.fifo_count[8:0]
@@ -46,6 +46,9 @@ framing.fifo_deq
 framing.fifo_dout[8:0]
 @200
 -
+@28
+framing.cadence
+@200
 -
 -
 -
