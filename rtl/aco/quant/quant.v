@@ -50,7 +50,7 @@ module quant (
     // =========================================================================
     // Output Assignment
     // =========================================================================
-    assign data_o = data_i >> shift;
+    assign data_o = data_i >>> shift;
     assign valid_o = (en_i & valid_i);
     assign last_o  = last_i;
 

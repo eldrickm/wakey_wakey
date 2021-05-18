@@ -1,0 +1,51 @@
+[*]
+[*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
+[*] Tue May 18 16:30:25 2021
+[*]
+[dumpfile] "/home/mjpauly/repos/wakey_wakey/rtl/aco/quant/wave.vcd"
+[dumpfile_mtime] "Tue May 18 16:30:22 2021"
+[dumpfile_size] 719
+[savefile] "/home/mjpauly/repos/wakey_wakey/rtl/aco/quant/view.gtkw"
+[timestart] 0
+[size] 1848 1016
+[pos] -1 -1
+*-24.000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 233
+[signals_width] 323
+[sst_expanded] 1
+[sst_vpaned_height] 289
+@28
+quant.clk_i
+quant.rst_n_i
+quant.en_i
+@200
+-
+@22
+quant.data_i[15:0]
+@28
+quant.valid_i
+quant.last_i
+@200
+-
+@22
+quant.data_o[7:0]
+@28
+quant.valid_o
+@29
+quant.last_o
+@200
+-
+-
+@22
+quant.shift_i[7:0]
+@28
+quant.wr_en
+@200
+-
+-
+-
+-
+-
+-
+[pattern_trace] 1
+[pattern_trace] 0
