@@ -8,7 +8,7 @@
 
 module framing # (
     parameter I_BW         = 9,   // preemphasis input
-    parameter O_BW         = 16,  // FFT output
+    parameter O_BW         = 16,  // output to FFT
     parameter FRAME_LEN    = 256,
     parameter CADENCE_CYC  = 2  // how frequently to output data in cycles
 ) (
