@@ -98,8 +98,10 @@ module user_proj_example #(
         .wbs_ack_o(wbs_ack_o),
         .wbs_dat_o(wbs_dat_o),
 
-        // microphone inputs
-        // TODO
+        // microphone i/o
+        .pdm_data_i(io_in[0]),
+        .pdm_clk_o(io_out[1]),
+        // TODO: Activate Pin
 
         // wake output
         .wake_o(io_out[0])
