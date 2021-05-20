@@ -20,13 +20,40 @@ module wakey_wakey (
     output          wbs_ack_o,
     output [31 : 0] wbs_dat_o,
 
-    // microphone inputs
-    // TODO
+    // microphone i/o
+    input           pdm_data_i,
+    output          pdm_clk_o,
+    // TODO: Activate Pin
 
     // wake output
     output wake_o
 );
 
+    // =========================================================================
+    // DFE - Digital Front End
+    // =========================================================================
+    localparam DFE_OUTPUT_BW = 8;
+
+    wire [DFE_OUTPUT_BW - 1 : 0] dfe_data;
+    wire                         dfe_valid;
+
+    dfe dfe_inst (
+        // clock, reset, and enable
+        .clk_i(clk_i),
+        .rst_n_i(rst_n_i),
+        // TODO: Activate Pin hooks up here
+        .en_i(1'b1),
+
+        // pdm input
+        .pdm_data_i(pdm_data_i),
+
+        // pdm clock output
+        .pdm_clk_o(pdm_clk_o),
+
+        // streaming output
+        .data_o(dfe_data),
+        .valid_o(dfe_valid)
+    );
 
     // =========================================================================
     // CFG - System Configuration
@@ -120,11 +147,16 @@ module wakey_wakey (
     // =========================================================================
     // WRD - Word Recognition DNN Accelerator Module
     // =========================================================================
-    // temporary signals to allow cocotb testbench access, set to 0 at synth
+    // TODO: temporary signals to allow cocotb testbench access, set to 0 at synth
     wire [103:0] data_i;
     wire valid_i;
     wire last_i;
     wire ready_o;
+    `ifndef COCOTB_SIM
+        assign data_i = {96'b0, dfe_data};
+        assign valid_i = dfe_valid;
+        assign last_i = 1'b0;
+    `endif
 
     wrd wrd_inst (
         // clock and reset

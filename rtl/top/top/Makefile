@@ -28,6 +28,13 @@ VERILOG_SOURCES += ../../wrd/wake/*.v
 VERILOG_SOURCES += ../../wrd/wrd/*.v
 VERILOG_SOURCES += ../../lib/fifo/*.v
 VERILOG_SOURCES += ../../lib/dffram/*.v
+VERILOG_SOURCES += ../../dfe/dfe/*.v
+VERILOG_SOURCES += ../../dfe/pdm_clk/*.v
+VERILOG_SOURCES += ../../dfe/sampler/*.v
+VERILOG_SOURCES += ../../dfe/filter/*.v
+VERILOG_SOURCES += ../../dfe/comb/*.v
+VERILOG_SOURCES += ../../dfe/integrator/*.v
+VERILOG_SOURCES += ../../dfe/decimator/*.v
 
 # ==============================================================================
 # modules
