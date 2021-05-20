@@ -120,16 +120,22 @@ module wakey_wakey (
     // =========================================================================
     // WRD - Word Recognition DNN Accelerator Module
     // =========================================================================
+    // temporary signals to allow cocotb testbench access, set to 0 at synth
+    wire [103:0] data_i;
+    wire valid_i;
+    wire last_i;
+    wire ready_o;
+
     wrd wrd_inst (
         // clock and reset
         .clk_i(clk_i),
         .rst_n_i(rst_n_i),
 
         // streaming input
-        .data_i(104'b0),
-        .valid_i(1'b0),
-        .last_i(1'b0),
-        .ready_o(),
+        .data_i(data_i),
+        .valid_i(valid_i),
+        .last_i(last_i),
+        .ready_o(ready_o),
 
         // wake pin
         .wake_o(wake_o),
