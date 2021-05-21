@@ -127,11 +127,14 @@ module dct (
         // Simulation Only Waveform Dump (.vcd export)
         // =====================================================================
         `ifdef COCOTB_SIM
+        `ifndef SCANNED
+        `define SCANNED
         $dumpfile ("wave.vcd");
         $dumpvars (0, dct);
         $dumpvars (0, acc_arr[0]);
         $dumpvars (0, acc_arr[1]);
         #1;
+        `endif
         `endif
     end
 

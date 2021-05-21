@@ -122,9 +122,12 @@ module filterbank_half # (
         // Simulation Only Waveform Dump (.vcd export)
         // =====================================================================
         `ifdef COCOTB_SIM
+        `ifndef SCANNED
+        `define SCANNED
         $dumpfile ("wave.vcd");
         $dumpvars (0, filterbank_half);
         #1;
+        `endif
         `endif
     end
 

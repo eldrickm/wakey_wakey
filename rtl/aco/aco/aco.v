@@ -19,7 +19,6 @@ module aco (
     // streaming input
     input signed  [I_BW - 1 : 0]            data_i,
     input                                   valid_i,
-    input                                   last_i,
 
     // streaming output
     output         [O_BW - 1 : 0]           data_o,
@@ -74,6 +73,8 @@ module aco (
     localparam WRD_FRAME_LEN            = 50;
     localparam WRD_FRAMING_CADENCE      = 1;
     localparam WRD_FRAMING_SKIP_ELEMS   = 0;
+
+    localparam O_BW                     = WRD_FRAMING_O_BW;
 
     // =========================================================================
     // Preemphasis
@@ -321,11 +322,14 @@ module aco (
     // Simulation Only Waveform Dump (.vcd export)
     // ========================================================================
     `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
     initial begin
         $dumpfile ("wave.vcd");
         $dumpvars (0, aco);
         #1;
     end
+    `endif
     `endif
 
 endmodule

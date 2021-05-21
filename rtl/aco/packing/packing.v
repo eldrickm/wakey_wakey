@@ -88,16 +88,18 @@ module packing (
     // Simulation Only Waveform Dump (.vcd export)
     // =========================================================================
     `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
     integer j;
     initial begin
         $dumpfile ("wave.vcd");
         $dumpvars (0, packing);
-        // reg i;
         for (j = 0; j < N_COEF; j = j + 1) begin
             $dumpvars (0, packed_arr[j]);
         end
         #1;
     end
+    `endif
     `endif
 
 endmodule

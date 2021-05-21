@@ -6,7 +6,7 @@ ACO (Acoustic Featurization) Software Model
 This is used to test our custom acoustic featurization pipeline against
 the speechpy implementation used in EdgeImpulse.
 """
-!pip install speechpy
+# !pip install speechpy
 import os
 import speechpy
 import numpy as np
@@ -108,8 +108,11 @@ def print_maxes():
     for k in maxes:
         print('\t{:20} {}'.format(k, maxes[k]))
 
-def aco(fs, signal):
+def aco(signal):
     '''Quantized python model of the ACO pipeline.'''
+    fs = 16000
+    signal = signal.astype(np.int16)  # increase bitwidth for preemphasis
+
     # Acoustic Featurization Constants
     FS = fs                                 # 16 KHz
     PERIOD = 1 / FS                         # 0.0625 ms
@@ -229,7 +232,7 @@ def aco(fs, signal):
 
     # 9) quantize to byte
     # =========================================================================
-    shift = 8
+    shift = 0
     quant_out = np.right_shift(dct_out, shift)
 
     # =========================================================================
@@ -237,11 +240,10 @@ def aco(fs, signal):
     out = quant_out.flatten()
 
     # collect intermediate values for RTL verification
-    intermediate_signals = [preemphasis_out, framing_out, fft_out,
-                            power_spectrum_out, mfcc_out, log_out,
-                            dct_out, quant_out]
+    sigs = [preemphasis_out, framing_out, fft_out, power_spectrum_out,
+            mfcc_out, log_out, dct_out, quant_out, out]
 
-    return out, intermediate_signals
+    return sigs
 
 def aco_with_dfe(fullfname):
     '''Quantized python model of the ACO pipeline.'''
@@ -252,8 +254,7 @@ def aco_with_dfe(fullfname):
     signal = pdm_model(signal, model_type='fast')
     # signal = pdm_model(signal, model_type='accurate')
     detect_max(signal, 'signal')
-    signal = signal.astype(np.int16)  # increase bitwidth for preemphasis
-    return aco(fs, signal)
+    return aco(signal)[-1]
 
 def get_speechpy_features(fullfname):
     '''Reads a .wav file and outputs the MFCC features using SpeechPy.'''
@@ -321,7 +322,7 @@ def get_features_quantized(all_fnames):
     all_features = np.zeros((0, 13*50))
     for i in tqdm(range(n)):
         fname = all_fnames[i]
-        features = aco_with_dfe(fname)[0]
+        features = aco_with_dfe(fname)
         all_features = np.vstack((all_features, features))
     print_maxes()
     return all_features
@@ -348,4 +349,4 @@ def generate_features():
     all_features = get_features_quantized(all_fnames)
     return shuffle_and_split(all_features, all_labels)
 
-X, Y, Xtest, Ytest = generate_features()
+# X, Y, Xtest, Ytest = generate_features()
