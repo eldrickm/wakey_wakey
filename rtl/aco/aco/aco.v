@@ -64,7 +64,7 @@ module aco (
     localparam QUANT_O_BW               = 8;
 
     localparam PACKING_I_BW             = 8;
-    localparam PACKING_O_BW             = BUFFER_I_BW * DCT_COEFS;
+    localparam PACKING_O_BW             = PACKING_I_BW * DCT_COEFS;
 
     localparam WRD_FRAMING_I_BW         = PACKING_O_BW;
     localparam WRD_FRAMING_O_BW         = PACKING_O_BW;
