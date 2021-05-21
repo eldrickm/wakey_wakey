@@ -92,19 +92,12 @@ def pdm_model(x_orig, model_type='fast'):
     x_pdm = pcm_to_pdm(x_orig, pdm_gen='pwm')
     return pdm_to_pcm(x_pdm, 1)
 
-# parameters
-p = {'num_mfcc_cof': 13,
-     'frame_length': 0.02,
-     'frame_stride': 0.02,
-     'filter_num': 32,
-     'fft_length': 256,
-     'window_size': 101,
-     'low_frequency': 300,
-     'preemph_cof': 0.98}
+# ==================== ACO modelling ====================
 
 maxes = {}
 def detect_max(arr, name):
-    '''Detect the maximum bit width at various stages of the pipeline.'''
+    '''Detect the maximum bit width at various stages of the pipeline. Does
+    not include the sign bit for signed numbers.'''
     global maxes
     val = np.log2(np.abs(arr.astype(np.float64)).max())  # consider absolute magnitude bits
     if (name not in maxes) or (maxes[name] < val):
@@ -115,19 +108,8 @@ def print_maxes():
     for k in maxes:
         print('\t{:20} {}'.format(k, maxes[k]))
 
-def custom_aco(fullfname):
-    # Get raw 16b audio data
-    fs, signal = wavfile.read(fullfname)
-
-    # use to estimate required bit widths, it scales up each training example to take the maximum range
-    # signal = signal.astype(np.float64) * (2**15) / np.abs(signal).max()
-
-    # DFE quantization model
-    signal = pdm_model(signal, model_type='fast')
-    #signal = pdm_model(signal, model_type='accurate')
-    signal = signal.astype(np.int16)
-    detect_max(signal, 'signal')
-
+def aco(fs_signal):
+    '''Quantized python model of the ACO pipeline.'''
     # Acoustic Featurization Constants
     FS = fs                                 # 16 KHz
     PERIOD = 1 / FS                         # 0.0625 ms
@@ -159,7 +141,8 @@ def custom_aco(fullfname):
     # 3) fft
     # TODO: Check 32b quantization, scaling
     # =========================================================================
-    fft_out = np.fft.rfft(framing_out)
+    # fft_out = np.fft.rfft(framing_out)
+    fft_out = np.fft.rfft(framing_out) / 8  # RTL FFT scaled down by 8
 
     # split into real and imag
     fft_out_real = fft_out.real
@@ -189,23 +172,29 @@ def custom_aco(fullfname):
 
     # 5) mel filterbank construction
     # =========================================================================
+    # mfcc_filterbank = speechpy.feature.filterbanks(NUM_MEL_FILTERS,
+                                                   # FFT_LENGTH // 2 + 1,
+                                                   # FS)
     mfcc_filterbank = speechpy.feature.filterbanks(NUM_MEL_FILTERS,
-                                                   FFT_LENGTH // 2 + 1,
-                                                   FS)
+                                                   FFT_LENGTH,
+                                                   FS)[:,:129]
 
     # quantize
-    mfcc_filterbank = (mfcc_filterbank * (2 ** 15 - 1)).astype(np.int16)
+    # mfcc_filterbank = (mfcc_filterbank * (2 ** 15 - 1)).astype(np.int16)
+    mfcc_filterbank = (mfcc_filterbank * (2 ** 16 - 1)).astype(np.uint16)
 
     # 6) mel filterbank application
     # =========================================================================
     # shift by 15 to cancel initial quantization in step 5)
     mfcc_out = np.dot(power_spectrum_out, mfcc_filterbank.T)
-    mfcc_out = np.right_shift(mfcc_out, 15)
+    # mfcc_out = np.right_shift(mfcc_out, 15)
+    mfcc_out = np.right_shift(mfcc_out, 16)
     detect_max(mfcc_out, 'mfcc_out')
 
     # 7) log
     # =========================================================================
     # deal with zero values for log
+    '''
     mfcc_out[mfcc_out == 0] = 1
 
     # log base 2
@@ -214,8 +203,16 @@ def custom_aco(fullfname):
     # quantize, max value is 64, so can use 8b
     log_out = np.floor(log_out)
     log_out = log_out.astype(np.int8)
+    '''
+    n_frames, n_mfcc = mfcc_out.shape
+    log_out = np.zeros((n_frmaes, n_mfcc), dtype=np.uint8)
+    for i in range(n_frames):
+        for j in range(n_mfcc):
+            for k in range(31, -1, -1):
+                if mfcc_out[i,j] & (1 << k):
+                    log_out[i,j] = k + 1
+                    break
     detect_max(log_out, 'log_out')
-
 
     # 8) dct
     # TODO: Check 16b quantization
@@ -230,12 +227,44 @@ def custom_aco(fullfname):
     # check 16b quantization
     assert np.array_equal(dct_out_raw.astype(np.int64), dct_out)
 
+    # 9) quantize to byte
+    # =========================================================================
+    quant_out = np.right_shift(dct_out, 8)
+
     # =========================================================================
     # flatten for use in pipeline
-    return dct_out.flatten()
+    out = quant_out.flatten()
 
-def get_features(fullfname):
-    '''Reads a .wav file and outputs the MFCC features.'''
+    # collect intermediate values for RTL verification
+    intermediate_signals = [preemphasis_out, framing_out, fft_out,
+                            power_spectrum_out, mfcc_out, log_out,
+                            dct_out, quant_out]
+
+    return out, intermediate_signals
+
+def aco_with_dfe(fullfname):
+    '''Quantized python model of the ACO pipeline.'''
+    # Get raw 16b audio data
+    fs, signal = wavfile.read(fullfname)
+
+    # DFE quantization model
+    signal = pdm_model(signal, model_type='fast')
+    # signal = pdm_model(signal, model_type='accurate')
+    detect_max(signal, 'signal')
+    signal = signal.astype(np.int16)  # increase bitwidth for preemphasis
+    return aco(fs, signal)
+
+def get_speechpy_features(fullfname):
+    '''Reads a .wav file and outputs the MFCC features using SpeechPy.'''
+    # parameters:
+    p = {'num_mfcc_cof': 13,
+         'frame_length': 0.02,
+         'frame_stride': 0.02,
+         'filter_num': 32,
+         'fft_length': 256,
+         'window_size': 101,
+         'low_frequency': 300,
+         'preemph_cof': 0.98}
     try:
         fs, data = wavfile.read(fullfname)
     except ValueError:
@@ -260,7 +289,7 @@ def get_features(fullfname):
     flattened = mfcc_cmvn.flatten()
     return flattened
 
-def get_fnames(group):
+def get_fnames_group(group):
     '''Gets all the filenames (with directories) for a given class.'''
     dir = group + '/'
     fnames = os.listdir(dir)
@@ -268,41 +297,54 @@ def get_fnames(group):
     fullnames = [dir + fname for fname in fnames]
     return fullnames
 
-# collect a big list of filenames and a big list of labels
-all_fnames = []
-all_labels = []
-for group in ['yes', 'unknown', 'noise']:
-    fnames = get_fnames(group)
-    label = 1 if group == 'yes' else 2
-    repeat = 2 if group == 'yes' else 1  # oversample wake word class to balance dataset
-    for _ in range(repeat):
-        all_fnames.extend(fnames)
-        for i in range(len(fnames)):
-            all_labels.append(label)
+def get_fnames_and_labels():
+    '''Collect a big list of filenames and a big list of labels.'''
+    all_fnames = []
+    all_labels = []
+    for group in ['yes', 'unknown', 'noise']:
+        fnames = get_fnames_group(group)
+        label = 1 if group == 'yes' else 2
+        repeat = 2 if group == 'yes' else 1  # oversample wake word class to balance dataset
+        for _ in range(repeat):
+            all_fnames.extend(fnames)
+            for i in range(len(fnames)):
+                all_labels.append(label)
+    all_labels = np.array(all_labels)
+    return all_fnames, all_labels
 
-# get a big list of mfcc features
-n = len(all_fnames)
-# n = 1
-print('num samples: ', n)
-all_features = np.zeros((0, 13*50))
-for i in tqdm(range(n)):
-    fname = all_fnames[i]
-    features = custom_aco(fname)
-    all_features = np.vstack((all_features, features))
-all_labels = np.array(all_labels)
+def get_features_quantized(all_fnames):
+    '''Get a big list of mfcc features for each wav file.'''
+    n = len(all_fnames)
+    # n = 1
+    print('num samples: ', n)
+    all_features = np.zeros((0, 13*50))
+    for i in tqdm(range(n)):
+        fname = all_fnames[i]
+        features = aco_with_dfe(fname)
+        all_features = np.vstack((all_features, features))
+    print_maxes()
+    return all_features
 
-print_maxes()
+def shuffle_and_split(all_features, all_labels):
+    '''First shuffle the data randomly, then split it into test and train.'''
+    np.random.seed(1)
+    idx = np.arange(n, dtype=int)
+    np.random.shuffle(idx)
+    features_shuffled = all_features[idx,:]
+    labels_shuffled = all_labels[idx]
 
-# shuffle the data randomly
-np.random.seed(1)
-idx = np.arange(n, dtype=int)
-np.random.shuffle(idx)
-features_shuffled = all_features[idx,:]
-labels_shuffled = all_labels[idx]
+    # split the data into train and test sets
+    split = int(train_test_split * n)
+    X = features_shuffled[:split,:]
+    Y = labels_shuffled[:split]
+    Xtest = features_shuffled[split:,:]
+    Ytest = labels_shuffled[split:]
+    return X, Y, Xtest, Ytest
 
-# split the data into train and test sets
-split = int(train_test_split * n)
-X = features_shuffled[:split,:]
-Y = labels_shuffled[:split]
-Xtest = features_shuffled[split:,:]
-Ytest = labels_shuffled[split:]
+def generate_features():
+    '''Main function for generating MFCC features.'''
+    all_names, all_labels = get_fnames_and_labels()
+    all_features = get_features_quantized(all_fnames)
+    return shuffle_and_split(all_features, all_labels)
+
+X, Y, Xtest, Ytest = generate_features()
