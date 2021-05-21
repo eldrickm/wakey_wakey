@@ -37,6 +37,8 @@ module aco (
     localparam FFT_FRAMING_O_BW         = 16;
     localparam FFT_FRAME_LEN            = 256;
     localparam FFT_FRAMING_CADENCE      = 1;
+                                          // take 256 samples every 20ms:
+    localparam FFT_FRAMING_SKIP_ELEMS   = 320 - FFT_FRAME_LEN;
 
     localparam FFT_I_BW                 = 16;
     localparam FFT_O_BW                 = 21 * 2;
@@ -54,6 +56,7 @@ module aco (
     localparam DCT_FRAMING_O_BW         = 8;
     localparam DCT_FRAME_LEN            = 32;
     localparam DCT_FRAMING_CADENCE      = 13;  // hold each value for 13 cycles
+    localparam DCT_FRAMING_SKIP_ELEMS   = 0;
 
     localparam DCT_I_BW                 = 8;
     localparam DCT_COEFS                = 13;
@@ -70,6 +73,7 @@ module aco (
     localparam WRD_FRAMING_O_BW         = PACKING_O_BW;
     localparam WRD_FRAME_LEN            = 50;
     localparam WRD_FRAMING_CADENCE      = 1;
+    localparam WRD_FRAMING_SKIP_ELEMS   = 0;
 
     // =========================================================================
     // Preemphasis
@@ -98,7 +102,8 @@ module aco (
         .I_BW(FFT_FRAMING_I_BW),
         .O_BW(FFT_FRAMING_O_BW),
         .FRAME_LEN(FFT_FRAME_LEN),
-        .CADENCE_CYC(FFT_FRAMING_CADENCE)
+        .CADENCE_CYC(FFT_FRAMING_CADENCE),
+        .SKIP_ELEMS(FFT_FRAMING_SKIP_ELEMS)
     ) fft_framing_inst (
         .clk_i(clk_i),
         .rst_n_i(rst_n_i),
@@ -202,7 +207,8 @@ module aco (
         .I_BW(DCT_FRAMING_I_BW),
         .O_BW(DCT_FRAMING_O_BW),
         .FRAME_LEN(DCT_FRAME_LEN),
-        .CADENCE_CYC(DCT_FRAMING_CADENCE)
+        .CADENCE_CYC(DCT_FRAMING_CADENCE),
+        .SKIP_ELEMS(DCT_FRAMING_SKIP_ELEMS)
     ) dct_framing_inst (
         .clk_i(clk_i),
         .rst_n_i(rst_n_i),
@@ -289,7 +295,8 @@ module aco (
         .I_BW(WRD_FRAMING_I_BW),
         .O_BW(WRD_FRAMING_O_BW),
         .FRAME_LEN(WRD_FRAME_LEN),
-        .CADENCE_CYC(WRD_FRAMING_CADENCE)
+        .CADENCE_CYC(WRD_FRAMING_CADENCE),
+        .SKIP_ELEMS(WRD_FRAMING_SKIP_ELEMS)
     ) wrd_framing_inst (
         .clk_i(clk_i),
         .rst_n_i(rst_n_i),

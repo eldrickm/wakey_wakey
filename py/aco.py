@@ -108,7 +108,7 @@ def print_maxes():
     for k in maxes:
         print('\t{:20} {}'.format(k, maxes[k]))
 
-def aco(fs_signal):
+def aco(fs, signal):
     '''Quantized python model of the ACO pipeline.'''
     # Acoustic Featurization Constants
     FS = fs                                 # 16 KHz
@@ -205,7 +205,7 @@ def aco(fs_signal):
     log_out = log_out.astype(np.int8)
     '''
     n_frames, n_mfcc = mfcc_out.shape
-    log_out = np.zeros((n_frmaes, n_mfcc), dtype=np.uint8)
+    log_out = np.zeros((n_frames, n_mfcc), dtype=np.uint8)
     for i in range(n_frames):
         for j in range(n_mfcc):
             for k in range(31, -1, -1):
@@ -229,7 +229,8 @@ def aco(fs_signal):
 
     # 9) quantize to byte
     # =========================================================================
-    quant_out = np.right_shift(dct_out, 8)
+    shift = 8
+    quant_out = np.right_shift(dct_out, shift)
 
     # =========================================================================
     # flatten for use in pipeline
@@ -320,7 +321,7 @@ def get_features_quantized(all_fnames):
     all_features = np.zeros((0, 13*50))
     for i in tqdm(range(n)):
         fname = all_fnames[i]
-        features = aco_with_dfe(fname)
+        features = aco_with_dfe(fname)[0]
         all_features = np.vstack((all_features, features))
     print_maxes()
     return all_features
@@ -343,7 +344,7 @@ def shuffle_and_split(all_features, all_labels):
 
 def generate_features():
     '''Main function for generating MFCC features.'''
-    all_names, all_labels = get_fnames_and_labels()
+    all_fnames, all_labels = get_fnames_and_labels()
     all_features = get_features_quantized(all_fnames)
     return shuffle_and_split(all_features, all_labels)
 
