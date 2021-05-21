@@ -49,10 +49,11 @@ module log (
     // =========================================================================
     // Merging
     // =========================================================================
-    // stage 1 input vector length = 16
-    // stage 2 input vector length = 8
-    // stage 3 input vector length = 4
-    // stage 4 input vector length = 2
+    // stage a input  vector length: 16 x 2b
+    // stage b input  vector length:  8 x 3b
+    // stage c input  vector length:  4 x 4b
+    // stage d input  vector length:  2 x 5b
+    // stage d output vector length:  1 x 6b
     wire [8*3 - 1 : 0] a;  // 24, 8 = 32/4
     wire [4*4 - 1 : 0] b;  // 16, 4 = 24/6
     wire [2*5 - 1 : 0] c;  // 10, 2 = 16/8
@@ -112,28 +113,30 @@ module log (
     end
     `endif
 
-endmodule
+endmodule // log
 
-// Implementation from:
+// Encode bits in pairs
 module enc
 (
    input wire     [1:0]       d,
    output logic   [1:0]       q
 );
 
-   // always_comb begin
-      // case (d[1:0])
-         // 2'b00    :  q = 2'b10;
-         // 2'b01    :  q = 2'b01;
-         // default  :  q = 2'b00;
-      // endcase
-   // end
-   assign q = (d == 2'b00) ? 2'b10
-                           : ((d == 2'b01) ? 2'b01
-                                           : 2'b00);
+    // original source:
+    // always_comb begin
+        // case (d[1:0])
+            // 2'b00    :  q = 2'b10;
+            // 2'b01    :  q = 2'b01;
+            // default  :  q = 2'b00;
+        // endcase
+    // end
+    assign q = (d == 2'b00) ? 2'b10
+                            : ((d == 2'b01) ? 2'b01
+                                            : 2'b00);
 
 endmodule // enc
 
+// Merge vectors of bits together
 module clzi #
 (
    // external parameter
@@ -147,24 +150,24 @@ module clzi #
    output logic   [WO-1:0]    q
 );
 
+    // original source:
+    // always_comb begin
+        // if (d[N - 1 + N] == 1'b0) begin
+            // q[WO-1] = (d[N-1+N] & d[N-1]);
+            // q[WO-2] = 1'b0;
+            // q[WO-3:0] = d[(2*N)-2 : N];
+        // end else begin
+            // q[WO-1] = d[N-1+N] & d[N-1];
+            // q[WO-2] = ~d[N-1];
+            // q[WO-3:0] = d[N-2 : 0];
+        // end
+    // end
 
-   // always_comb begin
-      // if (d[N - 1 + N] == 1'b0) begin
-         // q[WO-1] = (d[N-1+N] & d[N-1]);
-         // q[WO-2] = 1'b0;
-         // q[WO-3:0] = d[(2*N)-2 : N];
-      // end else begin
-         // q[WO-1] = d[N-1+N] & d[N-1];
-         // q[WO-2] = ~d[N-1];
-         // q[WO-3:0] = d[N-2 : 0];
-      // end
-   // end
-
-    assign q[WO-1] =   (d[N - 1 + N] == 1'b0) ? (d[N-1+N] & d[N-1])
-                                              : d[N-1+N] & d[N-1];
-    assign q[WO-2] =   (d[N - 1 + N] == 1'b0) ? 1'b0
-                                              : ~d[N-1];
-    assign q[WO-3:0] = (d[N - 1 + N] == 1'b0) ? d[(2*N)-2 : N]
-                                              : d[N-2 : 0];
+    wire leading_zero = (d[N - 1 + N] == 1'b0);
+    assign q[WO-1]   = d[N-1+N] & d[N-1];
+    assign q[WO-2]   = (leading_zero) ? 1'b0
+                                      : ~d[N-1];
+    assign q[WO-3:0] = (leading_zero) ? d[(2*N)-2 : N]
+                                      : d[N-2 : 0];
 
 endmodule // clzi
