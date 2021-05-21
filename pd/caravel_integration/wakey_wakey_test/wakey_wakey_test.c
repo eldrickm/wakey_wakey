@@ -19,10 +19,66 @@
 #include "verilog/dv/caravel/defs.h"
 #include "verilog/dv/caravel/stub.c"
 
+// Define Wishbone Addresses in CFG
+#define cfg_reg_addr   (*(volatile uint32_t*)0x30000000)
+#define cfg_reg_ctrl   (*(volatile uint32_t*)0x30000004)
+#define cfg_reg_data_0 (*(volatile uint32_t*)0x30000008)
+#define cfg_reg_data_1 (*(volatile uint32_t*)0x3000000C)
+#define cfg_reg_data_2 (*(volatile uint32_t*)0x30000010)
+#define cfg_reg_data_3 (*(volatile uint32_t*)0x30000014)
+
+void cfg_store(int addr, int data_3, int data_2, int data_1, int data_0)
+{
+    /*
+     * Store to Wakey Wakey Memory
+     * addr is a 32b address in the Wakey Wakey address space
+     * data_3 MSB
+     * data_2 
+     * data_1 
+     * data_0 LSB
+     */
+
+    // write the store address
+    cfg_reg_addr = addr;
+    // write data words
+    cfg_reg_data_0 = data_0;
+    cfg_reg_data_1 = data_1;
+    cfg_reg_data_2 = data_2;
+    cfg_reg_data_3 = data_3;
+    // write store command - 0x1
+    cfg_reg_ctrl = 0x1;
+}
+
+void cfg_load(int addr, int *data)
+{
+    /*
+     * Load from Wakey Wakey Memory
+     * addr is a 32b address in the Wakey Wakey address space
+     * returns a list of values into data
+     * where data[3] is the MSB (data_3) and data[0] is the LSB (data_0)
+     */
+
+    // write address the load address
+    cfg_reg_addr = addr;
+    // write the load command - 0x2
+    cfg_reg_ctrl = 0x2;
+    // TODO: Currently need to wait one clock cycle before read starts - fix?
+
+    // read the data words
+    data[0] = cfg_reg_data_0;
+    data[1] = cfg_reg_data_1;
+    data[2] = cfg_reg_data_2;
+    data[3] = cfg_reg_data_3;
+}
+
 /*
-	Wishbone Test:
-		- Configures MPRJ lower 8-IO pins as outputs
-		- Checks counter value through the wishbone port
+	Wakey Wakey Test:
+        1. Configure PDM Data Input Pin
+        2. Configure PDM Activate Input Pin
+        3. Configure PDM Clock Output Pin
+        4. Configure Wake Output Pin
+        5. Write CFG Data via wishbone
+        6. Read CFG Data via wishbone
 */
 int i = 0; 
 int clk = 0;
@@ -54,28 +110,28 @@ void main()
 	// so that the CSB line is not left floating.  This allows
 	// all of the GPIO pins to be used for user functions.
 
-    reg_mprj_io_31 = GPIO_MODE_MGMT_STD_OUTPUT;
-    reg_mprj_io_30 = GPIO_MODE_MGMT_STD_OUTPUT;
-    reg_mprj_io_29 = GPIO_MODE_MGMT_STD_OUTPUT;
-    reg_mprj_io_28 = GPIO_MODE_MGMT_STD_OUTPUT;
-    reg_mprj_io_27 = GPIO_MODE_MGMT_STD_OUTPUT;
-    reg_mprj_io_26 = GPIO_MODE_MGMT_STD_OUTPUT;
-    reg_mprj_io_25 = GPIO_MODE_MGMT_STD_OUTPUT;
-    reg_mprj_io_24 = GPIO_MODE_MGMT_STD_OUTPUT;
-    reg_mprj_io_23 = GPIO_MODE_MGMT_STD_OUTPUT;
-    reg_mprj_io_22 = GPIO_MODE_MGMT_STD_OUTPUT;
-    reg_mprj_io_21 = GPIO_MODE_MGMT_STD_OUTPUT;
-    reg_mprj_io_20 = GPIO_MODE_MGMT_STD_OUTPUT;
-    reg_mprj_io_19 = GPIO_MODE_MGMT_STD_OUTPUT;
-    reg_mprj_io_18 = GPIO_MODE_MGMT_STD_OUTPUT;
-    reg_mprj_io_17 = GPIO_MODE_MGMT_STD_OUTPUT;
-    reg_mprj_io_16 = GPIO_MODE_MGMT_STD_OUTPUT;
+    /* reg_mprj_io_31 = GPIO_MODE_MGMT_STD_OUTPUT; */
+    /* reg_mprj_io_30 = GPIO_MODE_MGMT_STD_OUTPUT; */
+    /* reg_mprj_io_29 = GPIO_MODE_MGMT_STD_OUTPUT; */
+    /* reg_mprj_io_28 = GPIO_MODE_MGMT_STD_OUTPUT; */
+    /* reg_mprj_io_27 = GPIO_MODE_MGMT_STD_OUTPUT; */
+    /* reg_mprj_io_26 = GPIO_MODE_MGMT_STD_OUTPUT; */
+    /* reg_mprj_io_25 = GPIO_MODE_MGMT_STD_OUTPUT; */
+    /* reg_mprj_io_24 = GPIO_MODE_MGMT_STD_OUTPUT; */
+    /* reg_mprj_io_23 = GPIO_MODE_MGMT_STD_OUTPUT; */
+    /* reg_mprj_io_22 = GPIO_MODE_MGMT_STD_OUTPUT; */
+    /* reg_mprj_io_21 = GPIO_MODE_MGMT_STD_OUTPUT; */
+    /* reg_mprj_io_20 = GPIO_MODE_MGMT_STD_OUTPUT; */
+    /* reg_mprj_io_19 = GPIO_MODE_MGMT_STD_OUTPUT; */
+    /* reg_mprj_io_18 = GPIO_MODE_MGMT_STD_OUTPUT; */
+    /* reg_mprj_io_17 = GPIO_MODE_MGMT_STD_OUTPUT; */
+    /* reg_mprj_io_16 = GPIO_MODE_MGMT_STD_OUTPUT; */
 
      /* Apply configuration */
-    reg_mprj_xfer = 1;
-    while (reg_mprj_xfer == 1);
+    /* reg_mprj_xfer = 1; */
+    /* while (reg_mprj_xfer == 1); */
 
-	reg_la2_oenb = reg_la2_iena = 0xFFFFFFFF;    // [95:64]
+	/* reg_la2_oenb = reg_la2_iena = 0xFFFFFFFF;    // [95:64] */
 
     // Flag start of the test
 	reg_mprj_datal = 0xAB600000;
