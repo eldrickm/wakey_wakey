@@ -18,3 +18,10 @@ make install
 make pdk
 make openlane
 make precheck
+
+# uncomment below and comment all above to update caravel_user_project
+# cd caravel_user_project/
+# git fetch upstream
+# git merge upstream/main
+# make update_caravel
+# cd ..
