@@ -8,16 +8,19 @@ from cocotb.clock import Clock
 from cocotb.triggers import FallingEdge, Timer
 
 FRAME_LEN = 256
+SKIP = 0
+N_FRAMES = 10
+CADENCE = 3  # CADENCE must be lower than the rate at which data comes in
 
 def get_msg(i, received, expected):
     return 'idx {}, dut output of {}, expected {}'.format(i, received, expected)
 
 def get_test_vector():
-    n = FRAME_LEN * 10
+    n = (FRAME_LEN + SKIP) * N_FRAMES
     x = np.random.randint(-256, 256, size=n)
     print('first 10 elems of input vector:')
     print(x[:10])
-    y = x.reshape(10, FRAME_LEN)
+    y = x.reshape(N_FRAMES, FRAME_LEN + SKIP)[:FRAME_LEN]
     return x, y
 
 async def write_input(dut, x):
@@ -33,16 +36,16 @@ async def write_input(dut, x):
     dut.valid_i <= 0
 
 async def check_output(dut, expected_frames):
-    for i in range(len(expected_frames)):
+    for i in range(expected_frames.shape[0]):
         expected_frame = expected_frames[i,:]
         print('first 10 elems expected frame:')
         print(expected_frame[:10])
         while (dut.valid_o != 1):
             await FallingEdge(dut.clk_i)
         for j in range(FRAME_LEN):
-            for k in range(2):  # check cadence
+            for k in range(CADENCE):  # check cadence
                 assert dut.valid_o == 1
-                if j == FRAME_LEN - 1 and k == 1:
+                if j == FRAME_LEN - 1 and k == CADENCE - 1:
                     assert dut.last_o == 1
                 else:
                     assert dut.last_o == 0

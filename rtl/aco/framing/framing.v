@@ -10,7 +10,10 @@ module framing # (
     parameter I_BW         = 9,   // preemphasis input
     parameter O_BW         = 16,  // output to FFT
     parameter FRAME_LEN    = 256,
-    parameter CADENCE_CYC  = 2  // how frequently to output data in cycles
+    parameter CADENCE_CYC  = 3,  // how long to hold output data before changing
+                                 // Must be lower than the rate at which data
+                                 // comes in.
+    parameter SKIP_ELEMS   = 0   // num elements to skip after a complete frame
 ) (
     // clock and reset
     input                                   clk_i,
@@ -32,9 +35,11 @@ module framing # (
     // localparam I_BW         = 9;   // preemphasis input
     // localparam O_BW         = 16;  // FFT output
     // localparam FRAME_LEN    = 256;
-    localparam FIFO_DEPTH   = FRAME_LEN + 4;   // 4 spaces of headroom
-    localparam COUNTER_BW   = $clog2(FIFO_DEPTH);
-    localparam CADENCE_BW   = $clog2(CADENCE_CYC);
+    localparam FIFO_DEPTH       = FRAME_LEN + 4;   // 4 spaces of headroom
+    localparam COUNTER_BW       = $clog2(FIFO_DEPTH);
+    localparam FULL_PERIOD      = FRAME_LEN + SKIP_ELEMS;
+    localparam SKIP_COUNTER_BW  = $clog2(FIFO_DEPTH + SKIP_ELEMS);
+    localparam CADENCE_BW       = $clog2(CADENCE_CYC);
 
     // =========================================================================
     // State Machine
@@ -79,9 +84,9 @@ module framing # (
         if (!rst_n_i | !en_i) begin
             fifo_count <= 'd0;
         end else begin
-            if (valid_i & !fifo_deq) begin
+            if (fifo_enq & !fifo_deq) begin
                 fifo_count <= fifo_count + 'd1;
-            end else if (!valid_i & fifo_deq) begin
+            end else if (!fifo_enq & fifo_deq) begin
                 fifo_count <= fifo_count - 'd1;
             end else begin
                 fifo_count <= fifo_count;
@@ -90,10 +95,32 @@ module framing # (
     end
 
     // =========================================================================
+    // Skip Counter
+    // =========================================================================
+    // Tracks the number of elements seen across one period, including
+    // elements that are to be skipped
+    reg [COUNTER_BW - 1 : 0] skip_count;
+    always @(posedge clk_i) begin
+        if (!rst_n_i | !en_i) begin
+            skip_count <= 'd0;
+        end else begin
+            if (valid_i & (skip_count == FULL_PERIOD - 'd1)) begin
+                skip_count = 'd0;
+            end else if (valid_i) begin
+                skip_count <= skip_count + 'd1;
+            end else begin
+                skip_count <= skip_count;
+            end
+        end
+    end
+    wire skip = (skip_count >= FRAME_LEN);  // skip if already have FRAME_LEN
+                                            // elements in the current period
+
+    // =========================================================================
     // Cadence
     // =========================================================================
     // Determines how long to hold an output
-    reg [CADENCE_BW - 1 : 0] cadence;  // number of elements in the fifo
+    reg [CADENCE_BW - 1 : 0] cadence;
     always @(posedge clk_i) begin
         if (!rst_n_i | !en_i) begin
             cadence <= 'd0;
@@ -114,6 +141,7 @@ module framing # (
     // =========================================================================
     wire signed [I_BW - 1 : 0]  fifo_dout;
     wire                        fifo_deq = ((state == STATE_UNLOAD) & next_elem);
+    wire                        fifo_enq = (en_i & valid_i & !skip);
     fifo #(
         .DATA_WIDTH(I_BW),
         .FIFO_DEPTH(FIFO_DEPTH)
@@ -121,7 +149,7 @@ module framing # (
         .clk_i(clk_i),
         .rst_n_i(rst_n_i & en_i),
 
-        .enq_i(en_i & valid_i),
+        .enq_i(fifo_enq),
         .din_i(data_i),
 
         .deq_i(fifo_deq),
