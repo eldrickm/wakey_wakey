@@ -6,6 +6,7 @@ import numpy as np
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import FallingEdge, Timer
+from cocotb.binary import BinaryValue
 
 import sys
 sys.path.append('../../../py/')
@@ -14,6 +15,8 @@ import pdm
 
 # Fixed parameters:
 N_FRAMES = 50  # frames 
+FFT_LEN = 256
+RFFT_LEN = int(FFT_LEN / 2 + 1)
 
 # Configurable parameters:
 PCM_SPACING = 3  # cycles between writing another PCM input
@@ -43,7 +46,6 @@ async def write_input(dut, x):
             await FallingEdge(dut.clk_i)
 
 async def check_preemphasis(dut, y):
-    print('Preemphasis: expected output: ', y[:200])
     i = 0
     while i < len(y):
         await Timer(1, units='us')  # wait until slightly after falling edge
@@ -54,8 +56,46 @@ async def check_preemphasis(dut, y):
                                                     received_val, expected_val)
             i += 1
         await FallingEdge(dut.clk_i)
-        print('\r{}/16000'.format(i), end='')
     print('Preemphasis: received expected output of ', y)
+
+async def check_framing(dut, y):
+    print('Expected first 10 elements of framing: ', y[0,:10])
+    for i in range(N_FRAMES):  # 50 frames of PCM data should be generated
+        while (dut.fft_framing_valid_o != 1):
+            await FallingEdge(dut.clk_i)
+        for j in range(FFT_LEN):
+            await Timer(1, units='us')
+            assert dut.fft_framing_valid_o == 1
+            if j == FFT_LEN - 1:
+                assert dut.fft_framing_last_o == 1
+            else:
+                assert dut.fft_framing_last_o == 0
+            expected_val = y[i, j]
+            received_val = dut.fft_framing_data_o.value.signed_integer
+            assert received_val == expected_val, get_msg('FFT Framing', j,
+                                                    received_val, expected_val)
+            await FallingEdge(dut.clk_i)
+    print('FFT Framing: received expected output of ', y)
+
+async def check_fft(dut, y):
+    threshold = 10  # maximum difference between expected and actual
+    for i in range(N_FRAMES):
+        while (dut.fft_valid_o != 1):  # wait until output is valid
+            await FallingEdge(dut.clk_i)
+        sig = np.zeros(RFFT_LEN, dtype=np.cdouble)
+        for j in range(RFFT_LEN):
+            binstr = dut.fft_data_o.value.get_binstr()
+            split_binstr = [binstr[:21], binstr[21:]]
+            output_arr = [BinaryValue(x).signed_integer for x in split_binstr]
+            sig[j] = output_arr[0] + output_arr[1] * 1j
+            if j == RFFT_LEN - 1:
+                assert dut.fft_last_o == 1
+            await FallingEdge(dut.clk_i)
+        absmax = np.abs(y[i,:] - sig).max()
+        assert absmax <= threshold, ('FFT: deviation of {} exceeds threshold'
+                                        .format(absmax))
+        print('\r{}/50'.format(i+1), end='')
+    print('FFT: received expected output of ', y)
 
 async def write_shift(dut, shift=0):
     '''Write the amount to shift by in the quantization stage.'''
@@ -69,9 +109,9 @@ async def do_test(dut):
     print('Beginning directed test with audio data.')
     x, y = get_test_vector()
     cocotb.fork(write_input(dut, x))
-    p = cocotb.fork(check_preemphasis   (dut, y[0]))
-    # cocotb.fork(check_framing       (dut, y[1]))
-    # cocotb.fork(check_fft           (dut, y[2]))
+    cocotb.fork(check_preemphasis   (dut, y[0]))
+    cocotb.fork(check_framing       (dut, y[1]))
+    p = cocotb.fork(check_fft           (dut, y[2]))
     # cocotb.fork(check_power_spectrum(dut, y[3]))
     # cocotb.fork(check_mfcc          (dut, y[4]))
     # cocotb.fork(check_log           (dut, y[5]))
