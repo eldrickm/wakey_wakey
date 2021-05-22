@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
-[*] Fri May 21 23:39:30 2021
+[*] Sat May 22 07:02:01 2021
 [*]
 [dumpfile] "/home/mjpauly/repos/wakey_wakey/rtl/aco/aco/wave.vcd"
-[dumpfile_mtime] "Fri May 21 23:32:23 2021"
-[dumpfile_size] 432413486
+[dumpfile_mtime] "Sat May 22 07:02:01 2021"
+[dumpfile_size] 70008832
 [savefile] "/home/mjpauly/repos/wakey_wakey/rtl/aco/aco/view.gtkw"
 [timestart] 0
 [size] 1848 1016
 [pos] -1 -1
-*-30.000000 1911000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-26.000000 118100000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] aco.
 [sst_width] 233
 [signals_width] 367
@@ -35,6 +35,79 @@ aco.preemph_valid_o
 @200
 -
 -FFT Framing
+@420
+aco.fft_framing_data_o[15:0]
+@28
+aco.fft_framing_valid_o
+aco.fft_framing_last_o
+@200
+-
+-FFT
+@22
+aco.fft_data_o[41:0]
+@28
+aco.fft_valid_o
+aco.fft_last_o
+@200
+-
+-Power Spectrum
+@24
+aco.power_spectrum_data_o[31:0]
+@28
+aco.power_spectrum_valid_o
+aco.power_spectrum_last_o
+@200
+-
+-Filterbank
+@22
+aco.filterbank_data_o[31:0]
+@28
+aco.filterbank_valid_o
+aco.filterbank_last_o
+@200
+-
+-Log
+@22
+aco.log_data_o[7:0]
+@28
+aco.log_valid_o
+aco.log_last_o
+@200
+-
+-DCT Framing
+@22
+aco.dct_framing_data_o[7:0]
+@28
+aco.dct_framing_valid_o
+aco.dct_framing_last_o
+@200
+-
+-DCT
+@28
+aco.dct_valid_o
+@420
+aco.dct_data_o[15:0]
+@28
+aco.dct_last_o
+@200
+-
+-Quant
+@420
+aco.quant_data_o[7:0]
+@28
+aco.quant_valid_o
+aco.quant_last_o
+@200
+-
+-Final Output
+@22
+aco.data_o[103:0]
+@29
+aco.valid_o
+@28
+aco.last_o
+@200
+-
 -
 -
 -

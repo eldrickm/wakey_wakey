@@ -47,10 +47,12 @@ module quant (
         end
     end
 
+    wire signed [I_BW - 1 : 0] shifted = data_i >>> shift;
+
     // =========================================================================
     // Output Assignment
     // =========================================================================
-    assign data_o = data_i >>> shift;
+    assign data_o = shifted[O_BW - 1 : 0];  // take lower bits
     assign valid_o = (en_i & valid_i);
     assign last_o  = last_i;
 
