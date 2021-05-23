@@ -30,12 +30,43 @@ def get_msg(block, i, received, expected):
     return '{}: idx {}, dut output of {}, expected {}.'.format(
                     block, i, received, expected)
 
-def get_test_vector():
+def get_sample_test_vector():
     '''Get a real audio sample for input and calculate the expected outputs.'''
-    sig_orig = pdm.read_sample_file(pdm.SAMPLE_FNAME)
-    sig_distorted = pdm.pdm_model(sig_orig, 'fast')
-    sigs = aco.aco(sig_distorted)
-    return sig_distorted, sigs
+    x = pdm.read_sample_file(pdm.SAMPLE_FNAME)
+    x_distorted = aco.pdm_model(x, 'fast')
+    sigs = aco.aco(x_distorted)
+    return x_distorted, sigs
+
+def get_cosine_test_vector():
+    '''Get a max amplitude cosine test vector to try saturate the pipeline
+    with.'''
+    t = np.linspace(0, 1, 16000)
+    f = 20  # Hz
+    A = 2**15-1  # max 16b signed amplitude
+    x = A * np.cos(2*np.pi * f * t)
+    x = aco.pdm_model(x, 'fast')
+    sigs = aco.aco(x)
+    return x, sigs
+
+def get_multi_cosine_test_vector():
+    '''Get a max amplitude cosine test vector to try saturate the pipeline
+    with.'''
+    t = np.linspace(0, 1, 16000)
+    n_freqs = 100
+    freqs = np.logspace(0, np.log10(16000), 10)
+    A = (2**15 -1) / n_freqs # max 16b signed amplitude
+    x = np.zeros(16000)
+    for f in freqs:
+        x += A * np.cos(2*np.pi * f * t)
+    x = aco.pdm_model(x, 'fast')
+    sigs = aco.aco(x)
+    return x, sigs
+
+def get_random_test_vector():
+    x = np.random.randint(-2**15, 2**15-1, size=16000)
+    x = aco.pdm_model(x, 'fast')
+    sigs = aco.aco(x)
+    return x, sigs
 
 async def write_input(dut, x):
     '''Write the PCM input to the dut.'''
@@ -82,6 +113,7 @@ async def check_framing(dut, y):
 
 async def check_fft(dut, y):
     threshold = 10  # maximum difference between expected and actual
+    full_sig = np.zeros((N_FRAMES, RFFT_LEN), dtype=np.cdouble)
     for i in range(N_FRAMES):
         while (dut.fft_valid_o != 1):  # wait until output is valid
             await FallingEdge(dut.clk_i)
@@ -100,11 +132,15 @@ async def check_fft(dut, y):
         absmax = np.abs(y[i,:] - sig).max()
         assert absmax <= threshold, ('FFT: deviation of {} exceeds threshold'
                                         .format(absmax))
+        full_sig[i, :] = sig
+    percent_err = (full_sig - y) / np.abs(y).max() * 100
+    print('FFT: max percent error: {}'.format(percent_err.max()))
     print('FFT: received expected output.')
 
 async def check_power_spectrum(dut, y):
     threshold = 500  # percent error permissible
     max_percent_err_all = 0
+    full_sig = np.zeros((N_FRAMES, RFFT_LEN))
     for i in range(N_FRAMES):
         while (dut.power_spectrum_valid_o != 1):
             await FallingEdge(dut.clk_i)
@@ -125,12 +161,17 @@ async def check_power_spectrum(dut, y):
                 max_percent_err_all = max_percent_err
             msg = 'Power Spectrum: {} exceeds threshold'.format(max_percent_err)
             assert max_percent_err <= threshold, msg
+        full_sig[i, :] = sig
     print('Power Spectrum: received expected output.')
-    print('Power Spectrum: Max percent error: {}.'.format(max_percent_err_all))
+    print('Power Spectrum: Max percent error in a frame: {}.'
+                .format(max_percent_err_all))
+    percent_err = (full_sig - y) / np.abs(y).max() * 100
+    print('Power Spectrum: max percent error: {}'.format(percent_err.max()))
 
 async def check_filterbank(dut, y):
     threshold = 1000  # percent error permissible
     max_percent_err_all = 0
+    full_sig = np.zeros((N_FRAMES, N_MFE))
     for i in range(N_FRAMES):
         sig = np.zeros(N_MFE)
         for j in range(N_MFE):
@@ -151,12 +192,17 @@ async def check_filterbank(dut, y):
                 max_percent_err_all = max_percent_err
             msg = 'Filterbank: {} exceeds threshold'.format(max_percent_err)
             assert max_percent_err <= threshold, msg
+        full_sig[i, :] = sig
     print('Filterbank: received expected output.')
-    print('Filterbank: Max percent error: {}.'.format(max_percent_err_all))
+    print('Filterbank: Max percent error in a frame: {}.'
+                .format(max_percent_err_all))
+    percent_err = (full_sig - y) / np.abs(y).max() * 100
+    print('Filterbank: max percent error: {}'.format(percent_err.max()))
 
 async def check_log(dut, y):
     threshold = 5  # maximum permissible difference
     max_err_all = 0
+    full_sig = np.zeros((N_FRAMES, N_MFE))
     for i in range(N_FRAMES):
         sig = np.zeros(N_MFE)
         for j in range(N_MFE):
@@ -175,12 +221,16 @@ async def check_log(dut, y):
             max_err_all = max_diff
         msg = 'Log: {} exceeds threshold'.format(max_diff)
         assert max_diff <= threshold, msg
+        full_sig[i, :] = sig
     print('Log: received expected output.')
     print('Log: Max difference: {}.'.format(max_err_all))
+    percent_err = (full_sig - y) / np.abs(y).max() * 100
+    print('Log: max percent error: {}'.format(percent_err.max()))
 
 async def check_dct(dut, y):
     threshold = 1000  # maximum permissible percent error
     max_percent_err_all = 0
+    full_sig = np.zeros((N_FRAMES, N_DCT))
     for i in range(N_FRAMES):
         while (dut.dct_valid_o != 1):
             await FallingEdge(dut.clk_i)
@@ -202,12 +252,17 @@ async def check_dct(dut, y):
                 max_percent_err_all = max_percent_err
             msg = 'DCT: {} exceeds threshold'.format(max_percent_err)
             assert max_percent_err <= threshold, msg
+        full_sig[i, :] = sig
     print('DCT: received expected output.')
-    print('DCT: Max percent err: {}.'.format(max_percent_err_all))
+    print('DCT: Max percent err in a frame: {}.'
+                .format(max_percent_err_all))
+    percent_err = (full_sig - y) / np.abs(y).max() * 100
+    print('DCT: max percent error: {}'.format(percent_err.max()))
 
 async def check_quant(dut, y):
     threshold = 1000  # maximum permissible percent error
     max_percent_err_all = 0
+    full_sig = np.zeros((N_FRAMES, N_DCT))
     for i in range(N_FRAMES):
         while (dut.quant_valid_o != 1):
             await FallingEdge(dut.clk_i)
@@ -230,8 +285,12 @@ async def check_quant(dut, y):
             msg = 'Quant: {} exceeds threshold'.format(max_percent_err)
             assert max_percent_err <= threshold, msg
         print('\r{}/50'.format(i+1), end='')
-    print('Quant: received expected output.')
-    print('Quant: Max percent err: {}.'.format(max_percent_err_all))
+        full_sig[i, :] = sig
+    print('\nQuant: received expected output.')
+    print('Quant: Max percent err in a frame: {}.'
+                .format(max_percent_err_all))
+    percent_err = (full_sig - y) / np.abs(y).max() * 100
+    print('Quant: max percent error: {}'.format(percent_err.max()))
 
 async def check_final(dut, y):
     threshold = 100  # maximum permissible percent error
@@ -262,20 +321,33 @@ async def check_final(dut, y):
         assert max_percent_err <= threshold, msg
     print('Final: received expected output.')
     print('Final: Max percent err: {}.'.format(max_percent_err_all))
-    plot_final_features([y, sig])
+    return y, sig
 
-def plot_final_features(sigs):
+def plot_final_features(sigs, test_num):
     titles = ['Expected Features', 'Received Features']
     plt.figure()
     for i in range(2):
         plt.subplot(2,1,i+1)
         plt.imshow(sigs[i].reshape((N_FRAMES, N_DCT)).T)
         plt.title(titles[i])
-    plt.savefig('plots/features_out.png')
+    plt.savefig('plots/features_out_{}.png'.format(test_num))
 
-async def do_test(dut):
-    print('Beginning directed test with audio data.')
-    x, y = get_test_vector()
+async def do_test(dut, test_num):
+    print('Beginning test #{}.'.format(test_num))
+    await reset(dut)  # reset to clear out previous values in pipeline
+    dut.en_i <= 1
+    if test_num == 1:
+        x, y = get_sample_test_vector()
+    elif test_num == 2:
+        x, y = get_cosine_test_vector()
+    elif test_num == 3:
+        x, y = get_multi_cosine_test_vector()
+    elif test_num == 4:
+        x, y = get_random_test_vector()
+    # elif test_num == 5:
+    else:
+        await do_test_no_en(dut)
+        return
     cocotb.fork(write_input(dut, x))
     cocotb.fork(check_preemphasis   (dut, y[0]))
     cocotb.fork(check_framing       (dut, y[1]))
@@ -285,10 +357,12 @@ async def do_test(dut):
     cocotb.fork(check_log           (dut, y[5]))
     cocotb.fork(check_dct           (dut, y[6]))
     cocotb.fork(check_quant         (dut, y[7]))
-    await       check_final         (dut, y[8])
+    results = await check_final     (dut, y[8])
+    plot_final_features(results, test_num)
 
 async def do_test_no_en(dut):
     print('Beginning test with random input data but en_i is low.')
+    dut.en_i <= 0
     await Timer(1, units='us')
     for i in range(10000):
         dut.data_i <= int(np.random.randint(-128, 128))  # feed in garbage data
@@ -296,13 +370,12 @@ async def do_test_no_en(dut):
         assert dut.valid_o == 0
         await FallingEdge(dut.clk_i)
 
-async def write_shift(dut, shift=0):
-    '''Write the amount to shift by in the quantization stage.'''
-    dut.shift_i <= shift
-    dut.wr_en <= 1
-    await FallingEdge(dut.clk_i)
-    dut.shift_i <= 0
-    dut.wr_en <= 0
+async def reset(dut):
+    '''Reset the dut.'''
+    dut.rst_n_i <= 0
+    for _ in range(50):  # wait long enough for fft core to reset
+        await FallingEdge(dut.clk_i)
+    dut.rst_n_i <= 1
 
 @cocotb.test()
 async def main(dut):
@@ -316,25 +389,11 @@ async def main(dut):
     dut.en_i <= 0
     dut.data_i <= 0
     dut.valid_i <= 0
-    dut.shift_i <= 0
-    dut.wr_en <= 0
 
-    # reset
-    for _ in range(50):  # wait long enough for fft core
-        await FallingEdge(dut.clk_i)
-    dut.rst_n_i <= 1
+    await reset(dut)
 
-    # write quantization shift amount
-    await write_shift(dut)
+    for i in range(1, 6):
+        await do_test(dut, i)
 
-    # test 1
-    dut.en_i <= 1
-    await do_test(dut)
-
-    # test 2
-    dut.en_i <= 0
-    await do_test_no_en(dut)
-
-    # test 3
-    # dut.en_i <= 1
-    # await do_test(dut)
+    print('Max bitwidths encountered in python ACO model:')
+    aco.print_maxes()

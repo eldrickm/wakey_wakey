@@ -45,7 +45,7 @@ module preemphasis (
             end
         end
     end
-    wire signed [O_BW - 1 : 0] data_scaled = (data_q * MUL) >> SHIFT;
+    wire signed [O_BW - 1 : 0] data_scaled = (data_q * MUL) >>> SHIFT;
 
     // =========================================================================
     // Output Assignment

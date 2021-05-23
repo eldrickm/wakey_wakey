@@ -99,7 +99,10 @@ def detect_max(arr, name):
     '''Detect the maximum bit width at various stages of the pipeline. Does
     not include the sign bit for signed numbers.'''
     global maxes
-    val = np.log2(np.abs(arr.astype(np.float64)).max())  # consider absolute magnitude bits
+    absmax = np.abs(arr.astype(np.float64)).max()
+    absmax = np.max((absmax, 1))  # avoid inf in log
+    val = np.log2(absmax)  # consider absolute magnitude bits
+    # print(name, 'bitwidth', val)
     if (name not in maxes) or (maxes[name] < val):
         maxes[name] = val
 
@@ -112,6 +115,7 @@ def aco(signal):
     '''Quantized python model of the ACO pipeline.'''
     fs = 16000
     signal = signal.astype(np.int16)  # increase bitwidth for preemphasis
+    detect_max(signal, 'signal')
 
     # Acoustic Featurization Constants
     FS = fs                                 # 16 KHz
@@ -126,6 +130,7 @@ def aco(signal):
     # =========================================================================
     # Delay by 1 cycle
     rolled_signal = np.roll(signal, 1)
+    rolled_signal[0] = 0  # zero out initial value
 
     # preemphasis coefficient of 31 / 32 = 0.96875, quantize via right shift
     scaled_rolled_signal = np.right_shift(31 * rolled_signal, 5)
@@ -232,8 +237,7 @@ def aco(signal):
 
     # 9) quantize to byte
     # =========================================================================
-    shift = 0
-    quant_out = np.right_shift(dct_out, shift)
+    quant_out = np.clip(dct_out, -2**7, 2**7-1)
 
     # =========================================================================
     # flatten for use in pipeline
