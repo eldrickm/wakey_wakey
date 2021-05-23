@@ -12,19 +12,13 @@ def get_msg(i, received, expected):
 
 def get_test_vector():
     n = 10
-    x = np.random.randint(-2**15, 2**15, size=n, dtype=np.int32)
-    s = np.random.randint(16)
-    y = np.right_shift(x, s)
-    y = np.clip(y, -2**7, 2**7-1)
-    return s, x, y
+    x = np.random.randint(-2**8, 2**8, size=n, dtype=np.int32)
+    y = np.clip(x, -2**7, 2**7-1)
+    return x, y
 
 async def check_output(dut):
     print('Beginning test with random input data.')
-    s, x, y = get_test_vector()
-    dut.shift_i <= s  # write shift
-    dut.wr_en <= 1
-    await FallingEdge(dut.clk_i)
-
+    x, y = get_test_vector()
     i = 0
     while i < len(x):
         dut.data_i <= int(x[i])
@@ -39,8 +33,8 @@ async def check_output(dut):
             received_val = dut.data_o.value.signed_integer
             assert received_val == expected_val, get_msg(i, received_val,
                                                          expected_val)
-            print('Received {} with input {} and shift {} as expected'
-                    .format(received_val, x[i], s))
+            print('Received {} with input {} as expected'
+                    .format(received_val, x[i]))
             i += 1
         else:
             assert dut.valid_o == 0
@@ -69,8 +63,6 @@ async def main(dut):
     dut.en_i <= 0
     dut.data_i <= 0
     dut.valid_i <= 0
-    dut.shift_i <= 0
-    dut.wr_en <= 0
     dut.last_i <= 0
 
     # reset
