@@ -33,6 +33,7 @@ module quant (
     localparam I_BW         = 16;
     localparam O_BW         = 8;
     localparam SHIFT_BW     = 8;
+    localparam CLIP         = $pow(2, O_BW - 1) - 1;  // clip to this if larger
 
     reg [SHIFT_BW - 1 : 0] shift;  // amount to shift by
     always @(posedge clk_i) begin
@@ -48,11 +49,14 @@ module quant (
     end
 
     wire signed [I_BW - 1 : 0] shifted = data_i >>> shift;
+    wire signed [O_BW - 1 : 0] lower = shifted[O_BW - 1 : 0]; // lower O_BW bits
 
     // =========================================================================
     // Output Assignment
     // =========================================================================
-    assign data_o = shifted[O_BW - 1 : 0];  // take lower bits
+    assign data_o = (shifted > CLIP) ? CLIP 
+                                     : ((shifted < -CLIP-1) ? -CLIP-1
+                                                            : lower);
     assign valid_o = (en_i & valid_i);
     assign last_o  = last_i;
 

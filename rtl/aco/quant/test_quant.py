@@ -11,10 +11,11 @@ def get_msg(i, received, expected):
     return 'idx {}, dut output of {}, expected {}'.format(i, received, expected)
 
 def get_test_vector():
-    n = 200
+    n = 10
     x = np.random.randint(-2**15, 2**15, size=n, dtype=np.int32)
-    s = np.random.randint(8, 15)
+    s = np.random.randint(16)
     y = np.right_shift(x, s)
+    y = np.clip(y, -2**7, 2**7-1)
     return s, x, y
 
 async def check_output(dut):
@@ -38,6 +39,8 @@ async def check_output(dut):
             received_val = dut.data_o.value.signed_integer
             assert received_val == expected_val, get_msg(i, received_val,
                                                          expected_val)
+            print('Received {} with input {} and shift {} as expected'
+                    .format(received_val, x[i], s))
             i += 1
         else:
             assert dut.valid_o == 0
@@ -84,4 +87,5 @@ async def main(dut):
 
     # test 3
     dut.en_i <= 1
-    await check_output(dut)
+    for i in range(20):
+        await check_output(dut)
