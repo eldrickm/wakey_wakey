@@ -4,7 +4,7 @@
 // Verification: Eldrick Millares
 // Notes:
 //
-// Top level module for the acoustic featurisation pipeline.
+// Top level module for the acoustic featurization pipeline.
 // =============================================================================
 
 module aco (

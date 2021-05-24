@@ -1,6 +1,7 @@
 # This file is public domain, it can be freely copied without restrictions.
 # SPDX-License-Identifier: CC0-1.0
 
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -68,6 +69,21 @@ def get_random_test_vector():
     sigs = aco.aco(x)
     return x, sigs
 
+def get_random_sample_test_vector(test_num):
+    top_dir = '../../../py/'
+    categories = ['yes/', 'noise/', 'no/', 'unknown/']
+    category = categories[test_num % 4]
+    sample_dir = top_dir + category
+    fnames = os.listdir(sample_dir)
+    idx = np.random.randint(len(fnames))
+    fname = sample_dir + fnames[idx]
+    print('Running test with', fname)
+    
+    x = pdm.read_sample_file(fname)
+    x = aco.pdm_model(x, 'fast')
+    sigs = aco.aco(x)
+    return x, sigs
+
 async def write_input(dut, x):
     '''Write the PCM input to the dut.'''
     for i in range(len(x)):
@@ -111,7 +127,7 @@ async def check_framing(dut, y):
             await FallingEdge(dut.clk_i)
     print('FFT Framing: received expected output.')
 
-async def check_fft(dut, y):
+async def check_fft(dut, y, test_num):
     threshold = 10  # maximum difference between expected and actual
     full_sig = np.zeros((N_FRAMES, RFFT_LEN), dtype=np.cdouble)
     for i in range(N_FRAMES):
@@ -136,8 +152,9 @@ async def check_fft(dut, y):
     percent_err = (full_sig - y) / np.abs(y).max() * 100
     print('FFT: max percent error: {}'.format(percent_err.max()))
     print('FFT: received expected output.')
+    plot_features((y, full_sig), test_num, 'FFT')
 
-async def check_power_spectrum(dut, y):
+async def check_power_spectrum(dut, y, test_num):
     threshold = 500  # percent error permissible
     max_percent_err_all = 0
     full_sig = np.zeros((N_FRAMES, RFFT_LEN))
@@ -167,9 +184,10 @@ async def check_power_spectrum(dut, y):
                 .format(max_percent_err_all))
     percent_err = (full_sig - y) / np.abs(y).max() * 100
     print('Power Spectrum: max percent error: {}'.format(percent_err.max()))
+    plot_features((y, full_sig), test_num, 'Power_spectrum')
 
-async def check_filterbank(dut, y):
-    threshold = 1000  # percent error permissible
+async def check_filterbank(dut, y, test_num):
+    threshold = 2000  # percent error permissible
     max_percent_err_all = 0
     full_sig = np.zeros((N_FRAMES, N_MFE))
     for i in range(N_FRAMES):
@@ -198,8 +216,9 @@ async def check_filterbank(dut, y):
                 .format(max_percent_err_all))
     percent_err = (full_sig - y) / np.abs(y).max() * 100
     print('Filterbank: max percent error: {}'.format(percent_err.max()))
+    plot_features((y, full_sig), test_num, 'Filterbank')
 
-async def check_log(dut, y):
+async def check_log(dut, y, test_num):
     threshold = 5  # maximum permissible difference
     max_err_all = 0
     full_sig = np.zeros((N_FRAMES, N_MFE))
@@ -226,8 +245,9 @@ async def check_log(dut, y):
     print('Log: Max difference: {}.'.format(max_err_all))
     percent_err = (full_sig - y) / np.abs(y).max() * 100
     print('Log: max percent error: {}'.format(percent_err.max()))
+    plot_features((y, full_sig), test_num, 'Log')
 
-async def check_dct(dut, y):
+async def check_dct(dut, y, test_num):
     threshold = 1000  # maximum permissible percent error
     max_percent_err_all = 0
     full_sig = np.zeros((N_FRAMES, N_DCT))
@@ -258,8 +278,9 @@ async def check_dct(dut, y):
                 .format(max_percent_err_all))
     percent_err = (full_sig - y) / np.abs(y).max() * 100
     print('DCT: max percent error: {}'.format(percent_err.max()))
+    plot_features((y, full_sig), test_num, 'DCT')
 
-async def check_quant(dut, y):
+async def check_quant(dut, y, test_num):
     threshold = 1000  # maximum permissible percent error
     max_percent_err_all = 0
     full_sig = np.zeros((N_FRAMES, N_DCT))
@@ -291,8 +312,9 @@ async def check_quant(dut, y):
                 .format(max_percent_err_all))
     percent_err = (full_sig - y) / np.abs(y).max() * 100
     print('Quant: max percent error: {}'.format(percent_err.max()))
+    plot_features((y, full_sig), test_num, 'Quant')
 
-async def check_final(dut, y):
+async def check_final(dut, y, test_num):
     threshold = 100  # maximum permissible percent error
     max_percent_err_all = 0
     while (dut.valid_o != 1):
@@ -321,22 +343,30 @@ async def check_final(dut, y):
         assert max_percent_err <= threshold, msg
     print('Final: received expected output.')
     print('Final: Max percent err: {}.'.format(max_percent_err_all))
-    return y, sig
+    plot_features((y, sig), test_num, 'Final')
 
-def plot_final_features(sigs, test_num):
+def plot_features(sigs, test_num, name):
+    plotdir = 'plots/test_{}/'.format(test_num)
+    if not os.path.exists(plotdir):
+        os.mkdir(plotdir)
     titles = ['Expected Features', 'Received Features']
     plt.figure()
     for i in range(2):
         plt.subplot(2,1,i+1)
-        plt.imshow(sigs[i].reshape((N_FRAMES, N_DCT)).T)
+        sig = np.abs(sigs[i]).astype(np.float)
+        size = sig.size
+        plt.imshow(sig.reshape((N_FRAMES, size//N_FRAMES)).T)
         plt.title(titles[i])
-    plt.savefig('plots/features_out_{}.png'.format(test_num))
+    plt.savefig(plotdir + '{}.png'.format(name))
 
 async def do_test(dut, test_num):
     print('Beginning test #{}.'.format(test_num))
     await reset(dut)  # reset to clear out previous values in pipeline
     dut.en_i <= 1
-    if test_num == 1:
+    if test_num == 0:
+        await do_test_no_en(dut)
+        return
+    elif test_num == 1:
         x, y = get_sample_test_vector()
     elif test_num == 2:
         x, y = get_cosine_test_vector()
@@ -344,21 +374,19 @@ async def do_test(dut, test_num):
         x, y = get_multi_cosine_test_vector()
     elif test_num == 4:
         x, y = get_random_test_vector()
-    # elif test_num == 5:
     else:
-        await do_test_no_en(dut)
-        return
+        x, y = get_random_sample_test_vector(test_num)
     cocotb.fork(write_input(dut, x))
     cocotb.fork(check_preemphasis   (dut, y[0]))
     cocotb.fork(check_framing       (dut, y[1]))
-    cocotb.fork(check_fft           (dut, y[2]))
-    cocotb.fork(check_power_spectrum(dut, y[3]))
-    cocotb.fork(check_filterbank    (dut, y[4]))
-    cocotb.fork(check_log           (dut, y[5]))
-    cocotb.fork(check_dct           (dut, y[6]))
-    cocotb.fork(check_quant         (dut, y[7]))
-    results = await check_final     (dut, y[8])
-    plot_final_features(results, test_num)
+    cocotb.fork(check_fft           (dut, y[2], test_num))
+    cocotb.fork(check_power_spectrum(dut, y[3], test_num))
+    cocotb.fork(check_filterbank    (dut, y[4], test_num))
+    cocotb.fork(check_log           (dut, y[5], test_num))
+    cocotb.fork(check_dct           (dut, y[6], test_num))
+    cocotb.fork(check_quant         (dut, y[7], test_num))
+    await check_final               (dut, y[8], test_num)
+    print()
 
 async def do_test_no_en(dut):
     print('Beginning test with random input data but en_i is low.')
@@ -392,7 +420,7 @@ async def main(dut):
 
     await reset(dut)
 
-    for i in range(1, 6):
+    for i in range(12):
         await do_test(dut, i)
 
     print('Max bitwidths encountered in python ACO model:')
