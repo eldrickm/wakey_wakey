@@ -119,6 +119,7 @@ module filterbank_half # (
                                                      // or      1,3,...31 (odd)
     reg [BOUNDARY_BW - 1 : 0] boundary;  // boundaries
 
+    generate
     if (COEFFILE == "coef_even.hex") begin
         always @(*) begin
             case(elem_counter)
@@ -388,7 +389,9 @@ module filterbank_half # (
             endcase
         end
     end
+    endgenerate
 
+    generate
     if (BOUNDARYFILE == "boundary_even.hex") begin
         always @(*) begin
             case(boundary_counter)
@@ -432,6 +435,7 @@ module filterbank_half # (
             endcase
         end
     end
+    endgenerate
 
     initial begin
         // $display("reading from: %s", COEFFILE);

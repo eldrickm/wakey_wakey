@@ -131,6 +131,7 @@ module	fftstage #(
 // Let the formal tool pick the coefficients
 `else
 	// initial	$readmemh(COEFFILE,cmem);
+    generate
     if (COEFFILE == "cmem_256.hex") begin
         always @(*) begin
             case (iaddr[(LGSPAN-1):0])
@@ -414,7 +415,7 @@ module	fftstage #(
             endcase
         end
     end
-        
+    endgenerate
 
 `endif
 
