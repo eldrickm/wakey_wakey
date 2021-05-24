@@ -35,6 +35,22 @@ VERILOG_SOURCES += ../../dfe/filter/*.v
 VERILOG_SOURCES += ../../dfe/comb/*.v
 VERILOG_SOURCES += ../../dfe/integrator/*.v
 VERILOG_SOURCES += ../../dfe/decimator/*.v
+VERILOG_SOURCES += ../../aco/aco/*.v
+VERILOG_SOURCES += ../../aco/preemphasis/*.v
+VERILOG_SOURCES += ../../aco/framing/*.v
+VERILOG_SOURCES += ../../aco/fft_wrapper/*.v
+VERILOG_SOURCES += ../../lib/fft/*.v
+VERILOG_SOURCES += ../../aco/power_spectrum/*.v
+VERILOG_SOURCES += ../../aco/filterbank/*.v
+VERILOG_SOURCES += ../../aco/filterbank_half/*.v
+VERILOG_SOURCES += ../../aco/log/*.v
+VERILOG_SOURCES += ../../aco/dct/*.v
+VERILOG_SOURCES += ../../aco/quant/*.v
+VERILOG_SOURCES += ../../aco/packing/*.v
+
+$(shell cp ../../lib/fft/*.hex .)  # copy over FFT hex files
+$(shell cp ../../aco/filterbank/*.hex .)  # copy over MFCC filterbank hex files
+$(shell cp ../../aco/dct/*.hex .)  # copy over DCT hex files
 
 # ==============================================================================
 # modules
@@ -54,6 +70,7 @@ clean::
 	rm -f results.xml
 	rm -f *.vcd
 	rm -rf __pycache__/
+	rm *.hex
 
 wave:
 	gtkwave *.vcd -a *.gtkw

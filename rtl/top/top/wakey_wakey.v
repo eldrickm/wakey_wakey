@@ -56,6 +56,31 @@ module wakey_wakey (
     );
 
     // =========================================================================
+    // ACO - Acoustic Featurizer
+    // =========================================================================
+    localparam ACO_OUTPUT_BW = 8 * 13;
+
+    wire [ACO_OUTPUT_BW - 1 : 0] aco_data;
+    wire                         aco_valid;
+    wire                         aco_last;
+
+    aco aco_inst (
+        // clock, reset, and enable
+        .clk_i(clk_i),
+        .rst_n_i(rst_n_i),
+        .en_i(1'b1),
+
+        // streaming input
+        .data_i(dfe_data),
+        .valid_i(dfe_valid),
+
+        // streaming output
+        .data_o(aco_data),
+        .valid_o(aco_valid),
+        .last_o(aco_last)
+    );
+
+    // =========================================================================
     // CFG - System Configuration
     // =========================================================================
     localparam CONV1_BANK_BW = 3;
