@@ -152,7 +152,7 @@ async def check_fft(dut, y, test_num):
     percent_err = (full_sig - y) / np.abs(y).max() * 100
     print('FFT: max percent error: {}'.format(percent_err.max()))
     print('FFT: received expected output.')
-    plot_features((y, full_sig), test_num, 'FFT')
+    plot_features((y, full_sig), test_num, '1FFT')
 
 async def check_power_spectrum(dut, y, test_num):
     threshold = 500  # percent error permissible
@@ -184,7 +184,7 @@ async def check_power_spectrum(dut, y, test_num):
                 .format(max_percent_err_all))
     percent_err = (full_sig - y) / np.abs(y).max() * 100
     print('Power Spectrum: max percent error: {}'.format(percent_err.max()))
-    plot_features((y, full_sig), test_num, 'Power_spectrum')
+    plot_features((y, full_sig), test_num, '2Power_spectrum')
 
 async def check_filterbank(dut, y, test_num):
     threshold = 2000  # percent error permissible
@@ -216,7 +216,7 @@ async def check_filterbank(dut, y, test_num):
                 .format(max_percent_err_all))
     percent_err = (full_sig - y) / np.abs(y).max() * 100
     print('Filterbank: max percent error: {}'.format(percent_err.max()))
-    plot_features((y, full_sig), test_num, 'Filterbank')
+    plot_features((y, full_sig), test_num, '3Filterbank')
 
 async def check_log(dut, y, test_num):
     threshold = 5  # maximum permissible difference
@@ -245,7 +245,7 @@ async def check_log(dut, y, test_num):
     print('Log: Max difference: {}.'.format(max_err_all))
     percent_err = (full_sig - y) / np.abs(y).max() * 100
     print('Log: max percent error: {}'.format(percent_err.max()))
-    plot_features((y, full_sig), test_num, 'Log')
+    plot_features((y, full_sig), test_num, '4Log')
 
 async def check_dct(dut, y, test_num):
     threshold = 1000  # maximum permissible percent error
@@ -278,7 +278,7 @@ async def check_dct(dut, y, test_num):
                 .format(max_percent_err_all))
     percent_err = (full_sig - y) / np.abs(y).max() * 100
     print('DCT: max percent error: {}'.format(percent_err.max()))
-    plot_features((y, full_sig), test_num, 'DCT')
+    plot_features((y, full_sig), test_num, '5DCT')
 
 async def check_quant(dut, y, test_num):
     threshold = 1000  # maximum permissible percent error
@@ -312,10 +312,10 @@ async def check_quant(dut, y, test_num):
                 .format(max_percent_err_all))
     percent_err = (full_sig - y) / np.abs(y).max() * 100
     print('Quant: max percent error: {}'.format(percent_err.max()))
-    plot_features((y, full_sig), test_num, 'Quant')
+    plot_features((y, full_sig), test_num, '6Quant')
 
 async def check_final(dut, y, test_num):
-    threshold = 100  # maximum permissible percent error
+    threshold = 500  # maximum permissible percent error
     max_percent_err_all = 0
     while (dut.valid_o != 1):
         await FallingEdge(dut.clk_i)
@@ -343,7 +343,7 @@ async def check_final(dut, y, test_num):
         assert max_percent_err <= threshold, msg
     print('Final: received expected output.')
     print('Final: Max percent err: {}.'.format(max_percent_err_all))
-    plot_features((y, sig), test_num, 'Final')
+    plot_features((y, sig), test_num, '7Final')
 
 def plot_features(sigs, test_num, name):
     plotdir = 'plots/test_{}/'.format(test_num)
@@ -357,7 +357,7 @@ def plot_features(sigs, test_num, name):
         size = sig.size
         plt.imshow(sig.reshape((N_FRAMES, size//N_FRAMES)).T)
         plt.title(titles[i])
-    plt.savefig(plotdir + '{}.png'.format(name))
+    plt.savefig(plotdir + '{}.png'.format(name), dpi=400)
 
 async def do_test(dut, test_num):
     print('Beginning test #{}.'.format(test_num))
