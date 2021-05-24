@@ -1,0 +1,44 @@
+[*]
+[*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
+[*] Mon May 24 21:17:13 2021
+[*]
+[dumpfile] "/home/mjpauly/repos/wakey_wakey/rtl/ctl/ctl/wave.vcd"
+[dumpfile_mtime] "Mon May 24 21:17:10 2021"
+[dumpfile_size] 6512
+[savefile] "/home/mjpauly/repos/wakey_wakey/rtl/ctl/ctl/view.gtkw"
+[timestart] 105800000
+[size] 1848 1016
+[pos] -1 -1
+*-27.000000 547060000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 233
+[signals_width] 254
+[sst_expanded] 1
+[sst_vpaned_height] 289
+@28
+ctl.clk_i
+ctl.rst_n_i
+@200
+-
+@28
+ctl.vad_i
+ctl.wake_valid_i
+@200
+-
+@28
+ctl.wake_valid_q
+ctl.wake_valid_falling_edge
+@29
+ctl.state[1:0]
+@200
+-
+@28
+ctl.en_o
+@200
+-
+-
+-
+-
+-
+-
+[pattern_trace] 1
+[pattern_trace] 0
