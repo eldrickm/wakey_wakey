@@ -18,6 +18,7 @@ module wrd (
 
     // wake pin
     output                                  wake_o,
+    output                                  wake_valid,
 
     // conv1 memory configuration
     input                                   conv1_rd_en_i,
@@ -428,7 +429,8 @@ module wrd (
         .ready_o(wake_ready),
 
         // wake output
-        .wake_o(wake_o)
+        .wake_o(wake_o),
+        .valid_o(wake_valid)
     );
 
     // =========================================================================

@@ -196,6 +196,7 @@ module wakey_wakey (
 
         // wake pin
         .wake_o(wake_o),
+        .wake_valid(wake_valid),
 
         // conv1 memory configuration
         .conv1_rd_en_i(conv1_rd_en),

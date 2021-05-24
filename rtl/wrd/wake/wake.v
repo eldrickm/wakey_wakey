@@ -21,13 +21,14 @@ module wake #(
     output                      ready_o,
 
     // wake output
-    output                      wake_o
+    output                      wake_o,
+    output                      valid_o
 );
 
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam SUSTAIN_LEN = 1024;
+    localparam SUSTAIN_LEN = 1024;  // TODO: increase sustain len
     localparam COUNTER_BW = $clog2(SUSTAIN_LEN);
 
     // =========================================================================
@@ -66,6 +67,7 @@ module wake #(
     // Output Assignment
     // =========================================================================
     assign wake_o = (state == STATE_WAKE);
+    assign valid_o = (valid_i | wake_o);
 
     // =========================================================================
     // Simulation Only Waveform Dump (.vcd export)
