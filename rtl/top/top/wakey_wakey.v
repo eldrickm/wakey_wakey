@@ -30,57 +30,6 @@ module wakey_wakey (
 );
 
     // =========================================================================
-    // DFE - Digital Front End
-    // =========================================================================
-    localparam DFE_OUTPUT_BW = 8;
-
-    wire [DFE_OUTPUT_BW - 1 : 0] dfe_data;
-    wire                         dfe_valid;
-
-    dfe dfe_inst (
-        // clock, reset, and enable
-        .clk_i(clk_i),
-        .rst_n_i(rst_n_i),
-        // TODO: Activate Pin hooks up here
-        .en_i(1'b1),
-
-        // pdm input
-        .pdm_data_i(pdm_data_i),
-
-        // pdm clock output
-        .pdm_clk_o(pdm_clk_o),
-
-        // streaming output
-        .data_o(dfe_data),
-        .valid_o(dfe_valid)
-    );
-
-    // =========================================================================
-    // ACO - Acoustic Featurizer
-    // =========================================================================
-    localparam ACO_OUTPUT_BW = 8 * 13;
-
-    wire [ACO_OUTPUT_BW - 1 : 0] aco_data;
-    wire                         aco_valid;
-    wire                         aco_last;
-
-    aco aco_inst (
-        // clock, reset, and enable
-        .clk_i(clk_i),
-        .rst_n_i(rst_n_i),
-        .en_i(1'b1),
-
-        // streaming input
-        .data_i(dfe_data),
-        .valid_i(dfe_valid),
-
-        // streaming output
-        .data_o(aco_data),
-        .valid_o(aco_valid),
-        .last_o(aco_last)
-    );
-
-    // =========================================================================
     // CFG - System Configuration
     // =========================================================================
     localparam CONV1_BANK_BW = 3;
@@ -170,18 +119,60 @@ module wakey_wakey (
     );
 
     // =========================================================================
+    // DFE - Digital Front End
+    // =========================================================================
+    localparam DFE_OUTPUT_BW = 8;
+
+    wire [DFE_OUTPUT_BW - 1 : 0] dfe_data;
+    wire                         dfe_valid;
+
+    dfe dfe_inst (
+        // clock, reset, and enable
+        .clk_i(clk_i),
+        .rst_n_i(rst_n_i),
+        // TODO: Activate Pin hooks up here
+        .en_i(1'b1),
+
+        // pdm input
+        .pdm_data_i(pdm_data_i),
+
+        // pdm clock output
+        .pdm_clk_o(pdm_clk_o),
+
+        // streaming output
+        .data_o(dfe_data),
+        .valid_o(dfe_valid)
+    );
+
+    // =========================================================================
+    // ACO - Acoustic Featurizer
+    // =========================================================================
+    localparam ACO_OUTPUT_BW = 8 * 13;
+
+    wire [ACO_OUTPUT_BW - 1 : 0] aco_data;
+    wire                         aco_valid;
+    wire                         aco_last;
+
+    aco aco_inst (
+        // clock, reset, and enable
+        .clk_i(clk_i),
+        .rst_n_i(rst_n_i),
+        .en_i(1'b1),
+
+        // streaming input
+        .data_i(dfe_data),
+        .valid_i(dfe_valid),
+
+        // streaming output
+        .data_o(aco_data),
+        .valid_o(aco_valid),
+        .last_o(aco_last)
+    );
+
+    // =========================================================================
     // WRD - Word Recognition DNN Accelerator Module
     // =========================================================================
-    // TODO: temporary signals to allow cocotb testbench access, set to 0 at synth
-    wire [103:0] data_i;
-    wire valid_i;
-    wire last_i;
-    wire ready_o;
-    `ifndef COCOTB_SIM
-        assign data_i = {96'b0, dfe_data};
-        assign valid_i = dfe_valid;
-        assign last_i = 1'b0;
-    `endif
+    wire wrd_ready;
 
     wrd wrd_inst (
         // clock and reset
@@ -189,10 +180,10 @@ module wakey_wakey (
         .rst_n_i(rst_n_i),
 
         // streaming input
-        .data_i(data_i),
-        .valid_i(valid_i),
-        .last_i(last_i),
-        .ready_o(ready_o),
+        .data_i(aco_data),
+        .valid_i(aco_valid),
+        .last_i(aco_last),
+        .ready_o(wrd_ready),
 
         // wake pin
         .wake_o(wake_o),
