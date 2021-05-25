@@ -23,11 +23,12 @@ module wakey_wakey (
     // microphone i/o
     input           pdm_data_i,
     output          pdm_clk_o,
-    // TODO: Activate Pin
+    input           vad_i,  // voice activity detection
 
     // wake output
     output wake_o
 );
+    localparam F_SYSTEM_CLK = 16000000;
 
     // =========================================================================
     // CFG - System Configuration
@@ -119,6 +120,25 @@ module wakey_wakey (
     );
 
     // =========================================================================
+    // CTL - Pipeline control
+    // =========================================================================
+    wire pipeline_en;
+    wire wake_valid;  // driven by WRD
+
+    ctl #(
+        .F_SYSTEM_CLK(F_SYSTEM_CLK)
+    ) ctl_inst (
+        .clk_i(clk_i),
+        .rst_n_i(rst_n_i),
+
+        .vad_i(vad_i),
+
+        .wake_valid_i(wake_valid),
+
+        .en_o(pipeline_en)
+    );
+
+    // =========================================================================
     // DFE - Digital Front End
     // =========================================================================
     localparam DFE_OUTPUT_BW = 8;
@@ -131,7 +151,7 @@ module wakey_wakey (
         .clk_i(clk_i),
         .rst_n_i(rst_n_i),
         // TODO: Activate Pin hooks up here
-        .en_i(1'b1),
+        .en_i(pipeline_en),
 
         // pdm input
         .pdm_data_i(pdm_data_i),
@@ -157,7 +177,7 @@ module wakey_wakey (
         // clock, reset, and enable
         .clk_i(clk_i),
         .rst_n_i(rst_n_i),
-        .en_i(1'b1),
+        .en_i(pipeline_en),
 
         // streaming input
         .data_i(dfe_data),
@@ -177,7 +197,7 @@ module wakey_wakey (
     wrd wrd_inst (
         // clock and reset
         .clk_i(clk_i),
-        .rst_n_i(rst_n_i),
+        .rst_n_i(rst_n_i & pipeline_en),
 
         // streaming input
         .data_i(aco_data),

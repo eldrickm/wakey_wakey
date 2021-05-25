@@ -47,6 +47,7 @@ VERILOG_SOURCES += ../../aco/log/*.v
 VERILOG_SOURCES += ../../aco/dct/*.v
 VERILOG_SOURCES += ../../aco/quant/*.v
 VERILOG_SOURCES += ../../aco/packing/*.v
+VERILOG_SOURCES += ../../ctl/ctl/*.v
 
 $(shell cp ../../lib/fft/*.hex .)  # copy over FFT hex files
 $(shell cp ../../aco/filterbank/*.hex .)  # copy over MFCC filterbank hex files
