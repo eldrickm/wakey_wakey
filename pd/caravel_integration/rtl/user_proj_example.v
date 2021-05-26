@@ -75,7 +75,8 @@ module user_proj_example #(
     output [2:0] irq
 );
     // IO
-    assign io_oeb = {(`MPRJ_IO_PADS-1){wb_rst_i}};
+    assign io_oeb = {(`MPRJ_IO_PADS){wb_rst_i}};
+    assign io_out[`MPRJ_IO_PADS - 1 : 2] = {(`MPRJ_IO_PADS - 2){1'b0}};
 
     // IRQ
     assign irq = 3'b000;	// Unused
