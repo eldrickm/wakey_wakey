@@ -13,34 +13,60 @@
 # limitations under the License.
 # SPDX-License-Identifier: Apache-2.0
 
+# Base Configurations. Don't Touch
+# section begin
 set script_dir [file dirname [file normalize [info script]]]
 
-set ::env(DESIGN_NAME) user_proj_example
+source $script_dir/../../caravel/openlane/user_project_wrapper_empty/fixed_wrapper_cfgs.tcl
 
+set ::env(DESIGN_NAME) user_project_wrapper
+#section end
+
+# User Configurations
+
+## Source Verilog Files
 set ::env(VERILOG_FILES) "\
 	$script_dir/../../caravel/verilog/rtl/defines.v \
 	$script_dir/../../verilog/rtl/design.v \
-	$script_dir/../../verilog/rtl/user_proj_example.v"
+	$script_dir/../../verilog/rtl/user_proj_example.v \
+	$script_dir/../../verilog/rtl/user_project_wrapper.v"
 
-set ::env(CLOCK_PORT) "wb_clk_i"
-# set ::env(CLOCK_NET) "wakey_wakey_inst.clk_i"
+## Clock configurations
+set ::env(CLOCK_PORT) "user_clock2"
+set ::env(CLOCK_NET) "mprj.wb_clk_i"
+
+# set ::env(CLOCK_PERIOD) "10"
 set ::env(CLOCK_PERIOD) "62.5"
 
-# set ::env(FP_SIZING) absolute
-# set ::env(DIE_AREA) "0 0 1000 1000"
-set ::env(DESIGN_IS_CORE) 0
-set ::env(FP_PDN_CORE_RING) 0
+## Internal Macros
+### Macro Placement
+# set ::env(MACRO_PLACEMENT_CFG) $script_dir/macro.cfg
+
+### Black-box verilog and views
+# set ::env(VERILOG_FILES_BLACKBOX) "\
+#     $script_dir/../../caravel/verilog/rtl/defines.v \
+#     $script_dir/../../verilog/rtl/user_proj_example.v"
+
+# set ::env(EXTRA_LEFS) "\
+#     $script_dir/../../lef/user_proj_example.lef"
+#
+# set ::env(EXTRA_GDS_FILES) "\
+#     $script_dir/../../gds/user_proj_example.gds"
+
 set ::env(GLB_RT_MAXLAYER) 5
 
-# set ::env(VDD_NETS) [list {vccd1} {vccd2} {vdda1} {vdda2}]
-# set ::env(GND_NETS) [list {vssd1} {vssd2} {vssa1} {vssa2}]
-set ::env(VDD_NETS) [list {vccd1}]
-set ::env(GND_NETS) [list {vssd1}]
+set ::env(FP_PDN_CHECK_NODES) 0
 
-set ::env(FP_PIN_ORDER_CFG) $script_dir/pin_order.cfg
-
-# set ::env(PL_BASIC_PLACEMENT) 1
-# set ::env(PL_TARGET_DENSITY) 0.50
-
-# If you're going to use multiple power domains, then keep this disabled.
-set ::env(RUN_CVC) 0
+# The following is because there are no std cells in the example wrapper project.
+# set ::env(SYNTH_TOP_LEVEL) 1
+# set ::env(PL_RANDOM_GLB_PLACEMENT) 1
+#
+# set ::env(PL_RESIZER_DESIGN_OPTIMIZATIONS) 0
+# set ::env(PL_RESIZER_TIMING_OPTIMIZATIONS) 0
+# set ::env(PL_RESIZER_BUFFER_INPUT_PORTS) 0
+# set ::env(PL_RESIZER_BUFFER_OUTPUT_PORTS) 0
+#
+# set ::env(DIODE_INSERTION_STRATEGY) 0
+# set ::env(FILL_INSERTION) 0
+# set ::env(TAP_DECAP_INSERTION) 0
+# set ::env(CLOCK_TREE_SYNTH) 0

@@ -9,4 +9,4 @@ cp -r caravel_integration/rtl/ caravel_user_project/verilog/
 # copy over dv files
 cp -r caravel_integration/wakey_wakey_test/ caravel_user_project/verilog/dv/
 # copy over config.tcl
-cp caravel_integration/config.tcl caravel_user_project/openlane/user_proj_example/
+cp caravel_integration/config.tcl caravel_user_project/openlane/user_project_wrapper/

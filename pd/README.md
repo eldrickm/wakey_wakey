@@ -55,7 +55,7 @@ executed.
 In `caravel_user_project/` run the following
 
 ```
-make user_proj_example
+make user_project_wrapper
 ```
 
 ### Syncing caravel_user_project changes into wakey_wakey

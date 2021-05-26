@@ -5,4 +5,4 @@ cp -r caravel_user_project/verilog/rtl/ caravel_integration
 cp -r caravel_user_project/verilog/dv/wakey_wakey_test/ caravel_integration
 
 # pull in config.tcl changes for openlane flow
-cp caravel_user_project/openlane/user_proj_example/config.tcl caravel_integration
+cp caravel_user_project/openlane/user_project_wrapper/config.tcl caravel_integration
