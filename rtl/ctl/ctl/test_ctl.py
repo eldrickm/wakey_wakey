@@ -7,8 +7,8 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import FallingEdge, Timer
 
-F_SYSTEM_CLK = 16  # test frequency
-COUNT_CYCLES = 12  # cycles to wait after VAD goes low
+F_SYSTEM_CLK = 100  # test frequency
+COUNT_CYCLES = 5  # cycles to wait after VAD goes low
 
 def get_msg(i, received, expected):
     return 'idx {}, dut output of {}, expected {}'.format(i, received, expected)
@@ -26,23 +26,19 @@ async def do_test(dut):
     for i in range(10):
         assert dut.en_o == 1
         await FallingEdge(dut.clk_i)
-    dut.vad_i <= 0
-    for i in range(COUNT_CYCLES):
-        assert dut.en_o == 1
-        await FallingEdge(dut.clk_i)
-    for i in range(10):
-        assert dut.en_o == 1
-        await FallingEdge(dut.clk_i)
     dut.wake_valid_i <= 1
     for i in range(10):
         assert dut.en_o == 1
         await FallingEdge(dut.clk_i)
     dut.wake_valid_i <= 0
     await FallingEdge(dut.clk_i)
+    for i in range(3):
+        assert dut.en_o == 0
+        await FallingEdge(dut.clk_i)
+    dut.vad_i <= 0
     for i in range(10):
         assert dut.en_o == 0
         await FallingEdge(dut.clk_i)
-    
 
 @cocotb.test()
 async def main(dut):
