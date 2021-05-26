@@ -103,6 +103,7 @@ module user_proj_example #(
         .pdm_data_i(io_in[0]),
         .pdm_clk_o(io_out[1]),
         // TODO: Activate Pin
+        .vad_i(io_in[1]),
 
         // wake output
         .wake_o(io_out[0])
