@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
-[*] Sun May 16 17:46:32 2021
+[*] Thu May 27 18:34:48 2021
 [*]
 [dumpfile] "/home/mjpauly/repos/wakey_wakey/rtl/aco/power_spectrum/wave.vcd"
-[dumpfile_mtime] "Sun May 16 17:46:01 2021"
-[dumpfile_size] 50748
+[dumpfile_mtime] "Thu May 27 18:34:40 2021"
+[dumpfile_size] 101439
 [savefile] "/home/mjpauly/repos/wakey_wakey/rtl/aco/power_spectrum/view.gtkw"
-[timestart] 0
+[timestart] 3796360000
 [size] 1848 1016
 [pos] -1 -1
-*-30.000000 16000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-24.000000 3905910000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [sst_width] 233
 [signals_width] 262
 [sst_expanded] 1
@@ -31,7 +31,6 @@ power_spectrum.last_i
 power_spectrum.data_o[31:0]
 @28
 power_spectrum.valid_o
-@29
 power_spectrum.last_o
 @200
 -

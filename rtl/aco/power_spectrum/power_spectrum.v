@@ -32,7 +32,7 @@ module power_spectrum (
     // =========================================================================
     // Register input to reduce long path length
     // =========================================================================
-    reg signed [I_BW - 1 : 0] data_i_q;
+    reg signed [I_BW * 2 - 1 : 0] data_i_q;
     reg valid_i_q;
     reg last_i_q;
     always @(posedge clk_i) begin
