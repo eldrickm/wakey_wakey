@@ -36,11 +36,36 @@ module power_spectrum (
     wire signed [I_BW - 1 : 0] imag_i = data_i[I_BW - 1 : 0];
 
     // =========================================================================
+    // Result
+    // =========================================================================
+    wire [O_BW - 1 : 0] data = (real_i * real_i) + (imag_i * imag_i);
+    wire valid = valid_i;
+    wire last = last_i;
+
+    // =========================================================================
+    // Register to reduce long path length
+    // =========================================================================
+    reg [O_BW - 1 : 0] data_q;
+    reg valid_q;
+    reg last_q;
+    always @(posedge clk_i) begin
+        if (!rst_n_i | !en_i) begin
+            data_q <= 'd0;
+            valid_q <= 'd0;
+            last_q <= 'd0;
+        end else begin
+            data_q <= data;
+            valid_q <= valid;
+            last_q <= last;
+        end
+    end
+
+    // =========================================================================
     // Output Assignment
     // =========================================================================
-    assign valid_o = (en_i & valid_i);
-    assign data_o = (real_i * real_i) + (imag_i * imag_i);
-    assign last_o = last_i;
+    assign data_o = data_q;
+    assign valid_o = valid_q;
+    assign last_o = last_q;
 
     // =========================================================================
     // Simulation Only Waveform Dump (.vcd export)
