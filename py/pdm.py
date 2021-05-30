@@ -13,7 +13,8 @@ PLOT = True
 
 f_pcm_in = 16000
 ratio_in = 250
-f_pdm = f_pcm_in * ratio_in  # 4.096 MHz
+# ratio_in = 125
+f_pdm = f_pcm_in * ratio_in  # 4 MHz
 f_pcm_out = 16000
 ratio_out = int(f_pdm / f_pcm_out)  # 250
 
@@ -105,14 +106,14 @@ def cicn(x):
     rolled = np.roll(x, ratio_out)
     rolled[:ratio_out] = 0
     x = np.cumsum(x) - np.cumsum(rolled)
-    x = x / ratio_out
-    x = x.astype(np.int8)
-    # x = x.astype(np.int16)  # same here
+    # x = x / ratio_out
+    # x = x.astype(np.int8)
+    x = x.astype(np.int16)  # same here
     return x
 
-def pdm_to_pcm(x, n_cic):
+def pdm_to_pcm(x, n_cic=1):
     '''n_cic is fixed to 1 stage for Wakey Wakey.'''
-    assert n_cic == 1
+    # assert n_cic == 1
     x = cic1(x)
     for i in range(n_cic - 1):
         x = cicn(x)

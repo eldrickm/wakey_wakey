@@ -74,15 +74,35 @@ module user_proj_example #(
     // IRQ
     output [2:0] irq
 );
-    // IO
-    assign io_oeb = {(`MPRJ_IO_PADS){wb_rst_i}};
-    assign io_out[`MPRJ_IO_PADS - 1 : 2] = {(`MPRJ_IO_PADS - 2){1'b0}};
+    // Output Enable
+    assign io_oeb[37] = 1'b1;       // wake_o
+    assign io_oeb[36] = 1'b0;       // pdm_data_i
+    assign io_oeb[35] = 1'b1;       // pdm_clk_o
+    assign io_oeb[34] = 1'b0;       // vad_i
+    assign io_oeb[33:0] = 34'b0;    // unused
+
+    // Outputs
+    assign io_out[37] = wake;       // wake_o
+    assign io_out[36] = 1'b0;       // pdm_data_i
+    assign io_out[35] = pdm_clk;    // pdm_clk_o
+    assign io_out[34] = 1'b0;       // vad_i
+    assign io_out[33:0] = 34'b0;    // unused
+
+    // Inputs
+    assign pdm_data = io_in[36];
+    assign vad = io_in[34];
 
     // IRQ
-    assign irq = 3'b000;	// Unused
+    assign irq = 3'b000;            // unused
 
-    // LA
-    assign la_data_out = {{(127-BITS){1'b0}}, 32'b0};
+    // Logic Analyzer Outputs
+    assign la_data_out = 128'b0;    // unused
+
+    // Wakey Wakey Instantiation
+    wire wake;
+    wire pdm_data;
+    wire pdm_clk;
+    wire vad;
 
     wakey_wakey wakey_wakey_inst (
         // clock and reset
@@ -100,12 +120,11 @@ module user_proj_example #(
         .wbs_dat_o(wbs_dat_o),
 
         // microphone i/o
-        .pdm_data_i(io_in[0]),
-        .pdm_clk_o(io_out[1]),
-        // TODO: Activate Pin
-        .vad_i(io_in[1]),
+        .pdm_data_i(pdm_data),
+        .pdm_clk_o(pdm_clk),
+        .vad_i(vad),
 
         // wake output
-        .wake_o(io_out[0])
+        .wake_o(wake)
     );
 endmodule
