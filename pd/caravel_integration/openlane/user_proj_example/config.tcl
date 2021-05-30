@@ -22,10 +22,11 @@ set ::env(VERILOG_FILES) "\
 	$script_dir/../../verilog/rtl/design.v \
 	$script_dir/../../verilog/rtl/user_proj_example.v"
 
-set ::env(CLOCK_PORT) ""
+# set ::env(CLOCK_PORT) ""
 # set ::env(CLOCK_NET) "counter.clk"
 # set ::env(CLOCK_PERIOD) "10"
-set ::env(CLOCK_NET) "wakey_wakey_inst.clk_i"
+set ::env(CLOCK_PORT) "wb_clk_i"
+# set ::env(CLOCK_NET) "wb_clk_i"
 set ::env(CLOCK_PERIOD) "62.5"
 
 set ::env(FP_SIZING) absolute
@@ -45,3 +46,6 @@ set ::env(PL_TARGET_DENSITY) 0.05
 
 # If you're going to use multiple power domains, then keep this disabled.
 set ::env(RUN_CVC) 0
+
+# added to disable the [WARNING PDM-0030] messages in PDN
+set ::env(FP_PDN_CHECK_NODES) 0
