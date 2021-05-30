@@ -676,99 +676,6 @@ module ctl # (
     `endif
 
 endmodule
-// ============================================================================
-// Module:       Maximum
-// Design:       Eldrick Millares
-// Verification: Matthew Pauly
-// Notes:
-// TODO: Hard coded for 2 elements - can we parameterize the one-hot compare?
-// ============================================================================
-
-module argmax #(
-    parameter I_BW = 24
-) (
-    // clock and reset
-    input                                       clk_i,
-    input                                       rst_n_i,
-
-    // streaming input
-    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data_i,
-    input                                       valid_i,
-    input                                       last_i,
-    output                                      ready_o,
-
-    // streaming output
-    output signed [VECTOR_LEN - 1 : 0]          data_o,
-    output                                      valid_o,
-    output                                      last_o,
-    input                                       ready_i
-);
-
-    genvar i;
-
-    // =========================================================================
-    // Local Parameters
-    // =========================================================================
-    localparam VECTOR_LEN = 2;
-
-    // =========================================================================
-    // Input Unpacking
-    // =========================================================================
-    wire signed [I_BW - 1 : 0] data_arr [VECTOR_LEN - 1 : 0];
-    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: unpack_inputs
-        assign data_arr[i] = data_i[(i + 1) * I_BW - 1 : i * I_BW];
-    end
-
-    // =========================================================================
-    // Max
-    // =========================================================================
-    wire [VECTOR_LEN - 1 : 0] argmax_one_hot;
-    reg  [VECTOR_LEN - 1 : 0] argmax_one_hot_q;
-
-    assign argmax_one_hot = (data_arr[0] > data_arr[1]) ? 'b01 : 'b10;
-
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            argmax_one_hot_q <= 'd0;
-        end else begin
-            argmax_one_hot_q <= argmax_one_hot;
-        end
-    end
-
-    // =========================================================================
-    // Output Assignment
-    // =========================================================================
-    // register all outputs
-    reg valid_q, last_q, ready_q;
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            valid_q <= 'b0;
-            last_q  <= 'b0;
-            ready_q <= 'b0;
-        end else begin
-            valid_q <= valid_i;
-            last_q  <= last_i;
-            ready_q <= ready_i;
-        end
-    end
-
-    assign data_o   = argmax_one_hot_q;
-    assign valid_o  = valid_q;
-    assign last_o   = last_q;
-    assign ready_o  = ready_q;
-
-    // =========================================================================
-    // Simulation Only Waveform Dump (.vcd export)
-    // =========================================================================
-    `ifdef COCOTB_SIM
-    initial begin
-        $dumpfile ("wave.vcd");
-        $dumpvars (0, argmax);
-        #1;
-    end
-    `endif
-
-endmodule
 // =============================================================================
 // Module:       Convolution Memory
 // Design:       Eldrick Millares
@@ -991,6 +898,780 @@ module conv_mem #(
     initial begin
         $dumpfile ("wave.vcd");
         $dumpvars (0, conv_mem);
+        #1;
+    end
+    `endif
+
+endmodule
+// ============================================================================
+// Quantizer
+// Design: Eldrick Millares
+// Verification: Matthew Pauly
+// Notes:
+// TODO: Can we synthesize a variable arithmetic right shift?
+// TODO: Does this need to be signed? Guess is no since it is after ReLU
+// ============================================================================
+
+module quantizer #(
+    parameter I_BW     = 32,
+    parameter O_BW     = 8,
+    parameter SHIFT_BW = $clog2(I_BW)
+) (
+    input                    clk_i,
+    input                    rst_n_i,
+
+    input [SHIFT_BW - 1 : 0] shift_i,
+
+    input [I_BW - 1 : 0]     data_i,
+    input                    valid_i,
+    input                    last_i,
+    output                   ready_o,
+
+    output [O_BW - 1 : 0]    data_o,
+    output                   valid_o,
+    output                   last_o,
+    input                    ready_i
+);
+
+    localparam [O_BW - 1 : 0] saturate_point = {1'b0, {O_BW - 1{1'b1}}};
+
+    reg [I_BW - 1 : 0] shifted;
+
+    always @(posedge clk_i) begin
+        shifted <= (data_i >> shift_i);
+    end
+
+    wire [O_BW - 1 : 0] truncated;
+    assign truncated = shifted[O_BW - 1 : 0];
+
+    // register all outputs
+    reg valid_q, last_q, ready_q;
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            valid_q <= 'b0;
+            last_q  <= 'b0;
+            ready_q <= 'b0;
+        end else begin
+            valid_q <= valid_i;
+            last_q  <= last_i;
+            ready_q <= ready_i;
+        end
+    end
+
+    assign data_o  = (shifted > saturate_point) ? saturate_point :
+                                                  shifted[O_BW - 1 : 0];
+    assign valid_o = valid_q;
+    assign last_o  = last_q;
+    assign ready_o = ready_q;
+
+    `ifdef COCOTB_SIM
+    initial begin
+        $dumpfile ("wave.vcd");
+        $dumpvars (0, quantizer);
+        #1;
+    end
+    `endif
+
+endmodule
+// =============================================================================
+// Module:       Recycler
+// Design:       Eldrick Millares
+// Verification: Matthew Pauly
+// Notes:
+// Constraint: FRAME_LEN > FILTER_LEN
+// Constraint: FILTER_LEN == 3
+// In order to change filter size, you'll have to parameterize the vec_add
+// unit.
+// TODO: Fix initial deque errors
+// TODO: Handle deassertions of valid midstream
+// TODO: Handle Full and Empty
+// =============================================================================
+
+module recycler #(
+    parameter BW          = 8,
+    parameter FRAME_LEN   = 50,
+    parameter VECTOR_LEN  = 13,
+    parameter NUM_FILTERS = 8
+) (
+    // clock and reset
+    input                             clk_i,
+    input                             rst_n_i,
+
+    // streaming input
+    input  signed [VECTOR_BW - 1 : 0] data_i,
+    input                             valid_i,
+    input                             last_i,
+    output                            ready_o,
+
+    // streaming output
+    output signed [VECTOR_BW - 1 : 0] data0_o,
+    output signed [VECTOR_BW - 1 : 0] data1_o,
+    output signed [VECTOR_BW - 1 : 0] data2_o,
+    output                            valid_o,
+    output                            last_o,
+    input                             ready_i
+);
+
+    genvar i;
+
+    // =========================================================================
+    // Local Parameters
+    // =========================================================================
+    // This unit is hard coded for width 3 filters
+    localparam FILTER_LEN = 3;
+    // Need to account for cycles where the ends of the featuremap wrap
+    // through the shift registers, hence the extra "+ NUM_FILTERS - 1"
+    localparam CYCLE_PERIOD = (FRAME_LEN + FILTER_LEN - 1);
+    localparam MAX_CYCLES = NUM_FILTERS * CYCLE_PERIOD;
+    // Number of cycles where we want to requeue data into the FIFO. For last
+    // filter want to drop all the data and leave the FIFO empty.
+    localparam MAX_CYCLES_REQUEUE = (NUM_FILTERS - 1) * CYCLE_PERIOD;
+
+    // bitwidth definitions
+    localparam VECTOR_BW  = VECTOR_LEN * BW;
+    localparam COUNTER_BW = $clog2(MAX_CYCLES);
+    localparam FRAME_COUNTER_BW = $clog2(FRAME_LEN + FILTER_LEN - 1);
+
+    // ========================================================================
+    // Recycler Controller
+    // ========================================================================
+    // Define States
+    localparam STATE_IDLE    = 2'd0,
+               STATE_PRELOAD = 2'd1,
+               STATE_LOAD    = 2'd2,
+               STATE_CYCLE   = 2'd3;
+
+    reg [1:0] state;
+    reg [COUNTER_BW - 1 : 0] counter;
+    // frame_counter is used to determine when the output is invalid due to
+    // having the ends of the featuremap both in the shift registers
+    reg [FRAME_COUNTER_BW - 1 : 0] frame_counter;
+
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            counter <= 'd0;
+            state <= STATE_IDLE;
+        end else begin
+            case (state)
+                STATE_IDLE: begin
+                    // FIFO State only transitions to PRELOAD on valid input
+                    counter <= 'd0;
+                    frame_counter <= 'd0;
+                    state   <= (valid_i) ? STATE_PRELOAD : STATE_IDLE;
+                end
+                STATE_PRELOAD: begin
+                    // In PRELOAD, we're shifting the first FILTER_LEN - 1
+                    // elements into our shift register, then transition
+                    // to regular LOAD where the shift register is not active
+                    counter <= counter + 'd1;
+                    frame_counter <= 'd0;
+                    state   <= (counter == FILTER_LEN) ? STATE_LOAD :
+                                                         STATE_PRELOAD;
+                end
+                STATE_LOAD: begin
+                    // In LOAD we're just shifting enough elements until
+                    // last_i is asserted
+                    counter <= 'd0;
+                    frame_counter <= 'd0;
+                    state   <= (last_i) ? STATE_CYCLE: STATE_LOAD;
+                end
+                STATE_CYCLE: begin
+                    // In CYCLE, we begin cycling MAX_CYCLE times.
+                    // If valid_i is high, we transition straight into
+                    // PRELOAD again since a new frame is immediately
+                    // available.
+                    // If valid_i is deasserted, we transition into IDLE
+                    // and wait on the next input blocks to come in
+                    counter <= counter + 'd1;
+                    frame_counter <= (frame_counter < FRAME_LEN + FILTER_LEN - 1)
+                                        ? frame_counter + 'd1
+                                        : 'd1;
+                    state   <= (counter < MAX_CYCLES - 1) ? STATE_CYCLE :
+                               ((valid_i) ? STATE_PRELOAD : STATE_IDLE);
+                end
+                default: begin
+                    counter <= 'd0;
+                    frame_counter <= 'd0;
+                    state   <= STATE_IDLE;
+                end
+            endcase
+        end
+    end
+
+    // ========================================================================
+    // Recycling FIFO
+    // ========================================================================
+    // Needed to ensure we do not drop data_i the first cycle "valid"
+    // is asserted
+    reg [VECTOR_BW - 1: 0] data_i_q;
+    always @(posedge clk_i) begin
+        data_i_q <= data_i;
+    end
+
+    // Delayed by 1 cycle since data_i_q is delayed by one cycle
+    reg fifo_recycle;
+    always @(posedge clk_i) begin
+        fifo_recycle <= (state == STATE_CYCLE);
+    end
+
+    // Assign din to input if loading, otherwise feedback output to recycle
+    wire [VECTOR_BW - 1 : 0] fifo_din;
+    assign fifo_din = fifo_recycle ? fifo_out_sr[FILTER_LEN - 1] : data_i_q;
+
+    // Always enqueue if FIFO is not idle
+    wire fifo_enq;
+    assign fifo_enq = (!(state == STATE_IDLE) & (counter <= MAX_CYCLES_REQUEUE));
+
+    // Dequeue the FIFO when we begin recycling
+    // or dequeue the FIFO exactly FILTER_LEN - 1 times when Preloading
+    wire fifo_deq;
+    assign fifo_deq = ((state == STATE_CYCLE) |
+                       ((state == STATE_PRELOAD) &
+                        (counter < FILTER_LEN - 1)));
+
+    wire [VECTOR_BW - 1 : 0] fifo_dout;
+
+    fifo #(
+        .DATA_WIDTH(VECTOR_BW),
+        .FIFO_DEPTH(FRAME_LEN)
+    ) fifo_inst (
+        .clk_i(clk_i),
+        .rst_n_i(rst_n_i),
+
+        .enq_i(fifo_enq),
+        .deq_i(fifo_deq),
+
+        .din_i(fifo_din),
+        .dout_o(fifo_dout),
+
+        .full_o_n(),
+        .empty_o_n()
+    );
+
+    // FIFO Output Shift Register Enable
+    wire sr_en;
+    assign sr_en = (fifo_recycle | (state == STATE_PRELOAD));
+
+    // FIFO Output Shift Register
+    reg [VECTOR_BW - 1 : 0] fifo_out_sr [FILTER_LEN - 1 : 0];
+    always @(posedge clk_i) begin
+        if (sr_en) begin
+            fifo_out_sr[0] <= fifo_dout;
+        end
+    end
+    for (i = 1; i < FILTER_LEN; i = i + 1) begin: create_fifo_out_sr
+        always @(posedge clk_i) begin
+            if (sr_en) begin
+                fifo_out_sr[i] <= fifo_out_sr[i-1];
+            end
+        end
+    end
+
+    // FIFO Output Valid Shift Register
+    reg fifo_out_valid;
+    always @(posedge clk_i) begin
+        fifo_out_valid <= (state == STATE_CYCLE);
+    end
+
+    // ========================================================================
+    // Output Assignment
+    // ========================================================================
+    assign data0_o = fifo_out_sr[0];
+    assign data1_o = fifo_out_sr[1];
+    assign data2_o = fifo_out_sr[2];
+    // Output is not valid when both ends of the featuremap are in the shift
+    // register
+    assign valid_o = fifo_out_valid & (frame_counter <= FRAME_LEN);
+    assign ready_o = ready_i;
+    assign last_o  = last_i;
+
+    // ========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // ========================================================================
+    `ifdef COCOTB_SIM
+    initial begin
+        $dumpfile ("wave.vcd");
+        $dumpvars (0, recycler);
+        #1;
+    end
+    `endif
+
+endmodule
+// ============================================================================
+// Module:       Reduction Addition
+// Design:       Eldrick Millares
+// Verification: Matthew Pauly
+// Notes:
+// TODO: Can we make elements in sum minimum length?
+// ============================================================================
+
+module red_add #(
+    parameter I_BW = 18,
+    parameter O_BW = 32,
+    parameter VECTOR_LEN = 2
+) (
+    // clock and reset
+    input                                       clk_i,
+    input                                       rst_n_i,
+
+    // streaming input
+    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data_i,
+    input                                       valid_i,
+    input                                       last_i,
+    output                                      ready_o,
+
+    // streaming output
+    output signed [O_BW - 1 : 0]                data_o,
+    output                                      valid_o,
+    output                                      last_o,
+    input                                       ready_i
+);
+
+    genvar i;
+
+    // =========================================================================
+    // Input Unpacking
+    // =========================================================================
+    // unpacked arrays
+    wire signed [I_BW - 1 : 0] data_arr [VECTOR_LEN - 1 : 0];
+    wire signed [O_BW - 1 : 0] sum      [VECTOR_LEN - 1 : 0];
+    reg  signed [O_BW - 1 : 0] final_sum_q;
+
+    // unpack data input
+    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: unpack_inputs
+        assign data_arr[i] = data_i[(i + 1) * I_BW - 1 : i * I_BW];
+    end
+
+    // =========================================================================
+    // Reduction Addition
+    // =========================================================================
+    for (i = 1; i < VECTOR_LEN; i = i + 1) begin: reduction_sum
+         if (i == 1) begin
+             assign sum[i] = data_arr[i] + data_arr[i-1];
+         end else begin
+             assign sum[i] = sum[i-1] + data_arr[i];
+         end
+    end
+
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            final_sum_q <= 'd0;
+        end else begin
+            final_sum_q <= sum[VECTOR_LEN - 1];
+        end
+    end
+
+    // =========================================================================
+    // Output Assignment
+    // =========================================================================
+    // register all outputs
+    reg valid_q, last_q, ready_q;
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            valid_q <= 'b0;
+            last_q  <= 'b0;
+            ready_q <= 'b0;
+        end else begin
+            valid_q <= valid_i;
+            last_q  <= last_i;
+            ready_q <= ready_i;
+        end
+    end
+
+    assign data_o   = final_sum_q;
+    assign valid_o  = valid_q;
+    assign last_o   = last_q;
+    assign ready_o = ready_q;
+
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    initial begin
+        $dumpfile ("wave.vcd");
+        $dumpvars (0, red_add);
+        #1;
+    end
+    `endif
+
+endmodule
+// =============================================================================
+// Module:       ReLU (Rectified Linear Unit)
+// Design:       Eldrick Millares
+// Verification: Matthew Pauly
+// Notes:
+// =============================================================================
+
+module relu #(
+    parameter BW = 32
+) (
+    input                      clk_i,
+    input                      rst_n_i,
+
+    input  signed [BW - 1 : 0] data_i,
+    input                      valid_i,
+    input                      last_i,
+    output                     ready_o,
+
+    output signed [BW - 1 : 0] data_o,
+    output                     valid_o,
+    output                     last_o,
+    input                      ready_i
+);
+
+    // =========================================================================
+    // Rectification
+    // =========================================================================
+    reg [BW - 1 : 0] rectified;
+    always @(posedge clk_i) begin
+        rectified <= (data_i > 0) ? data_i : 0;
+    end
+
+    // =========================================================================
+    // Output Assignment
+    // =========================================================================
+    // register all outputs
+    reg valid_q, last_q, ready_q;
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            valid_q <= 'b0;
+            last_q  <= 'b0;
+            ready_q <= 'b0;
+        end else begin
+            valid_q <= valid_i;
+            last_q  <= last_i;
+            ready_q <= ready_i;
+        end
+    end
+
+    assign data_o  = rectified;
+    assign valid_o = valid_q;
+    assign last_o  = last_q;
+    assign ready_o = ready_q;
+
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    initial begin
+        $dumpfile ("wave.vcd");
+        $dumpvars (0, relu);
+        #1;
+    end
+    `endif
+
+endmodule
+// =============================================================================
+// Module:       Vector Adder
+// Design:       Eldrick Millares
+// Verification: Matthew Pauly
+// Notes:
+// =============================================================================
+
+module vec_add #(
+    parameter I_BW = 16,
+    parameter O_BW = 18,
+    parameter VECTOR_LEN = 13
+) (
+    // clock and reset
+    input                                       clk_i,
+    input                                       rst_n_i,
+
+    // streaming input
+    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data0_i,
+    input                                       valid0_i,
+    input                                       last0_i,
+    output                                      ready0_o,
+
+    // streaming input
+    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data1_i,
+    input                                       valid1_i,
+    input                                       last1_i,
+    output                                      ready1_o,
+
+    // streaming input
+    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data2_i,
+    input                                       valid2_i,
+    input                                       last2_i,
+    output                                      ready2_o,
+
+    // streaming output
+    output signed [(VECTOR_LEN * O_BW) - 1 : 0] data_o,
+    output                                      valid_o,
+    output                                      last_o,
+    input                                       ready_i
+);
+
+    genvar i;
+
+    // =========================================================================
+    // Input Unpacking
+    // =========================================================================
+    // unpacked arrays
+    wire signed [I_BW - 1 : 0] data0_arr [VECTOR_LEN - 1 : 0];
+    wire signed [I_BW - 1 : 0] data1_arr [VECTOR_LEN - 1 : 0];
+    wire signed [I_BW - 1 : 0] data2_arr [VECTOR_LEN - 1 : 0];
+    reg  signed [O_BW - 1 : 0] out_arr   [VECTOR_LEN - 1 : 0];
+
+    // unpack data input
+    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: unpack_inputs
+        assign data0_arr[i] = data0_i[(i + 1) * I_BW - 1 : i * I_BW];
+        assign data1_arr[i] = data1_i[(i + 1) * I_BW - 1 : i * I_BW];
+        assign data2_arr[i] = data2_i[(i + 1) * I_BW - 1 : i * I_BW];
+    end
+
+    // =========================================================================
+    // Vector Addition
+    // =========================================================================
+    // registered addition of data elements
+    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: vector_addition
+        always @(posedge clk_i) begin
+            if (!rst_n_i) begin
+                out_arr[i] <= 'd0;
+            end else begin
+                out_arr[i] <= data0_arr[i] + data1_arr[i] + data2_arr[i];
+            end
+        end
+    end
+
+    // =========================================================================
+    // Output Packing
+    // =========================================================================
+    // pack addition results
+    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: pack_output
+        assign data_o[(i + 1) * O_BW - 1 : i * O_BW] = out_arr[i];
+    end
+
+    // =========================================================================
+    // Output Assignment
+    // =========================================================================
+    // register all outputs
+    reg valid_q, last_q, ready_q;
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            valid_q <= 'b0;
+            last_q  <= 'b0;
+            ready_q <= 'b0;
+        end else begin
+            valid_q <= valid0_i & valid1_i & valid2_i;
+            last_q  <= last0_i | last1_i | last2_i;
+            ready_q <= ready_i;
+        end
+    end
+
+    assign valid_o  = valid_q;
+    assign last_o   = last_q;
+    assign ready0_o = ready_q;
+    assign ready1_o = ready_q;
+    assign ready2_o = ready_q;
+
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    initial begin
+        $dumpfile ("wave.vcd");
+        $dumpvars (0, vec_add);
+        #1;
+    end
+    `endif
+
+endmodule
+// =============================================================================
+// Module:       Vector Multiplier
+// Design:       Eldrick Millares
+// Verification: Matthew Pauly
+// Notes:
+// =============================================================================
+
+module vec_mul #(
+    parameter I_BW = 8,
+    parameter O_BW = 16,
+    parameter VECTOR_LEN = 13
+) (
+    // clock and reset
+    input                                       clk_i,
+    input                                       rst_n_i,
+
+    // streaming input
+    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data0_i,
+    input                                       valid0_i,
+    input                                       last0_i,
+    output                                      ready0_o,
+
+    // streaming input
+    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data1_i,
+    input                                       valid1_i,
+    input                                       last1_i,
+    output                                      ready1_o,
+
+    // streaming output
+    output signed [(VECTOR_LEN * O_BW) - 1 : 0] data_o,
+    output                                      valid_o,
+    output                                      last_o,
+    input                                       ready_i
+);
+
+    genvar i;
+
+    // =========================================================================
+    // Input Unpacking
+    // =========================================================================
+    // unpacked arrays
+    wire signed [I_BW - 1 : 0] data0_arr [VECTOR_LEN - 1 : 0];
+    wire signed [I_BW - 1 : 0] data1_arr [VECTOR_LEN - 1 : 0];
+    reg  signed [O_BW - 1 : 0] out_arr   [VECTOR_LEN - 1 : 0];
+
+    // unpack data input
+    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: unpack_inputs
+        assign data0_arr[i] = data0_i[(i + 1) * I_BW - 1 : i * I_BW];
+        assign data1_arr[i] = data1_i[(i + 1) * I_BW - 1 : i * I_BW];
+    end
+
+    // =========================================================================
+    // Vector Multiplication
+    // =========================================================================
+    // registered multiplication of data elements
+    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: vector_multiply
+        always @(posedge clk_i) begin
+            if (!rst_n_i) begin
+                out_arr[i] <= 'd0;
+            end else begin
+                out_arr[i] <= data0_arr[i] * data1_arr[i];
+            end
+        end
+    end
+
+    // =========================================================================
+    // Output Packing
+    // =========================================================================
+    // pack multiplication results
+    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: pack_output
+        assign data_o[(i + 1) * O_BW - 1 : i * O_BW] = out_arr[i];
+    end
+
+    // =========================================================================
+    // Output Assignment
+    // =========================================================================
+    // register all outputs
+    reg valid_q, last_q, ready_q;
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            valid_q <= 'b0;
+            last_q  <= 'b0;
+            ready_q <= 'b0;
+        end else begin
+            valid_q <= valid0_i & valid1_i;
+            last_q  <= last0_i | last1_i;
+            ready_q <= ready_i;
+        end
+    end
+
+    assign valid_o  = valid_q;
+    assign last_o   = last_q;
+    assign ready0_o = ready_q;
+    assign ready1_o = ready_q;
+
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    initial begin
+        $dumpfile ("wave.vcd");
+        $dumpvars (0, vec_mul);
+        #1;
+    end
+    `endif
+
+endmodule
+// ============================================================================
+// Module:       Maximum
+// Design:       Eldrick Millares
+// Verification: Matthew Pauly
+// Notes:
+// TODO: Hard coded for 2 elements - can we parameterize the one-hot compare?
+// ============================================================================
+
+module argmax #(
+    parameter I_BW = 24
+) (
+    // clock and reset
+    input                                       clk_i,
+    input                                       rst_n_i,
+
+    // streaming input
+    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data_i,
+    input                                       valid_i,
+    input                                       last_i,
+    output                                      ready_o,
+
+    // streaming output
+    output signed [VECTOR_LEN - 1 : 0]          data_o,
+    output                                      valid_o,
+    output                                      last_o,
+    input                                       ready_i
+);
+
+    genvar i;
+
+    // =========================================================================
+    // Local Parameters
+    // =========================================================================
+    localparam VECTOR_LEN = 2;
+
+    // =========================================================================
+    // Input Unpacking
+    // =========================================================================
+    wire signed [I_BW - 1 : 0] data_arr [VECTOR_LEN - 1 : 0];
+    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: unpack_inputs
+        assign data_arr[i] = data_i[(i + 1) * I_BW - 1 : i * I_BW];
+    end
+
+    // =========================================================================
+    // Max
+    // =========================================================================
+    wire [VECTOR_LEN - 1 : 0] argmax_one_hot;
+    reg  [VECTOR_LEN - 1 : 0] argmax_one_hot_q;
+
+    assign argmax_one_hot = (data_arr[0] > data_arr[1]) ? 'b01 : 'b10;
+
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            argmax_one_hot_q <= 'd0;
+        end else begin
+            argmax_one_hot_q <= argmax_one_hot;
+        end
+    end
+
+    // =========================================================================
+    // Output Assignment
+    // =========================================================================
+    // register all outputs
+    reg valid_q, last_q, ready_q;
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            valid_q <= 'b0;
+            last_q  <= 'b0;
+            ready_q <= 'b0;
+        end else begin
+            valid_q <= valid_i;
+            last_q  <= last_i;
+            ready_q <= ready_i;
+        end
+    end
+
+    assign data_o   = argmax_one_hot_q;
+    assign valid_o  = valid_q;
+    assign last_o   = last_q;
+    assign ready_o  = ready_q;
+
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    initial begin
+        $dumpfile ("wave.vcd");
+        $dumpvars (0, argmax);
         #1;
     end
     `endif
@@ -2184,687 +2865,6 @@ module max_pool #(
     initial begin
         $dumpfile ("wave.vcd");
         $dumpvars (0, max_pool);
-        #1;
-    end
-    `endif
-
-endmodule
-// ============================================================================
-// Quantizer
-// Design: Eldrick Millares
-// Verification: Matthew Pauly
-// Notes:
-// TODO: Can we synthesize a variable arithmetic right shift?
-// TODO: Does this need to be signed? Guess is no since it is after ReLU
-// ============================================================================
-
-module quantizer #(
-    parameter I_BW     = 32,
-    parameter O_BW     = 8,
-    parameter SHIFT_BW = $clog2(I_BW)
-) (
-    input                    clk_i,
-    input                    rst_n_i,
-
-    input [SHIFT_BW - 1 : 0] shift_i,
-
-    input [I_BW - 1 : 0]     data_i,
-    input                    valid_i,
-    input                    last_i,
-    output                   ready_o,
-
-    output [O_BW - 1 : 0]    data_o,
-    output                   valid_o,
-    output                   last_o,
-    input                    ready_i
-);
-
-    localparam [O_BW - 1 : 0] saturate_point = {1'b0, {O_BW - 1{1'b1}}};
-
-    reg [I_BW - 1 : 0] shifted;
-
-    always @(posedge clk_i) begin
-        shifted <= (data_i >> shift_i);
-    end
-
-    wire [O_BW - 1 : 0] truncated;
-    assign truncated = shifted[O_BW - 1 : 0];
-
-    // register all outputs
-    reg valid_q, last_q, ready_q;
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            valid_q <= 'b0;
-            last_q  <= 'b0;
-            ready_q <= 'b0;
-        end else begin
-            valid_q <= valid_i;
-            last_q  <= last_i;
-            ready_q <= ready_i;
-        end
-    end
-
-    assign data_o  = (shifted > saturate_point) ? saturate_point :
-                                                  shifted[O_BW - 1 : 0];
-    assign valid_o = valid_q;
-    assign last_o  = last_q;
-    assign ready_o = ready_q;
-
-    `ifdef COCOTB_SIM
-    initial begin
-        $dumpfile ("wave.vcd");
-        $dumpvars (0, quantizer);
-        #1;
-    end
-    `endif
-
-endmodule
-// =============================================================================
-// Module:       Recycler
-// Design:       Eldrick Millares
-// Verification: Matthew Pauly
-// Notes:
-// Constraint: FRAME_LEN > FILTER_LEN
-// Constraint: FILTER_LEN == 3
-// In order to change filter size, you'll have to parameterize the vec_add
-// unit.
-// TODO: Fix initial deque errors
-// TODO: Handle deassertions of valid midstream
-// TODO: Handle Full and Empty
-// =============================================================================
-
-module recycler #(
-    parameter BW          = 8,
-    parameter FRAME_LEN   = 50,
-    parameter VECTOR_LEN  = 13,
-    parameter NUM_FILTERS = 8
-) (
-    // clock and reset
-    input                             clk_i,
-    input                             rst_n_i,
-
-    // streaming input
-    input  signed [VECTOR_BW - 1 : 0] data_i,
-    input                             valid_i,
-    input                             last_i,
-    output                            ready_o,
-
-    // streaming output
-    output signed [VECTOR_BW - 1 : 0] data0_o,
-    output signed [VECTOR_BW - 1 : 0] data1_o,
-    output signed [VECTOR_BW - 1 : 0] data2_o,
-    output                            valid_o,
-    output                            last_o,
-    input                             ready_i
-);
-
-    genvar i;
-
-    // =========================================================================
-    // Local Parameters
-    // =========================================================================
-    // This unit is hard coded for width 3 filters
-    localparam FILTER_LEN = 3;
-    // Need to account for cycles where the ends of the featuremap wrap
-    // through the shift registers, hence the extra "+ NUM_FILTERS - 1"
-    localparam CYCLE_PERIOD = (FRAME_LEN + FILTER_LEN - 1);
-    localparam MAX_CYCLES = NUM_FILTERS * CYCLE_PERIOD;
-    // Number of cycles where we want to requeue data into the FIFO. For last
-    // filter want to drop all the data and leave the FIFO empty.
-    localparam MAX_CYCLES_REQUEUE = (NUM_FILTERS - 1) * CYCLE_PERIOD;
-
-    // bitwidth definitions
-    localparam VECTOR_BW  = VECTOR_LEN * BW;
-    localparam COUNTER_BW = $clog2(MAX_CYCLES);
-    localparam FRAME_COUNTER_BW = $clog2(FRAME_LEN + FILTER_LEN - 1);
-
-    // ========================================================================
-    // Recycler Controller
-    // ========================================================================
-    // Define States
-    localparam STATE_IDLE    = 2'd0,
-               STATE_PRELOAD = 2'd1,
-               STATE_LOAD    = 2'd2,
-               STATE_CYCLE   = 2'd3;
-
-    reg [1:0] state;
-    reg [COUNTER_BW - 1 : 0] counter;
-    // frame_counter is used to determine when the output is invalid due to
-    // having the ends of the featuremap both in the shift registers
-    reg [FRAME_COUNTER_BW - 1 : 0] frame_counter;
-
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            counter <= 'd0;
-            state <= STATE_IDLE;
-        end else begin
-            case (state)
-                STATE_IDLE: begin
-                    // FIFO State only transitions to PRELOAD on valid input
-                    counter <= 'd0;
-                    frame_counter <= 'd0;
-                    state   <= (valid_i) ? STATE_PRELOAD : STATE_IDLE;
-                end
-                STATE_PRELOAD: begin
-                    // In PRELOAD, we're shifting the first FILTER_LEN - 1
-                    // elements into our shift register, then transition
-                    // to regular LOAD where the shift register is not active
-                    counter <= counter + 'd1;
-                    frame_counter <= 'd0;
-                    state   <= (counter == FILTER_LEN) ? STATE_LOAD :
-                                                         STATE_PRELOAD;
-                end
-                STATE_LOAD: begin
-                    // In LOAD we're just shifting enough elements until
-                    // last_i is asserted
-                    counter <= 'd0;
-                    frame_counter <= 'd0;
-                    state   <= (last_i) ? STATE_CYCLE: STATE_LOAD;
-                end
-                STATE_CYCLE: begin
-                    // In CYCLE, we begin cycling MAX_CYCLE times.
-                    // If valid_i is high, we transition straight into
-                    // PRELOAD again since a new frame is immediately
-                    // available.
-                    // If valid_i is deasserted, we transition into IDLE
-                    // and wait on the next input blocks to come in
-                    counter <= counter + 'd1;
-                    frame_counter <= (frame_counter < FRAME_LEN + FILTER_LEN - 1)
-                                        ? frame_counter + 'd1
-                                        : 'd1;
-                    state   <= (counter < MAX_CYCLES - 1) ? STATE_CYCLE :
-                               ((valid_i) ? STATE_PRELOAD : STATE_IDLE);
-                end
-                default: begin
-                    counter <= 'd0;
-                    frame_counter <= 'd0;
-                    state   <= STATE_IDLE;
-                end
-            endcase
-        end
-    end
-
-    // ========================================================================
-    // Recycling FIFO
-    // ========================================================================
-    // Needed to ensure we do not drop data_i the first cycle "valid"
-    // is asserted
-    reg [VECTOR_BW - 1: 0] data_i_q;
-    always @(posedge clk_i) begin
-        data_i_q <= data_i;
-    end
-
-    // Delayed by 1 cycle since data_i_q is delayed by one cycle
-    reg fifo_recycle;
-    always @(posedge clk_i) begin
-        fifo_recycle <= (state == STATE_CYCLE);
-    end
-
-    // Assign din to input if loading, otherwise feedback output to recycle
-    wire [VECTOR_BW - 1 : 0] fifo_din;
-    assign fifo_din = fifo_recycle ? fifo_out_sr[FILTER_LEN - 1] : data_i_q;
-
-    // Always enqueue if FIFO is not idle
-    wire fifo_enq;
-    assign fifo_enq = (!(state == STATE_IDLE) & (counter <= MAX_CYCLES_REQUEUE));
-
-    // Dequeue the FIFO when we begin recycling
-    // or dequeue the FIFO exactly FILTER_LEN - 1 times when Preloading
-    wire fifo_deq;
-    assign fifo_deq = ((state == STATE_CYCLE) |
-                       ((state == STATE_PRELOAD) &
-                        (counter < FILTER_LEN - 1)));
-
-    wire [VECTOR_BW - 1 : 0] fifo_dout;
-
-    fifo #(
-        .DATA_WIDTH(VECTOR_BW),
-        .FIFO_DEPTH(FRAME_LEN)
-    ) fifo_inst (
-        .clk_i(clk_i),
-        .rst_n_i(rst_n_i),
-
-        .enq_i(fifo_enq),
-        .deq_i(fifo_deq),
-
-        .din_i(fifo_din),
-        .dout_o(fifo_dout),
-
-        .full_o_n(),
-        .empty_o_n()
-    );
-
-    // FIFO Output Shift Register Enable
-    wire sr_en;
-    assign sr_en = (fifo_recycle | (state == STATE_PRELOAD));
-
-    // FIFO Output Shift Register
-    reg [VECTOR_BW - 1 : 0] fifo_out_sr [FILTER_LEN - 1 : 0];
-    always @(posedge clk_i) begin
-        if (sr_en) begin
-            fifo_out_sr[0] <= fifo_dout;
-        end
-    end
-    for (i = 1; i < FILTER_LEN; i = i + 1) begin: create_fifo_out_sr
-        always @(posedge clk_i) begin
-            if (sr_en) begin
-                fifo_out_sr[i] <= fifo_out_sr[i-1];
-            end
-        end
-    end
-
-    // FIFO Output Valid Shift Register
-    reg fifo_out_valid;
-    always @(posedge clk_i) begin
-        fifo_out_valid <= (state == STATE_CYCLE);
-    end
-
-    // ========================================================================
-    // Output Assignment
-    // ========================================================================
-    assign data0_o = fifo_out_sr[0];
-    assign data1_o = fifo_out_sr[1];
-    assign data2_o = fifo_out_sr[2];
-    // Output is not valid when both ends of the featuremap are in the shift
-    // register
-    assign valid_o = fifo_out_valid & (frame_counter <= FRAME_LEN);
-    assign ready_o = ready_i;
-    assign last_o  = last_i;
-
-    // ========================================================================
-    // Simulation Only Waveform Dump (.vcd export)
-    // ========================================================================
-    `ifdef COCOTB_SIM
-    initial begin
-        $dumpfile ("wave.vcd");
-        $dumpvars (0, recycler);
-        #1;
-    end
-    `endif
-
-endmodule
-// ============================================================================
-// Module:       Reduction Addition
-// Design:       Eldrick Millares
-// Verification: Matthew Pauly
-// Notes:
-// TODO: Can we make elements in sum minimum length?
-// ============================================================================
-
-module red_add #(
-    parameter I_BW = 18,
-    parameter O_BW = 32,
-    parameter VECTOR_LEN = 2
-) (
-    // clock and reset
-    input                                       clk_i,
-    input                                       rst_n_i,
-
-    // streaming input
-    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data_i,
-    input                                       valid_i,
-    input                                       last_i,
-    output                                      ready_o,
-
-    // streaming output
-    output signed [O_BW - 1 : 0]                data_o,
-    output                                      valid_o,
-    output                                      last_o,
-    input                                       ready_i
-);
-
-    genvar i;
-
-    // =========================================================================
-    // Input Unpacking
-    // =========================================================================
-    // unpacked arrays
-    wire signed [I_BW - 1 : 0] data_arr [VECTOR_LEN - 1 : 0];
-    wire signed [O_BW - 1 : 0] sum      [VECTOR_LEN - 1 : 0];
-    reg  signed [O_BW - 1 : 0] final_sum_q;
-
-    // unpack data input
-    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: unpack_inputs
-        assign data_arr[i] = data_i[(i + 1) * I_BW - 1 : i * I_BW];
-    end
-
-    // =========================================================================
-    // Reduction Addition
-    // =========================================================================
-    for (i = 1; i < VECTOR_LEN; i = i + 1) begin: reduction_sum
-         if (i == 1) begin
-             assign sum[i] = data_arr[i] + data_arr[i-1];
-         end else begin
-             assign sum[i] = sum[i-1] + data_arr[i];
-         end
-    end
-
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            final_sum_q <= 'd0;
-        end else begin
-            final_sum_q <= sum[VECTOR_LEN - 1];
-        end
-    end
-
-    // =========================================================================
-    // Output Assignment
-    // =========================================================================
-    // register all outputs
-    reg valid_q, last_q, ready_q;
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            valid_q <= 'b0;
-            last_q  <= 'b0;
-            ready_q <= 'b0;
-        end else begin
-            valid_q <= valid_i;
-            last_q  <= last_i;
-            ready_q <= ready_i;
-        end
-    end
-
-    assign data_o   = final_sum_q;
-    assign valid_o  = valid_q;
-    assign last_o   = last_q;
-    assign ready_o = ready_q;
-
-    // =========================================================================
-    // Simulation Only Waveform Dump (.vcd export)
-    // =========================================================================
-    `ifdef COCOTB_SIM
-    initial begin
-        $dumpfile ("wave.vcd");
-        $dumpvars (0, red_add);
-        #1;
-    end
-    `endif
-
-endmodule
-// =============================================================================
-// Module:       ReLU (Rectified Linear Unit)
-// Design:       Eldrick Millares
-// Verification: Matthew Pauly
-// Notes:
-// =============================================================================
-
-module relu #(
-    parameter BW = 32
-) (
-    input                      clk_i,
-    input                      rst_n_i,
-
-    input  signed [BW - 1 : 0] data_i,
-    input                      valid_i,
-    input                      last_i,
-    output                     ready_o,
-
-    output signed [BW - 1 : 0] data_o,
-    output                     valid_o,
-    output                     last_o,
-    input                      ready_i
-);
-
-    // =========================================================================
-    // Rectification
-    // =========================================================================
-    reg [BW - 1 : 0] rectified;
-    always @(posedge clk_i) begin
-        rectified <= (data_i > 0) ? data_i : 0;
-    end
-
-    // =========================================================================
-    // Output Assignment
-    // =========================================================================
-    // register all outputs
-    reg valid_q, last_q, ready_q;
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            valid_q <= 'b0;
-            last_q  <= 'b0;
-            ready_q <= 'b0;
-        end else begin
-            valid_q <= valid_i;
-            last_q  <= last_i;
-            ready_q <= ready_i;
-        end
-    end
-
-    assign data_o  = rectified;
-    assign valid_o = valid_q;
-    assign last_o  = last_q;
-    assign ready_o = ready_q;
-
-    // =========================================================================
-    // Simulation Only Waveform Dump (.vcd export)
-    // =========================================================================
-    `ifdef COCOTB_SIM
-    initial begin
-        $dumpfile ("wave.vcd");
-        $dumpvars (0, relu);
-        #1;
-    end
-    `endif
-
-endmodule
-// =============================================================================
-// Module:       Vector Adder
-// Design:       Eldrick Millares
-// Verification: Matthew Pauly
-// Notes:
-// =============================================================================
-
-module vec_add #(
-    parameter I_BW = 16,
-    parameter O_BW = 18,
-    parameter VECTOR_LEN = 13
-) (
-    // clock and reset
-    input                                       clk_i,
-    input                                       rst_n_i,
-
-    // streaming input
-    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data0_i,
-    input                                       valid0_i,
-    input                                       last0_i,
-    output                                      ready0_o,
-
-    // streaming input
-    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data1_i,
-    input                                       valid1_i,
-    input                                       last1_i,
-    output                                      ready1_o,
-
-    // streaming input
-    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data2_i,
-    input                                       valid2_i,
-    input                                       last2_i,
-    output                                      ready2_o,
-
-    // streaming output
-    output signed [(VECTOR_LEN * O_BW) - 1 : 0] data_o,
-    output                                      valid_o,
-    output                                      last_o,
-    input                                       ready_i
-);
-
-    genvar i;
-
-    // =========================================================================
-    // Input Unpacking
-    // =========================================================================
-    // unpacked arrays
-    wire signed [I_BW - 1 : 0] data0_arr [VECTOR_LEN - 1 : 0];
-    wire signed [I_BW - 1 : 0] data1_arr [VECTOR_LEN - 1 : 0];
-    wire signed [I_BW - 1 : 0] data2_arr [VECTOR_LEN - 1 : 0];
-    reg  signed [O_BW - 1 : 0] out_arr   [VECTOR_LEN - 1 : 0];
-
-    // unpack data input
-    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: unpack_inputs
-        assign data0_arr[i] = data0_i[(i + 1) * I_BW - 1 : i * I_BW];
-        assign data1_arr[i] = data1_i[(i + 1) * I_BW - 1 : i * I_BW];
-        assign data2_arr[i] = data2_i[(i + 1) * I_BW - 1 : i * I_BW];
-    end
-
-    // =========================================================================
-    // Vector Addition
-    // =========================================================================
-    // registered addition of data elements
-    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: vector_addition
-        always @(posedge clk_i) begin
-            if (!rst_n_i) begin
-                out_arr[i] <= 'd0;
-            end else begin
-                out_arr[i] <= data0_arr[i] + data1_arr[i] + data2_arr[i];
-            end
-        end
-    end
-
-    // =========================================================================
-    // Output Packing
-    // =========================================================================
-    // pack addition results
-    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: pack_output
-        assign data_o[(i + 1) * O_BW - 1 : i * O_BW] = out_arr[i];
-    end
-
-    // =========================================================================
-    // Output Assignment
-    // =========================================================================
-    // register all outputs
-    reg valid_q, last_q, ready_q;
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            valid_q <= 'b0;
-            last_q  <= 'b0;
-            ready_q <= 'b0;
-        end else begin
-            valid_q <= valid0_i & valid1_i & valid2_i;
-            last_q  <= last0_i | last1_i | last2_i;
-            ready_q <= ready_i;
-        end
-    end
-
-    assign valid_o  = valid_q;
-    assign last_o   = last_q;
-    assign ready0_o = ready_q;
-    assign ready1_o = ready_q;
-    assign ready2_o = ready_q;
-
-    // =========================================================================
-    // Simulation Only Waveform Dump (.vcd export)
-    // =========================================================================
-    `ifdef COCOTB_SIM
-    initial begin
-        $dumpfile ("wave.vcd");
-        $dumpvars (0, vec_add);
-        #1;
-    end
-    `endif
-
-endmodule
-// =============================================================================
-// Module:       Vector Multiplier
-// Design:       Eldrick Millares
-// Verification: Matthew Pauly
-// Notes:
-// =============================================================================
-
-module vec_mul #(
-    parameter I_BW = 8,
-    parameter O_BW = 16,
-    parameter VECTOR_LEN = 13
-) (
-    // clock and reset
-    input                                       clk_i,
-    input                                       rst_n_i,
-
-    // streaming input
-    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data0_i,
-    input                                       valid0_i,
-    input                                       last0_i,
-    output                                      ready0_o,
-
-    // streaming input
-    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data1_i,
-    input                                       valid1_i,
-    input                                       last1_i,
-    output                                      ready1_o,
-
-    // streaming output
-    output signed [(VECTOR_LEN * O_BW) - 1 : 0] data_o,
-    output                                      valid_o,
-    output                                      last_o,
-    input                                       ready_i
-);
-
-    genvar i;
-
-    // =========================================================================
-    // Input Unpacking
-    // =========================================================================
-    // unpacked arrays
-    wire signed [I_BW - 1 : 0] data0_arr [VECTOR_LEN - 1 : 0];
-    wire signed [I_BW - 1 : 0] data1_arr [VECTOR_LEN - 1 : 0];
-    reg  signed [O_BW - 1 : 0] out_arr   [VECTOR_LEN - 1 : 0];
-
-    // unpack data input
-    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: unpack_inputs
-        assign data0_arr[i] = data0_i[(i + 1) * I_BW - 1 : i * I_BW];
-        assign data1_arr[i] = data1_i[(i + 1) * I_BW - 1 : i * I_BW];
-    end
-
-    // =========================================================================
-    // Vector Multiplication
-    // =========================================================================
-    // registered multiplication of data elements
-    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: vector_multiply
-        always @(posedge clk_i) begin
-            if (!rst_n_i) begin
-                out_arr[i] <= 'd0;
-            end else begin
-                out_arr[i] <= data0_arr[i] * data1_arr[i];
-            end
-        end
-    end
-
-    // =========================================================================
-    // Output Packing
-    // =========================================================================
-    // pack multiplication results
-    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: pack_output
-        assign data_o[(i + 1) * O_BW - 1 : i * O_BW] = out_arr[i];
-    end
-
-    // =========================================================================
-    // Output Assignment
-    // =========================================================================
-    // register all outputs
-    reg valid_q, last_q, ready_q;
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            valid_q <= 'b0;
-            last_q  <= 'b0;
-            ready_q <= 'b0;
-        end else begin
-            valid_q <= valid0_i & valid1_i;
-            last_q  <= last0_i | last1_i;
-            ready_q <= ready_i;
-        end
-    end
-
-    assign valid_o  = valid_q;
-    assign last_o   = last_q;
-    assign ready0_o = ready_q;
-    assign ready1_o = ready_q;
-
-    // =========================================================================
-    // Simulation Only Waveform Dump (.vcd export)
-    // =========================================================================
-    `ifdef COCOTB_SIM
-    initial begin
-        $dumpfile ("wave.vcd");
-        $dumpvars (0, vec_mul);
         #1;
     end
     `endif
@@ -5842,6 +5842,249 @@ module framing # (
 
 endmodule
 // =============================================================================
+// Module:       Power Spectrum
+// Design:       Matthew Pauly
+// Verification: Eldrick Millares
+// Notes:        Computes the power spectrum of a frequency domain signal from
+//               the fft wrapper, which is the real part squared added to the
+//               imaginary part squared.
+// =============================================================================
+
+module power_spectrum (
+    // clock and reset
+    input                                   clk_i,
+    input                                   rst_n_i,
+    input                                   en_i,
+
+    // streaming input
+    input  signed [I_BW * 2 - 1 : 0]        data_i,
+    input                                   valid_i,
+    input                                   last_i,
+
+    // streaming output
+    output [O_BW - 1 : 0]                   data_o,
+    output                                  valid_o,
+    output                                  last_o
+);
+    // =========================================================================
+    // Local Parameters
+    // =========================================================================
+    localparam I_BW         = 21;
+    localparam O_BW         = 32;
+
+    // =========================================================================
+    // Register input to reduce long path length
+    // =========================================================================
+    reg signed [I_BW * 2 - 1 : 0] data_i_q;
+    reg valid_i_q;
+    reg last_i_q;
+    always @(posedge clk_i) begin
+        if (!rst_n_i | !en_i) begin
+            data_i_q <= 'd0;
+            valid_i_q <= 'd0;
+            last_i_q <= 'd0;
+        end else begin
+            if (valid_i) begin
+                data_i_q <= data_i;
+                valid_i_q <= valid_i;
+                last_i_q <= last_i;
+            end else begin
+                data_i_q <= 'd0;
+                valid_i_q <= 'd0;
+                last_i_q <= 'd0;
+            end
+        end
+    end
+
+    // =========================================================================
+    // Unpacked Data
+    // =========================================================================
+    wire signed [I_BW - 1 : 0] real_i = data_i_q[I_BW * 2 - 1 : I_BW];
+    wire signed [I_BW - 1 : 0] imag_i = data_i_q[I_BW - 1 : 0];
+
+    // =========================================================================
+    // Result
+    // =========================================================================
+    wire [O_BW - 1 : 0] data = (real_i * real_i) + (imag_i * imag_i);
+    wire valid = valid_i_q;
+    wire last = last_i_q;
+
+    // =========================================================================
+    // Register output to reduce long path length
+    // =========================================================================
+    reg [O_BW - 1 : 0] data_q;
+    reg valid_q;
+    reg last_q;
+    always @(posedge clk_i) begin
+        if (!rst_n_i | !en_i) begin
+            data_q <= 'd0;
+            valid_q <= 'd0;
+            last_q <= 'd0;
+        end else begin
+            if (valid) begin
+                data_q <= data;
+                valid_q <= valid;
+                last_q <= last;
+            end else begin
+                data_q <= 'd0;
+                valid_q <= 'd0;
+                last_q <= 'd0;
+            end
+        end
+    end
+
+    // =========================================================================
+    // Output Assignment
+    // =========================================================================
+    assign data_o = data_q;
+    assign valid_o = valid_q;
+    assign last_o = last_q;
+
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
+    initial begin
+        $dumpfile ("wave.vcd");
+        $dumpvars (0, power_spectrum);
+        #1;
+    end
+    `endif
+    `endif
+
+endmodule
+// =============================================================================
+// Module:       Preemphasis
+// Design:       Matthew Pauly
+// Verification: Eldrick Millares
+// Notes:        Implements a simple high-pass filter by multiplying the
+//               delayed signal by 0.97 and subtracting that from the
+//               undelayed signal. The multiplication is implemented as a
+//               multiplication by 31 and a right-shift by 5.
+// =============================================================================
+
+module preemphasis (
+    // clock and reset
+    input                                   clk_i,
+    input                                   rst_n_i,
+    input                                   en_i,
+
+    // streaming input
+    input  signed [I_BW - 1 : 0]            data_i,
+    input                                   valid_i,
+
+    // streaming output
+    output  signed [O_BW - 1 : 0]           data_o,
+    output                                  valid_o
+);
+    // =========================================================================
+    // Local Parameters
+    // =========================================================================
+    localparam I_BW         = 8;   // PCM input
+    localparam O_BW         = 9;
+    localparam MUL          = 31;
+    localparam SHIFT        = 5;
+
+    // =========================================================================
+    // Delayed and scaled data
+    // =========================================================================
+    reg signed [I_BW - 1 : 0] data_q;
+    always @(posedge clk_i) begin
+        if (!rst_n_i | !en_i) begin
+            data_q <= 'd0;
+        end else begin
+            if (valid_i) begin
+                data_q <= data_i;
+            end else begin
+                data_q <= data_q;
+            end
+        end
+    end
+    wire signed [O_BW - 1 : 0] data_scaled = (data_q * MUL) >>> SHIFT;
+
+    // =========================================================================
+    // Output Assignment
+    // =========================================================================
+    assign valid_o = (en_i & valid_i);
+    assign data_o = data_i - data_scaled;
+
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
+    initial begin
+        $dumpfile ("wave.vcd");
+        $dumpvars (0, preemphasis);
+        #1;
+    end
+    `endif
+    `endif
+
+endmodule
+// =============================================================================
+// Module:       ACO Quantizer
+// Design:       Matthew Pauly
+// Verification: Eldrick Millares
+// Notes:        
+//
+// Quantize 16b values to 8b values such that they saturate if they don't fit
+// within 8b.
+// =============================================================================
+
+module quant (
+    // clock and reset
+    input                                   clk_i,
+    input                                   rst_n_i,
+    input                                   en_i,
+
+    // streaming input
+    input  signed [I_BW - 1 : 0]            data_i,
+    input                                   valid_i,
+    input                                   last_i,
+
+    // streaming output
+    output  signed [O_BW - 1 : 0]           data_o,
+    output                                  valid_o,
+    output                                  last_o
+);
+    // =========================================================================
+    // Local Parameters
+    // =========================================================================
+    localparam I_BW         = 16;
+    localparam O_BW         = 8;
+    localparam CLIP         = $pow(2, O_BW - 1) - 1;  // clip to this if larger
+
+    wire signed [O_BW - 1 : 0] lower = data_i[O_BW - 1 : 0]; // lower O_BW bits
+
+    // =========================================================================
+    // Output Assignment
+    // =========================================================================
+    assign data_o = (data_i > CLIP) ? CLIP 
+                                    : ((data_i < -CLIP-1) ? -CLIP-1
+                                                          : lower);
+    assign valid_o = (en_i & valid_i);
+    assign last_o  = last_i;
+
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
+    initial begin
+        $dumpfile ("wave.vcd");
+        $dumpvars (0, quant);
+        #1;
+    end
+    `endif
+    `endif
+
+endmodule
+// =============================================================================
 // Module:       Log
 // Design:       Matthew Pauly
 // Verification: Eldrick Millares
@@ -6116,249 +6359,6 @@ module packing (
         for (j = 0; j < N_COEF; j = j + 1) begin
             $dumpvars (0, packed_arr[j]);
         end
-        #1;
-    end
-    `endif
-    `endif
-
-endmodule
-// =============================================================================
-// Module:       Power Spectrum
-// Design:       Matthew Pauly
-// Verification: Eldrick Millares
-// Notes:        Computes the power spectrum of a frequency domain signal from
-//               the fft wrapper, which is the real part squared added to the
-//               imaginary part squared.
-// =============================================================================
-
-module power_spectrum (
-    // clock and reset
-    input                                   clk_i,
-    input                                   rst_n_i,
-    input                                   en_i,
-
-    // streaming input
-    input  signed [I_BW * 2 - 1 : 0]        data_i,
-    input                                   valid_i,
-    input                                   last_i,
-
-    // streaming output
-    output [O_BW - 1 : 0]                   data_o,
-    output                                  valid_o,
-    output                                  last_o
-);
-    // =========================================================================
-    // Local Parameters
-    // =========================================================================
-    localparam I_BW         = 21;
-    localparam O_BW         = 32;
-
-    // =========================================================================
-    // Register input to reduce long path length
-    // =========================================================================
-    reg signed [I_BW * 2 - 1 : 0] data_i_q;
-    reg valid_i_q;
-    reg last_i_q;
-    always @(posedge clk_i) begin
-        if (!rst_n_i | !en_i) begin
-            data_i_q <= 'd0;
-            valid_i_q <= 'd0;
-            last_i_q <= 'd0;
-        end else begin
-            if (valid_i) begin
-                data_i_q <= data_i;
-                valid_i_q <= valid_i;
-                last_i_q <= last_i;
-            end else begin
-                data_i_q <= 'd0;
-                valid_i_q <= 'd0;
-                last_i_q <= 'd0;
-            end
-        end
-    end
-
-    // =========================================================================
-    // Unpacked Data
-    // =========================================================================
-    wire signed [I_BW - 1 : 0] real_i = data_i_q[I_BW * 2 - 1 : I_BW];
-    wire signed [I_BW - 1 : 0] imag_i = data_i_q[I_BW - 1 : 0];
-
-    // =========================================================================
-    // Result
-    // =========================================================================
-    wire [O_BW - 1 : 0] data = (real_i * real_i) + (imag_i * imag_i);
-    wire valid = valid_i_q;
-    wire last = last_i_q;
-
-    // =========================================================================
-    // Register output to reduce long path length
-    // =========================================================================
-    reg [O_BW - 1 : 0] data_q;
-    reg valid_q;
-    reg last_q;
-    always @(posedge clk_i) begin
-        if (!rst_n_i | !en_i) begin
-            data_q <= 'd0;
-            valid_q <= 'd0;
-            last_q <= 'd0;
-        end else begin
-            if (valid) begin
-                data_q <= data;
-                valid_q <= valid;
-                last_q <= last;
-            end else begin
-                data_q <= 'd0;
-                valid_q <= 'd0;
-                last_q <= 'd0;
-            end
-        end
-    end
-
-    // =========================================================================
-    // Output Assignment
-    // =========================================================================
-    assign data_o = data_q;
-    assign valid_o = valid_q;
-    assign last_o = last_q;
-
-    // =========================================================================
-    // Simulation Only Waveform Dump (.vcd export)
-    // =========================================================================
-    `ifdef COCOTB_SIM
-    `ifndef SCANNED
-    `define SCANNED
-    initial begin
-        $dumpfile ("wave.vcd");
-        $dumpvars (0, power_spectrum);
-        #1;
-    end
-    `endif
-    `endif
-
-endmodule
-// =============================================================================
-// Module:       Preemphasis
-// Design:       Matthew Pauly
-// Verification: Eldrick Millares
-// Notes:        Implements a simple high-pass filter by multiplying the
-//               delayed signal by 0.97 and subtracting that from the
-//               undelayed signal. The multiplication is implemented as a
-//               multiplication by 31 and a right-shift by 5.
-// =============================================================================
-
-module preemphasis (
-    // clock and reset
-    input                                   clk_i,
-    input                                   rst_n_i,
-    input                                   en_i,
-
-    // streaming input
-    input  signed [I_BW - 1 : 0]            data_i,
-    input                                   valid_i,
-
-    // streaming output
-    output  signed [O_BW - 1 : 0]           data_o,
-    output                                  valid_o
-);
-    // =========================================================================
-    // Local Parameters
-    // =========================================================================
-    localparam I_BW         = 8;   // PCM input
-    localparam O_BW         = 9;
-    localparam MUL          = 31;
-    localparam SHIFT        = 5;
-
-    // =========================================================================
-    // Delayed and scaled data
-    // =========================================================================
-    reg signed [I_BW - 1 : 0] data_q;
-    always @(posedge clk_i) begin
-        if (!rst_n_i | !en_i) begin
-            data_q <= 'd0;
-        end else begin
-            if (valid_i) begin
-                data_q <= data_i;
-            end else begin
-                data_q <= data_q;
-            end
-        end
-    end
-    wire signed [O_BW - 1 : 0] data_scaled = (data_q * MUL) >>> SHIFT;
-
-    // =========================================================================
-    // Output Assignment
-    // =========================================================================
-    assign valid_o = (en_i & valid_i);
-    assign data_o = data_i - data_scaled;
-
-    // =========================================================================
-    // Simulation Only Waveform Dump (.vcd export)
-    // =========================================================================
-    `ifdef COCOTB_SIM
-    `ifndef SCANNED
-    `define SCANNED
-    initial begin
-        $dumpfile ("wave.vcd");
-        $dumpvars (0, preemphasis);
-        #1;
-    end
-    `endif
-    `endif
-
-endmodule
-// =============================================================================
-// Module:       ACO Quantizer
-// Design:       Matthew Pauly
-// Verification: Eldrick Millares
-// Notes:        
-//
-// Quantize 16b values to 8b values such that they saturate if they don't fit
-// within 8b.
-// =============================================================================
-
-module quant (
-    // clock and reset
-    input                                   clk_i,
-    input                                   rst_n_i,
-    input                                   en_i,
-
-    // streaming input
-    input  signed [I_BW - 1 : 0]            data_i,
-    input                                   valid_i,
-    input                                   last_i,
-
-    // streaming output
-    output  signed [O_BW - 1 : 0]           data_o,
-    output                                  valid_o,
-    output                                  last_o
-);
-    // =========================================================================
-    // Local Parameters
-    // =========================================================================
-    localparam I_BW         = 16;
-    localparam O_BW         = 8;
-    localparam CLIP         = $pow(2, O_BW - 1) - 1;  // clip to this if larger
-
-    wire signed [O_BW - 1 : 0] lower = data_i[O_BW - 1 : 0]; // lower O_BW bits
-
-    // =========================================================================
-    // Output Assignment
-    // =========================================================================
-    assign data_o = (data_i > CLIP) ? CLIP 
-                                    : ((data_i < -CLIP-1) ? -CLIP-1
-                                                          : lower);
-    assign valid_o = (en_i & valid_i);
-    assign last_o  = last_i;
-
-    // =========================================================================
-    // Simulation Only Waveform Dump (.vcd export)
-    // =========================================================================
-    `ifdef COCOTB_SIM
-    `ifndef SCANNED
-    `define SCANNED
-    initial begin
-        $dumpfile ("wave.vcd");
-        $dumpvars (0, quant);
         #1;
     end
     `endif
@@ -8468,1061 +8468,6 @@ module	convround(i_clk, i_ce, i_val, o_val);
 endmodule
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename:	fftmain.v
-// {{{
-// Project:	A General Purpose Pipelined FFT Implementation
-//
-// Purpose:	This is the main module in the General Purpose FPGA FFT
-//		implementation.  As such, all other modules are subordinate
-//	to this one.  This module accomplish a fixed size Complex FFT on
-//	256 data points.
-//	The FFT is fully pipelined, and accepts as inputs one complex two's
-//	complement sample per clock.
-//
-// Parameters:
-//	i_clk	The clock.  All operations are synchronous with this clock.
-//	i_reset	Synchronous reset, active high.  Setting this line will
-//			force the reset of all of the internals to this routine.
-//			Further, following a reset, the o_sync line will go
-//			high the same time the first output sample is valid.
-//	i_ce	A clock enable line.  If this line is set, this module
-//			will accept one complex input value, and produce
-//			one (possibly empty) complex output value.
-//	i_sample	The complex input sample.  This value is split
-//			into two two's complement numbers, 16 bits each, with
-//			the real portion in the high order bits, and the
-//			imaginary portion taking the bottom 16 bits.
-//	o_result	The output result, of the same format as i_sample,
-//			only having 21 bits for each of the real and imaginary
-//			components, leading to 42 bits total.
-//	o_sync	A one bit output indicating the first sample of the FFT frame.
-//			It also indicates the first valid sample out of the FFT
-//			on the first frame.
-//
-// Arguments:	This file was computer generated using the following command
-//		line:
-//
-//		% ./fftgen -f 256 -a hdr
-//
-//	This core will use hardware accelerated multiplies (DSPs)
-//	for 0 of the 8 stages
-//
-// Creator:	Dan Gisselquist, Ph.D.
-//		Gisselquist Technology, LLC
-//
-////////////////////////////////////////////////////////////////////////////////
-// }}}
-// Copyright (C) 2015-2021, Gisselquist Technology, LLC
-// {{{
-// This file is part of the general purpose pipelined FFT project.
-//
-// The pipelined FFT project is free software (firmware): you can redistribute
-// it and/or modify it under the terms of the GNU Lesser General Public License
-// as published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version.
-//
-// The pipelined FFT project is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTIBILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser
-// General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with this program.  (It's in the $(ROOT)/doc directory.  Run make
-// with no target there if the PDF file isn't present.)  If not, see
-// <http://www.gnu.org/licenses/> for a copy.
-// }}}
-// License:	LGPL, v3, as defined and found on www.gnu.org,
-// {{{
-//		http://www.gnu.org/licenses/lgpl.html
-//
-// }}}
-////////////////////////////////////////////////////////////////////////////////
-//
-//
-`default_nettype	none
-//
-//
-//
-module fftmain(i_clk, i_reset, i_ce,
-		i_sample, o_result, o_sync);
-	// The bit-width of the input, IWIDTH, output, OWIDTH, and the log
-	// of the FFT size.  These are localparams, rather than parameters,
-	// because once the core has been generated, they can no longer be
-	// changed.  (These values can be adjusted by running the core
-	// generator again.)  The reason is simply that these values have
-	// been hardwired into the core at several places.
-	localparam	IWIDTH=16, OWIDTH=21; // LGWIDTH=8;
-	//
-	input	wire				i_clk, i_reset, i_ce;
-	//
-	input	wire	[(2*IWIDTH-1):0]	i_sample;
-	output	reg	[(2*OWIDTH-1):0]	o_result;
-	output	reg				o_sync;
-
-
-	// Outputs of the FFT, ready for bit reversal.
-	wire				br_sync;
-	wire	[(2*OWIDTH-1):0]	br_result;
-
-
-	wire		w_s256;
-	wire	[33:0]	w_d256;
-	fftstage	#(IWIDTH,IWIDTH+4,17,7,0,
-			0, 1, "cmem_256.hex")
-		stage_256(i_clk, i_reset, i_ce,
-			(!i_reset), i_sample, w_d256, w_s256);
-
-
-	wire		w_s128;
-	wire	[35:0]	w_d128;
-	fftstage	#(17,21,18,6,0,
-			0, 1, "cmem_128.hex")
-		stage_128(i_clk, i_reset, i_ce,
-			w_s256, w_d256, w_d128, w_s128);
-
-	wire		w_s64;
-	wire	[35:0]	w_d64;
-	fftstage	#(18,22,18,5,0,
-			0, 1, "cmem_64.hex")
-		stage_64(i_clk, i_reset, i_ce,
-			w_s128, w_d128, w_d64, w_s64);
-
-	wire		w_s32;
-	wire	[37:0]	w_d32;
-	fftstage	#(18,22,19,4,0,
-			0, 1, "cmem_32.hex")
-		stage_32(i_clk, i_reset, i_ce,
-			w_s64, w_d64, w_d32, w_s32);
-
-	wire		w_s16;
-	wire	[37:0]	w_d16;
-	fftstage	#(19,23,19,3,0,
-			0, 1, "cmem_16.hex")
-		stage_16(i_clk, i_reset, i_ce,
-			w_s32, w_d32, w_d16, w_s16);
-
-	wire		w_s8;
-	wire	[39:0]	w_d8;
-	fftstage	#(19,23,20,2,0,
-			0, 1, "cmem_8.hex")
-		stage_8(i_clk, i_reset, i_ce,
-			w_s16, w_d16, w_d8, w_s8);
-
-	wire		w_s4;
-	wire	[39:0]	w_d4;
-	qtrstage	#(20,20,8,0,0)	stage_4(i_clk, i_reset, i_ce,
-						w_s8, w_d8, w_d4, w_s4);
-	wire		w_s2;
-	wire	[41:0]	w_d2;
-	laststage	#(20,21,1)	stage_2(i_clk, i_reset, i_ce,
-					w_s4, w_d4, w_d2, w_s2);
-
-
-	wire	br_start;
-	reg	r_br_started;
-	initial	r_br_started = 1'b0;
-	always @(posedge i_clk)
-	if (i_reset)
-		r_br_started <= 1'b0;
-	else if (i_ce)
-		r_br_started <= r_br_started || w_s2;
-	assign	br_start = r_br_started || w_s2;
-
-	// Now for the bit-reversal stage.
-	bitreverse	#(8,21)
-	revstage(
-		// {{{
-		.i_clk(i_clk),
-		.i_reset(i_reset),
-		.i_ce(i_ce & br_start),
-		.i_in(w_d2),
-		.o_out(br_result),
-		.o_sync(br_sync)
-		// }}}
-	);
-
-
-	// Last clock: Register our outputs, we're done.
-	initial	o_sync  = 1'b0;
-	always @(posedge i_clk)
-	if (i_reset)
-		o_sync  <= 1'b0;
-	else if (i_ce)
-		o_sync  <= br_sync;
-
-	always @(posedge i_clk)
-	if (i_ce)
-		o_result  <= br_result;
-
-
-    // =========================================================================
-    // Simulation Only Waveform Dump (.vcd export)
-    // =========================================================================
-    `ifdef COCOTB_SIM
-    `ifndef SCANNED
-    `define SCANNED
-    initial begin
-      $dumpfile ("wave.vcd");
-      $dumpvars (0, fftmain);
-      #1;
-    end
-    `endif
-    `endif
-
-endmodule
-////////////////////////////////////////////////////////////////////////////////
-//
-// Filename:	fftstage.v
-// {{{
-// Project:	A General Purpose Pipelined FFT Implementation
-//
-// Purpose:	This file is (almost) a Verilog source file.  It is meant to
-//		be used by a FFT core compiler to generate FFTs which may be
-//	used as part of an FFT core.  Specifically, this file encapsulates
-//	the options of an FFT-stage.  For any 2^N length FFT, there shall be
-//	(N-1) of these stages.
-//
-//
-// Operation:
-// 	Given a stream of values, operate upon them as though they were
-// 	value pairs, x[n] and x[n+N/2].  The stream begins when n=0, and ends
-// 	when n=N/2-1 (i.e. there's a full set of N values).  When the value
-// 	x[0] enters, the synchronization input, i_sync, must be true as well.
-//
-// 	For this stream, produce outputs
-// 	y[n    ] = x[n] + x[n+N/2], and
-// 	y[n+N/2] = (x[n] - x[n+N/2]) * c[n],
-// 			where c[n] is a complex coefficient found in the
-// 			external memory file COEFFILE.
-// 	When y[0] is output, a synchronization bit o_sync will be true as
-// 	well, otherwise it will be zero.
-//
-// 	Most of the work to do this is done within the butterfly, whether the
-// 	hardware accelerated butterfly (uses a DSP) or not.
-//
-// Creator:	Dan Gisselquist, Ph.D.
-//		Gisselquist Technology, LLC
-//
-////////////////////////////////////////////////////////////////////////////////
-// }}}
-// Copyright (C) 2015-2021, Gisselquist Technology, LLC
-// {{{
-// This file is part of the general purpose pipelined FFT project.
-//
-// The pipelined FFT project is free software (firmware): you can redistribute
-// it and/or modify it under the terms of the GNU Lesser General Public License
-// as published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version.
-//
-// The pipelined FFT project is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTIBILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser
-// General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with this program.  (It's in the $(ROOT)/doc directory.  Run make
-// with no target there if the PDF file isn't present.)  If not, see
-// <http://www.gnu.org/licenses/> for a copy.
-// }}}
-// License:	LGPL, v3, as defined and found on www.gnu.org,
-// {{{
-//		http://www.gnu.org/licenses/lgpl.html
-//
-// }}}
-////////////////////////////////////////////////////////////////////////////////
-//
-//
-`default_nettype	none
-//
-module	fftstage #(
-		// {{{
-		parameter	IWIDTH=16,CWIDTH=20,OWIDTH=17,
-		// Parameters specific to the core that should be changed when
-		// this core is built ... Note that the minimum LGSPAN (the base
-		// two log of the span, or the base two log of the current FFT
-		// size) is 3.  Smaller spans (i.e. the span of 2) must use the
-		// dbl laststage module.
-		// Verilator lint_off UNUSED
-		parameter	LGSPAN=7, BFLYSHIFT=0, // LGWIDTH=8
-		parameter [0:0]	OPT_HWMPY = 1,
-		// Clocks per CE.  If your incoming data rate is less than 50%
-		// of your clock speed, you can set CKPCE to 2'b10, make sure
-		// there's at least one clock between cycles when i_ce is high,
-		// and then use two multiplies instead of three.  Setting CKPCE
-		// to 2'b11, and insisting on at least two clocks with i_ce low
-		// between cycles with i_ce high, then the hardware optimized
-		// butterfly code will used one multiply instead of two.
-		parameter	CKPCE = 1,
-		// The COEFFILE parameter contains the name of the file
-		// containing the FFT twiddle factors
-		parameter	COEFFILE="cmem_256.hex"
-		// Verilator lint_on  UNUSED
-
-// `ifdef	VERILATOR
-		// parameter  [0:0]	ZERO_ON_IDLE = 1'b0
-// `else
-		// localparam [0:0]	ZERO_ON_IDLE = 1'b0
-// `endif // VERILATOR
-		// }}}
-	) (
-		// {{{
-		input	wire				i_clk, i_reset,
-							i_ce, i_sync,
-		input	wire	[(2*IWIDTH-1):0]	i_data,
-		output	reg	[(2*OWIDTH-1):0]	o_data,
-		output	reg				o_sync
-
-		// }}}
-	);
-		localparam [0:0]	ZERO_ON_IDLE = 1'b0;
-
-	// Local signal definitions
-	// {{{
-	// I am using the prefixes
-	// 	ib_*	to reference the inputs to the butterfly, and
-	// 	ob_*	to reference the outputs from the butterfly
-	reg	wait_for_sync;
-	reg	[(2*IWIDTH-1):0]	ib_a, ib_b;
-	reg	[(2*CWIDTH-1):0]	ib_c;
-	reg	ib_sync;
-
-	reg	b_started;
-	wire	ob_sync;
-	wire	[(2*OWIDTH-1):0]	ob_a, ob_b;
-
-	// cmem is defined as an array of real and complex values,
-	// where the top CWIDTH bits are the real value and the bottom
-	// CWIDTH bits are the imaginary value.
-	//
-	// cmem[i] = { (2^(CWIDTH-2)) * cos(2*pi*i/(2^LGWIDTH)),
-	//		(2^(CWIDTH-2)) * sin(2*pi*i/(2^LGWIDTH)) };
-	//
-	// reg	[(2*CWIDTH-1):0]	cmem [0:((1<<LGSPAN)-1)];
-    reg	[(2*CWIDTH-1):0]	cmem;
-`ifdef	FORMAL
-// Let the formal tool pick the coefficients
-`else
-	// initial	$readmemh(COEFFILE,cmem);
-    generate
-    if (COEFFILE == "cmem_256.hex") begin
-        always @(*) begin
-            case (iaddr[(LGSPAN-1):0])
-                0   : cmem = 40'h4000000000;
-                1   : cmem = 40'h3ffb1fe6df;
-                2   : cmem = 40'h3fec4fcdc1;
-                3   : cmem = 40'h3fd3afb4ab;
-                4   : cmem = 40'h3fb12f9ba1;
-                5   : cmem = 40'h3f84df82a7;
-                6   : cmem = 40'h3f4ebf69bf;
-                7   : cmem = 40'h3f0edf50ef;
-                8   : cmem = 40'h3ec53f383a;
-                9   : cmem = 40'h3e71ef1fa4;
-                10  : cmem = 40'h3e150f0730;
-                11  : cmem = 40'h3dae8eeee3;
-                12  : cmem = 40'h3d3e8ed6c0;
-                13  : cmem = 40'h3cc51ebeca;
-                14  : cmem = 40'h3c424ea706;
-                15  : cmem = 40'h3bb62e8f78;
-                16  : cmem = 40'h3b20de7822;
-                17  : cmem = 40'h3a827e6108;
-                18  : cmem = 40'h39dafe4a2f;
-                19  : cmem = 40'h392a9e3399;
-                20  : cmem = 40'h38716e1d4a;
-                21  : cmem = 40'h37af8e0746;
-                22  : cmem = 40'h36e50df18f;
-                23  : cmem = 40'h36121ddc2a;
-                24  : cmem = 40'h3536ddc719;
-                25  : cmem = 40'h34535db25f;
-                26  : cmem = 40'h3367cd9e01;
-                27  : cmem = 40'h32744d8a01;
-                28  : cmem = 40'h31790d7662;
-                29  : cmem = 40'h30762d6327;
-                30  : cmem = 40'h2f6bcd5053;
-                31  : cmem = 40'h2e5a1d3de9;
-                32  : cmem = 40'h2d414d2bec;
-                33  : cmem = 40'h2c217d1a5f;
-                34  : cmem = 40'h2afadd0944;
-                35  : cmem = 40'h29cd9cf89e;
-                36  : cmem = 40'h2899ece870;
-                37  : cmem = 40'h275ffcd8bc;
-                38  : cmem = 40'h261ffcc984;
-                39  : cmem = 40'h24da1cbacb;
-                40  : cmem = 40'h238e7cac93;
-                41  : cmem = 40'h223d6c9edf;
-                42  : cmem = 40'h20e71c91b0;
-                43  : cmem = 40'h1f8bac8508;
-                44  : cmem = 40'h1e2b6c78ea;
-                45  : cmem = 40'h1cc67c6d57;
-                46  : cmem = 40'h1b5d1c6251;
-                47  : cmem = 40'h19ef8c57d9;
-                48  : cmem = 40'h187dec4df3;
-                49  : cmem = 40'h17088c449e;
-                50  : cmem = 40'h158fac3bdc;
-                51  : cmem = 40'h14136c33af;
-                52  : cmem = 40'h12940c2c18;
-                53  : cmem = 40'h1111dc2518;
-                54  : cmem = 40'h0f8d0c1eb0;
-                55  : cmem = 40'h0e05cc18e2;
-                56  : cmem = 40'h0c7c6c13ad;
-                57  : cmem = 40'h0af11c0f13;
-                58  : cmem = 40'h09641c0b15;
-                59  : cmem = 40'h07d59c07b3;
-                60  : cmem = 40'h0645fc04ee;
-                61  : cmem = 40'h04b55c02c6;
-                62  : cmem = 40'h0323fc013c;
-                63  : cmem = 40'h01921c004f;
-                64  : cmem = 40'h00000c0000;
-                65  : cmem = 40'hfe6dfc004f;
-                66  : cmem = 40'hfcdc1c013c;
-                67  : cmem = 40'hfb4abc02c6;
-                68  : cmem = 40'hf9ba1c04ee;
-                69  : cmem = 40'hf82a7c07b3;
-                70  : cmem = 40'hf69bfc0b15;
-                71  : cmem = 40'hf50efc0f13;
-                72  : cmem = 40'hf383ac13ad;
-                73  : cmem = 40'hf1fa4c18e2;
-                74  : cmem = 40'hf0730c1eb0;
-                75  : cmem = 40'heeee3c2518;
-                76  : cmem = 40'hed6c0c2c18;
-                77  : cmem = 40'hebecac33af;
-                78  : cmem = 40'hea706c3bdc;
-                79  : cmem = 40'he8f78c449e;
-                80  : cmem = 40'he7822c4df3;
-                81  : cmem = 40'he6108c57d9;
-                82  : cmem = 40'he4a2fc6251;
-                83  : cmem = 40'he3399c6d57;
-                84  : cmem = 40'he1d4ac78ea;
-                85  : cmem = 40'he0746c8508;
-                86  : cmem = 40'hdf18fc91b0;
-                87  : cmem = 40'hddc2ac9edf;
-                88  : cmem = 40'hdc719cac93;
-                89  : cmem = 40'hdb25fcbacb;
-                90  : cmem = 40'hd9e01cc984;
-                91  : cmem = 40'hd8a01cd8bc;
-                92  : cmem = 40'hd7662ce870;
-                93  : cmem = 40'hd6327cf89e;
-                94  : cmem = 40'hd5053d0944;
-                95  : cmem = 40'hd3de9d1a5f;
-                96  : cmem = 40'hd2becd2bec;
-                97  : cmem = 40'hd1a5fd3de9;
-                98  : cmem = 40'hd0944d5053;
-                99  : cmem = 40'hcf89ed6327;
-                100 : cmem = 40'hce870d7662;
-                101 : cmem = 40'hcd8bcd8a01;
-                102 : cmem = 40'hcc984d9e01;
-                103 : cmem = 40'hcbacbdb25f;
-                104 : cmem = 40'hcac93dc719;
-                105 : cmem = 40'hc9edfddc2a;
-                106 : cmem = 40'hc91b0df18f;
-                107 : cmem = 40'hc8508e0746;
-                108 : cmem = 40'hc78eae1d4a;
-                109 : cmem = 40'hc6d57e3399;
-                110 : cmem = 40'hc6251e4a2f;
-                111 : cmem = 40'hc57d9e6108;
-                112 : cmem = 40'hc4df3e7822;
-                113 : cmem = 40'hc449ee8f78;
-                114 : cmem = 40'hc3bdcea706;
-                115 : cmem = 40'hc33afebeca;
-                116 : cmem = 40'hc2c18ed6c0;
-                117 : cmem = 40'hc2518eeee3;
-                118 : cmem = 40'hc1eb0f0730;
-                119 : cmem = 40'hc18e2f1fa4;
-                120 : cmem = 40'hc13adf383a;
-                121 : cmem = 40'hc0f13f50ef;
-                122 : cmem = 40'hc0b15f69bf;
-                123 : cmem = 40'hc07b3f82a7;
-                124 : cmem = 40'hc04eef9ba1;
-                125 : cmem = 40'hc02c6fb4ab;
-                126 : cmem = 40'hc013cfcdc1;
-                127 : cmem = 40'hc004ffe6df;
-            endcase
-        end
-    end else if (COEFFILE == "cmem_128.hex") begin
-        always @(*) begin
-            case (iaddr[(LGSPAN-1):0])
-                0   : cmem = 42'h10000000000;
-                1   : cmem = 42'h0ffb11f9b82;
-                2   : cmem = 42'h0fec47f3743;
-                3   : cmem = 42'h0fd3abed37f;
-                4   : cmem = 42'h0fb14de7074;
-                5   : cmem = 42'h0f8541e0e60;
-                6   : cmem = 42'h0f4fa1dad7f;
-                7   : cmem = 42'h0f1091d4e0d;
-                8   : cmem = 42'h0ec837cf044;
-                9   : cmem = 42'h0e76bfc945e;
-                10  : cmem = 42'h0e1c5bc3a94;
-                11  : cmem = 42'h0db943be31e;
-                12  : cmem = 42'h0d4db5b8e31;
-                13  : cmem = 42'h0cd9f1b3c02;
-                14  : cmem = 42'h0c5e41aecc3;
-                15  : cmem = 42'h0bdaf1aa0a6;
-                16  : cmem = 42'h0b5051a57d8;
-                17  : cmem = 42'h0abeb5a1288;
-                18  : cmem = 42'h0a267b9d0e0;
-                19  : cmem = 42'h0987fd99308;
-                20  : cmem = 42'h08e39f95926;
-                21  : cmem = 42'h0839c59235f;
-                22  : cmem = 42'h078ad98f1d3;
-                23  : cmem = 42'h06d7458c4a1;
-                24  : cmem = 42'h061f7989be5;
-                25  : cmem = 42'h0563e7877b8;
-                26  : cmem = 42'h04a50385830;
-                27  : cmem = 42'h03e34183d60;
-                28  : cmem = 42'h031f198275a;
-                29  : cmem = 42'h0259038162b;
-                30  : cmem = 42'h01917b809dd;
-                31  : cmem = 42'h00c8fd80278;
-                32  : cmem = 42'h00000180000;
-                33  : cmem = 42'h3f370580278;
-                34  : cmem = 42'h3e6e87809dd;
-                35  : cmem = 42'h3da6ff8162b;
-                36  : cmem = 42'h3ce0e98275a;
-                37  : cmem = 42'h3c1cc183d60;
-                38  : cmem = 42'h3b5aff85830;
-                39  : cmem = 42'h3a9c1b877b8;
-                40  : cmem = 42'h39e08989be5;
-                41  : cmem = 42'h3928bd8c4a1;
-                42  : cmem = 42'h3875298f1d3;
-                43  : cmem = 42'h37c63d9235f;
-                44  : cmem = 42'h371c6395926;
-                45  : cmem = 42'h36780599308;
-                46  : cmem = 42'h35d9879d0e0;
-                47  : cmem = 42'h35414da1288;
-                48  : cmem = 42'h34afb1a57d8;
-                49  : cmem = 42'h342511aa0a6;
-                50  : cmem = 42'h33a1c1aecc3;
-                51  : cmem = 42'h332611b3c02;
-                52  : cmem = 42'h32b24db8e31;
-                53  : cmem = 42'h3246bfbe31e;
-                54  : cmem = 42'h31e3a7c3a94;
-                55  : cmem = 42'h318943c945e;
-                56  : cmem = 42'h3137cbcf044;
-                57  : cmem = 42'h30ef71d4e0d;
-                58  : cmem = 42'h30b061dad7f;
-                59  : cmem = 42'h307ac1e0e60;
-                60  : cmem = 42'h304eb5e7074;
-                61  : cmem = 42'h302c57ed37f;
-                62  : cmem = 42'h3013bbf3743;
-                63  : cmem = 42'h3004f1f9b82;
-            endcase
-        end
-    end else if (COEFFILE == "cmem_64.hex") begin
-        always @(*) begin
-            case (iaddr[(LGSPAN-1):0])
-                0   : cmem = 44'h40000000000;
-                1   : cmem = 44'h3fb11fe6e86;
-                2   : cmem = 44'h3ec533ce0e9;
-                3   : cmem = 44'h3d3e87b5afe;
-                4   : cmem = 44'h3b20db9e087;
-                5   : cmem = 44'h38716787529;
-                6   : cmem = 44'h3536cf71c62;
-                7   : cmem = 44'h3179035d986;
-                8   : cmem = 44'h2d413f4afb1;
-                9   : cmem = 44'h2899eb3a1c0;
-                10  : cmem = 44'h238e7b2b24d;
-                11  : cmem = 44'h1e2b5f1e3a7;
-                12  : cmem = 44'h187de7137ca;
-                13  : cmem = 44'h12940b0b05f;
-                14  : cmem = 44'h0c7c5f04eb4;
-                15  : cmem = 44'h0645eb013b9;
-                16  : cmem = 44'h00000300000;
-                17  : cmem = 44'hf9ba1b013b9;
-                18  : cmem = 44'hf383a704eb4;
-                19  : cmem = 44'hed6bfb0b05f;
-                20  : cmem = 44'he7821f137ca;
-                21  : cmem = 44'he1d4a71e3a7;
-                22  : cmem = 44'hdc718b2b24d;
-                23  : cmem = 44'hd7661b3a1c0;
-                24  : cmem = 44'hd2bec74afb1;
-                25  : cmem = 44'hce87035d986;
-                26  : cmem = 44'hcac93771c62;
-                27  : cmem = 44'hc78e9f87529;
-                28  : cmem = 44'hc4df2b9e087;
-                29  : cmem = 44'hc2c17fb5afe;
-                30  : cmem = 44'hc13ad3ce0e9;
-                31  : cmem = 44'hc04ee7e6e86;
-            endcase
-        end
-    end else if (COEFFILE == "cmem_32.hex") begin
-        always @(*) begin
-            case (iaddr[(LGSPAN-1):0])
-                0   : cmem = 44'h40000000000;
-                1   : cmem = 44'h3ec533ce0e9;
-                2   : cmem = 44'h3b20db9e087;
-                3   : cmem = 44'h3536cf71c62;
-                4   : cmem = 44'h2d413f4afb1;
-                5   : cmem = 44'h238e7b2b24d;
-                6   : cmem = 44'h187de7137ca;
-                7   : cmem = 44'h0c7c5f04eb4;
-                8   : cmem = 44'h00000300000;
-                9   : cmem = 44'hf383a704eb4;
-                10  : cmem = 44'he7821f137ca;
-                11  : cmem = 44'hdc718b2b24d;
-                12  : cmem = 44'hd2bec74afb1;
-                13  : cmem = 44'hcac93771c62;
-                14  : cmem = 44'hc4df2b9e087;
-                15  : cmem = 44'hc13ad3ce0e9;
-            endcase
-        end
-    end else if (COEFFILE == "cmem_16.hex") begin
-        always @(*) begin
-            case (iaddr[(LGSPAN-1):0])
-                0   : cmem = 46'h100000000000;
-                1   : cmem = 46'h0ec83673c10f;
-                2   : cmem = 46'h0b504f695f62;
-                3   : cmem = 46'h061f78e26f94;
-                4   : cmem = 46'h000000600000;
-                5   : cmem = 46'h39e087e26f94;
-                6   : cmem = 46'h34afb1695f62;
-                7   : cmem = 46'h3137ca73c10f;
-            endcase
-        end
-    end else begin
-        always @(*) begin
-            case (iaddr[(LGSPAN-1):0])
-                0   : cmem = 46'h100000000000;
-                1   : cmem = 46'h0b504f695f62;
-                2   : cmem = 46'h000000600000;
-                3   : cmem = 46'h34afb1695f62;
-            endcase
-        end
-    end
-    endgenerate
-
-`endif
-
-	reg	[(LGSPAN):0]		iaddr;
-	reg	[(2*IWIDTH-1):0]	imem	[0:((1<<LGSPAN)-1)];
-
-	reg	[LGSPAN:0]		oaddr;
-	reg	[(2*OWIDTH-1):0]	omem	[0:((1<<LGSPAN)-1)];
-
-	wire				idle;
-	reg	[(LGSPAN-1):0]		nxt_oaddr;
-	reg	[(2*OWIDTH-1):0]	pre_ovalue;
-	// }}}
-
-	// wait_for_sync, iaddr
-	// {{{
-	initial wait_for_sync = 1'b1;
-	initial iaddr = 0;
-	always @(posedge i_clk)
-	if (i_reset)
-	begin
-		wait_for_sync <= 1'b1;
-		iaddr <= 0;
-	end else if ((i_ce)&&((!wait_for_sync)||(i_sync)))
-	begin
-		//
-		// First step: Record what we're not ready to use yet
-		//
-		iaddr <= iaddr + { {(LGSPAN){1'b0}}, 1'b1 };
-		wait_for_sync <= 1'b0;
-	end
-	// }}}
-
-	// Write to imem
-	// {{{
-	always @(posedge i_clk) // Need to make certain here that we don't read
-	if ((i_ce)&&(!iaddr[LGSPAN])) // and write the same address on
-		imem[iaddr[(LGSPAN-1):0]] <= i_data; // the same clk
-	// }}}
-
-	// ib_sync
-	// {{{
-	// Now, we have all the inputs, so let's feed the butterfly
-	//
-	// ib_sync is the synchronization bit to the butterfly.  It will
-	// be tracked within the butterfly, and used to create the o_sync
-	// value when the results from this output are produced
-	initial ib_sync = 1'b0;
-	always @(posedge i_clk)
-	if (i_reset)
-		ib_sync <= 1'b0;
-	else if (i_ce)
-	begin
-		// Set the sync to true on the very first
-		// valid input in, and hence on the very
-		// first valid data out per FFT.
-		ib_sync <= (iaddr==(1<<(LGSPAN)));
-	end
-	// }}}
-
-	// ib_a, ib_b, ib_c
-	// {{{
-	// Read the values from our input memory, and use them to feed
-	// first of two butterfly inputs
-	always	@(posedge i_clk)
-	if (i_ce)
-	begin
-		// One input from memory, ...
-		ib_a <= imem[iaddr[(LGSPAN-1):0]];
-		// One input clocked in from the top
-		ib_b <= i_data;
-		// and the coefficient or twiddle factor
-		// ib_c <= cmem[iaddr[(LGSPAN-1):0]];
-        ib_c <= cmem;
-	end
-	// }}}
-
-	// idle
-	// {{{
-	// The idle register is designed to keep track of when an input
-	// to the butterfly is important and going to be used.  It's used
-	// in a flag following, so that when useful values are placed
-	// into the butterfly they'll be non-zero (idle=0), otherwise when
-	// the inputs to the butterfly are irrelevant and will be ignored,
-	// then (idle=1) those inputs will be set to zero.  This
-	// functionality is not designed to be used in operation, but only
-	// within a Verilator simulation context when chasing a bug.
-	// In this limited environment, the non-zero answers will stand
-	// in a trace making it easier to highlight a bug.
-	generate if (ZERO_ON_IDLE)
-	begin : GEN_ZERO_ON_IDLE
-		reg	r_idle;
-
-		initial	r_idle = 1;
-		always @(posedge i_clk)
-		if (i_reset)
-			r_idle <= 1'b1;
-		else if (i_ce)
-			r_idle <= (!iaddr[LGSPAN])&&(!wait_for_sync);
-
-		assign	idle = r_idle;
-
-	end else begin : NO_IDLE_GENERATION
-
-		assign	idle = 0;
-
-	end endgenerate
-	// }}}
-
-	////////////////////////////////////////////////////////////////////////
-	//
-	// Instantiate the butterfly
-	// {{{
-	////////////////////////////////////////////////////////////////////////
-	//
-	//
-// For the formal proof, we'll assume the outputs of hwbfly and/or
-// butterfly, rather than actually calculating them.  This will simplify
-// the proof and (if done properly) will be equivalent.  Be careful of
-// defining FORMAL if you want the full logic!
-`ifndef	FORMAL
-	//
-	generate if (OPT_HWMPY)
-	begin : HWBFLY
-
-		hwbfly #(
-			// {{{
-			.IWIDTH(IWIDTH),
-			.CWIDTH(CWIDTH),
-			.OWIDTH(OWIDTH),
-			.CKPCE(CKPCE),
-			.SHIFT(BFLYSHIFT)
-			// }}}
-		) bfly(
-			// {{{
-			.i_clk(i_clk), .i_reset(i_reset), .i_ce(i_ce),
-			.i_coef((idle && !i_ce) ? 0:ib_c),
-			.i_left((idle && !i_ce) ? 0:ib_a),
-			.i_right((idle && !i_ce) ? 0:ib_b),
-			.i_aux(ib_sync && i_ce),
-			.o_left(ob_a), .o_right(ob_b), .o_aux(ob_sync)
-			// }}}
-		);
-
-	end else begin : FWBFLY
-
-		butterfly #(
-			// {{{
-			.IWIDTH(IWIDTH),
-			.CWIDTH(CWIDTH),
-			.OWIDTH(OWIDTH),
-			.CKPCE(CKPCE),
-			.SHIFT(BFLYSHIFT)
-			// }}}
-		) bfly(
-			// {{{
-			.i_clk(i_clk), .i_reset(i_reset), .i_ce(i_ce),
-			.i_coef( (idle && !i_ce)?0:ib_c),
-			.i_left( (idle && !i_ce)?0:ib_a),
-			.i_right((idle && !i_ce)?0:ib_b),
-			.i_aux(ib_sync && i_ce),
-			.o_left(ob_a), .o_right(ob_b), .o_aux(ob_sync)
-			// }}}
-		);
-
-	end endgenerate
-`else
-
-	// Verilator lint_off UNDRIVEN
-	(* anyseq *)    wire    [(2*OWIDTH-1):0]        f_ob_a, f_ob_b;
-	(* anyseq *)    wire    f_ob_sync;
-	// Verilator lint_on  UNDRIVEN
-
-	assign  ob_sync = f_ob_sync;
-	assign  ob_a    = f_ob_a;
-	assign  ob_b    = f_ob_b;
-
-`endif
-
-	// }}}
-
-	// oaddr, o_sync, b_started
-	// {{{
-	// Next step: recover the outputs from the butterfly
-	//
-	// The first output can go immediately to the output of this routine
-	// The second output must wait until this time in the idle cycle
-	// oaddr is the output memory address, keeping track of where we are
-	// in this output cycle.
-	initial oaddr     = 0;
-	initial o_sync    = 0;
-	initial b_started = 0;
-	always @(posedge i_clk)
-	if (i_reset)
-	begin
-		oaddr     <= 0;
-		o_sync    <= 0;
-		// b_started will be true once we've seen the first ob_sync
-		b_started <= 0;
-	end else if (i_ce)
-	begin
-		o_sync <= (!oaddr[LGSPAN])?ob_sync : 1'b0;
-		if (ob_sync||b_started)
-			oaddr <= oaddr + 1'b1;
-		if ((ob_sync)&&(!oaddr[LGSPAN]))
-			// If b_started is true, then a butterfly output
-			// is available
-			b_started <= 1'b1;
-	end
-	// }}}
-
-	// nxt_oaddr
-	// {{{
-	always @(posedge i_clk)
-	if (i_ce)
-		nxt_oaddr[0] <= oaddr[0];
-	generate if (LGSPAN>1)
-	begin
-
-		always @(posedge i_clk)
-		if (i_ce)
-			nxt_oaddr[LGSPAN-1:1] <= oaddr[LGSPAN-1:1] + 1'b1;
-
-	end endgenerate
-	// }}}
-
-	// omem
-	// {{{
-	// Only write to the memory on the first half of the outputs
-	// We'll use the memory value on the second half of the outputs
-	always @(posedge i_clk)
-	if ((i_ce)&&(!oaddr[LGSPAN]))
-		omem[oaddr[(LGSPAN-1):0]] <= ob_b;
-	// }}}
-
-	// pre_ovalue
-	// {{{
-	always @(posedge i_clk)
-	if (i_ce)
-		pre_ovalue <= omem[nxt_oaddr[(LGSPAN-1):0]];
-	// }}}
-
-	// o_data
-	// {{{
-	always @(posedge i_clk)
-	if (i_ce)
-		o_data <= (!oaddr[LGSPAN]) ? ob_a : pre_ovalue;
-	// }}}
-
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-//
-// Formal properties
-// {{{
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-`ifdef	FORMAL
-	// Local (formal) declarations
-	// {{{
-	// An arbitrary processing delay from butterfly input to
-	// butterfly output(s)
-	// Verilator lint_off UNDRIVEN
-	(* anyconst *) reg	[LGSPAN:0]	f_mpydelay;
-	(* anyconst *)	reg	[LGSPAN:0]	f_addr;
-	// Verilator lint_on  UNDRIVEN
-	reg	[2*IWIDTH-1:0]			f_left, f_right;
-	reg	[2*OWIDTH-1:0]	f_oleft, f_oright;
-	reg	[LGSPAN:0]	f_oaddr;
-	wire	[LGSPAN:0]	f_oaddr_m1 = f_oaddr - 1'b1;
-	reg	f_output_active;
-	// }}}
-
-
-	always @(*)
-		assume(f_mpydelay > 1);
-
-	reg	f_past_valid;
-	initial	f_past_valid = 1'b0;
-	always @(posedge i_clk)
-		f_past_valid <= 1'b1;
-
-	always @(posedge i_clk)
-	if ((!f_past_valid)||($past(i_reset)))
-	begin
-		assert(iaddr == 0);
-		assert(wait_for_sync);
-		assert(o_sync == 0);
-		assert(oaddr == 0);
-		assert(!b_started);
-		assert(!o_sync);
-	end
-
-	////////////////////////////////////////////////////////////////////////
-	//
-	// Formally verify the input half, from the inputs to this module
-	// to the inputs of the butterfly
-	//
-	////////////////////////////////////////////////////////////////////////
-	//
-	//
-
-	// Let's  verify a specific set of inputs
-
-	always @(posedge i_clk)
-	if (!$past(i_ce) && !$past(i_ce,2) && !$past(i_ce,3) && !$past(i_ce,4))
-		assume(!i_ce);
-
-	always @(*)
-		assume(f_addr[LGSPAN]==1'b0);
-
-	always @(posedge i_clk)
-	if ((i_ce)&&(iaddr[LGSPAN:0] == f_addr))
-		f_left <= i_data;
-
-	always @(*)
-	if (wait_for_sync)
-		assert(iaddr == 0);
-
-	wire	[LGSPAN:0]	f_last_addr = iaddr - 1'b1;
-
-	always @(posedge i_clk)
-	if ((!wait_for_sync)&&(f_last_addr >= { 1'b0, f_addr[LGSPAN-1:0]}))
-		assert(f_left == imem[f_addr[LGSPAN-1:0]]);
-
-	always @(posedge i_clk)
-	if ((i_ce)&&(iaddr == { 1'b1, f_addr[LGSPAN-1:0]}))
-		f_right <= i_data;
-
-	always @(posedge i_clk)
-	if (i_ce && !wait_for_sync
-		&& (f_last_addr == { 1'b1, f_addr[LGSPAN-1:0]}))
-	begin
-		assert(ib_a == f_left);
-		assert(ib_b == f_right);
-		assert(ib_c == cmem[f_addr[LGSPAN-1:0]]);
-	end
-
-	////////////////////////////////////////////////////////////////////////
-	//
-	// Formally verify the output half, from the output of the butterfly
-	// to the outputs of this module
-	//
-	////////////////////////////////////////////////////////////////////////
-	//
-	//
-
-	always @(*)
-		f_oaddr = iaddr - f_mpydelay + {1'b1,{(LGSPAN-1){1'b0}} };
-
-	assign	f_oaddr_m1 = f_oaddr - 1'b1;
-
-	initial	f_output_active = 1'b0;
-	always @(posedge i_clk)
-	if (i_reset)
-		f_output_active <= 1'b0;
-	else if ((i_ce)&&(ob_sync))
-		f_output_active <= 1'b1;
-
-	always @(*)
-		assert(f_output_active == b_started);
-
-	always @(*)
-	if (wait_for_sync)
-		assert(!f_output_active);
-
-	always @(*)
-	if (f_output_active)
-	begin
-		assert(oaddr == f_oaddr);
-	end else
-		assert(oaddr == 0);
-
-	always @(*)
-	if (wait_for_sync)
-		assume(!ob_sync);
-
-	always @(*)
-		assume(ob_sync == (f_oaddr == 0));
-
-	always @(posedge i_clk)
-	if ((f_past_valid)&&(!$past(i_ce)))
-	begin
-		assume($stable(ob_a));
-		assume($stable(ob_b));
-	end
-
-	initial	f_oleft  = 0;
-	initial	f_oright = 0;
-	always @(posedge i_clk)
-	if ((i_ce)&&(f_oaddr == f_addr))
-	begin
-		f_oleft  <= ob_a;
-		f_oright <= ob_b;
-	end
-
-	always @(posedge i_clk)
-	if ((f_output_active)&&(f_oaddr_m1 >= { 1'b0, f_addr[LGSPAN-1:0]}))
-		assert(omem[f_addr[LGSPAN-1:0]] == f_oright);
-
-	always @(posedge i_clk)
-	if ((i_ce)&&(f_oaddr_m1 == 0)&&(f_output_active))
-	begin
-		assert(o_sync);
-	end else if ((i_ce)||(!f_output_active))
-		assert(!o_sync);
-
-	always @(posedge i_clk)
-	if ((i_ce)&&(f_output_active)&&(f_oaddr_m1 == f_addr))
-		assert(o_data == f_oleft);
-
-	always @(posedge i_clk)
-	if ((i_ce)&&(f_output_active)&&(f_oaddr[LGSPAN])
-			&&(f_oaddr[LGSPAN-1:0] == f_addr[LGSPAN-1:0]))
-		assert(pre_ovalue == f_oright);
-
-	always @(posedge i_clk)
-	if ((i_ce)&&(f_output_active)&&(f_oaddr_m1[LGSPAN])
-			&&(f_oaddr_m1[LGSPAN-1:0] == f_addr[LGSPAN-1:0]))
-		assert(o_data == f_oright);
-
-	// Make Verilator happy
-	// {{{
-	// Verilator lint_off UNUSED
-	wire	unused_formal;
-	assign unused_formal = &{ 1'b0, idle, ib_sync };
-	// Verilator lint_on  UNUSED
-	// }}}
-
-`endif // FORMAL
-// }}}
-endmodule
-////////////////////////////////////////////////////////////////////////////////
-//
 // Filename:	hwbfly.v
 // {{{
 // Project:	A General Purpose Pipelined FFT Implementation
@@ -11438,4 +10383,1059 @@ module	qtrstage(i_clk, i_reset, i_ce, i_sync, i_data, o_data, o_sync);
 	end
 
 `endif
+endmodule
+////////////////////////////////////////////////////////////////////////////////
+//
+// Filename:	fftmain.v
+// {{{
+// Project:	A General Purpose Pipelined FFT Implementation
+//
+// Purpose:	This is the main module in the General Purpose FPGA FFT
+//		implementation.  As such, all other modules are subordinate
+//	to this one.  This module accomplish a fixed size Complex FFT on
+//	256 data points.
+//	The FFT is fully pipelined, and accepts as inputs one complex two's
+//	complement sample per clock.
+//
+// Parameters:
+//	i_clk	The clock.  All operations are synchronous with this clock.
+//	i_reset	Synchronous reset, active high.  Setting this line will
+//			force the reset of all of the internals to this routine.
+//			Further, following a reset, the o_sync line will go
+//			high the same time the first output sample is valid.
+//	i_ce	A clock enable line.  If this line is set, this module
+//			will accept one complex input value, and produce
+//			one (possibly empty) complex output value.
+//	i_sample	The complex input sample.  This value is split
+//			into two two's complement numbers, 16 bits each, with
+//			the real portion in the high order bits, and the
+//			imaginary portion taking the bottom 16 bits.
+//	o_result	The output result, of the same format as i_sample,
+//			only having 21 bits for each of the real and imaginary
+//			components, leading to 42 bits total.
+//	o_sync	A one bit output indicating the first sample of the FFT frame.
+//			It also indicates the first valid sample out of the FFT
+//			on the first frame.
+//
+// Arguments:	This file was computer generated using the following command
+//		line:
+//
+//		% ./fftgen -f 256 -a hdr
+//
+//	This core will use hardware accelerated multiplies (DSPs)
+//	for 0 of the 8 stages
+//
+// Creator:	Dan Gisselquist, Ph.D.
+//		Gisselquist Technology, LLC
+//
+////////////////////////////////////////////////////////////////////////////////
+// }}}
+// Copyright (C) 2015-2021, Gisselquist Technology, LLC
+// {{{
+// This file is part of the general purpose pipelined FFT project.
+//
+// The pipelined FFT project is free software (firmware): you can redistribute
+// it and/or modify it under the terms of the GNU Lesser General Public License
+// as published by the Free Software Foundation, either version 3 of the
+// License, or (at your option) any later version.
+//
+// The pipelined FFT project is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTIBILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser
+// General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program.  (It's in the $(ROOT)/doc directory.  Run make
+// with no target there if the PDF file isn't present.)  If not, see
+// <http://www.gnu.org/licenses/> for a copy.
+// }}}
+// License:	LGPL, v3, as defined and found on www.gnu.org,
+// {{{
+//		http://www.gnu.org/licenses/lgpl.html
+//
+// }}}
+////////////////////////////////////////////////////////////////////////////////
+//
+//
+`default_nettype	none
+//
+//
+//
+module fftmain(i_clk, i_reset, i_ce,
+		i_sample, o_result, o_sync);
+	// The bit-width of the input, IWIDTH, output, OWIDTH, and the log
+	// of the FFT size.  These are localparams, rather than parameters,
+	// because once the core has been generated, they can no longer be
+	// changed.  (These values can be adjusted by running the core
+	// generator again.)  The reason is simply that these values have
+	// been hardwired into the core at several places.
+	localparam	IWIDTH=16, OWIDTH=21; // LGWIDTH=8;
+	//
+	input	wire				i_clk, i_reset, i_ce;
+	//
+	input	wire	[(2*IWIDTH-1):0]	i_sample;
+	output	reg	[(2*OWIDTH-1):0]	o_result;
+	output	reg				o_sync;
+
+
+	// Outputs of the FFT, ready for bit reversal.
+	wire				br_sync;
+	wire	[(2*OWIDTH-1):0]	br_result;
+
+
+	wire		w_s256;
+	wire	[33:0]	w_d256;
+	fftstage	#(IWIDTH,IWIDTH+4,17,7,0,
+			0, 1, "cmem_256.hex")
+		stage_256(i_clk, i_reset, i_ce,
+			(!i_reset), i_sample, w_d256, w_s256);
+
+
+	wire		w_s128;
+	wire	[35:0]	w_d128;
+	fftstage	#(17,21,18,6,0,
+			0, 1, "cmem_128.hex")
+		stage_128(i_clk, i_reset, i_ce,
+			w_s256, w_d256, w_d128, w_s128);
+
+	wire		w_s64;
+	wire	[35:0]	w_d64;
+	fftstage	#(18,22,18,5,0,
+			0, 1, "cmem_64.hex")
+		stage_64(i_clk, i_reset, i_ce,
+			w_s128, w_d128, w_d64, w_s64);
+
+	wire		w_s32;
+	wire	[37:0]	w_d32;
+	fftstage	#(18,22,19,4,0,
+			0, 1, "cmem_32.hex")
+		stage_32(i_clk, i_reset, i_ce,
+			w_s64, w_d64, w_d32, w_s32);
+
+	wire		w_s16;
+	wire	[37:0]	w_d16;
+	fftstage	#(19,23,19,3,0,
+			0, 1, "cmem_16.hex")
+		stage_16(i_clk, i_reset, i_ce,
+			w_s32, w_d32, w_d16, w_s16);
+
+	wire		w_s8;
+	wire	[39:0]	w_d8;
+	fftstage	#(19,23,20,2,0,
+			0, 1, "cmem_8.hex")
+		stage_8(i_clk, i_reset, i_ce,
+			w_s16, w_d16, w_d8, w_s8);
+
+	wire		w_s4;
+	wire	[39:0]	w_d4;
+	qtrstage	#(20,20,8,0,0)	stage_4(i_clk, i_reset, i_ce,
+						w_s8, w_d8, w_d4, w_s4);
+	wire		w_s2;
+	wire	[41:0]	w_d2;
+	laststage	#(20,21,1)	stage_2(i_clk, i_reset, i_ce,
+					w_s4, w_d4, w_d2, w_s2);
+
+
+	wire	br_start;
+	reg	r_br_started;
+	initial	r_br_started = 1'b0;
+	always @(posedge i_clk)
+	if (i_reset)
+		r_br_started <= 1'b0;
+	else if (i_ce)
+		r_br_started <= r_br_started || w_s2;
+	assign	br_start = r_br_started || w_s2;
+
+	// Now for the bit-reversal stage.
+	bitreverse	#(8,21)
+	revstage(
+		// {{{
+		.i_clk(i_clk),
+		.i_reset(i_reset),
+		.i_ce(i_ce & br_start),
+		.i_in(w_d2),
+		.o_out(br_result),
+		.o_sync(br_sync)
+		// }}}
+	);
+
+
+	// Last clock: Register our outputs, we're done.
+	initial	o_sync  = 1'b0;
+	always @(posedge i_clk)
+	if (i_reset)
+		o_sync  <= 1'b0;
+	else if (i_ce)
+		o_sync  <= br_sync;
+
+	always @(posedge i_clk)
+	if (i_ce)
+		o_result  <= br_result;
+
+
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
+    initial begin
+      $dumpfile ("wave.vcd");
+      $dumpvars (0, fftmain);
+      #1;
+    end
+    `endif
+    `endif
+
+endmodule
+////////////////////////////////////////////////////////////////////////////////
+//
+// Filename:	fftstage.v
+// {{{
+// Project:	A General Purpose Pipelined FFT Implementation
+//
+// Purpose:	This file is (almost) a Verilog source file.  It is meant to
+//		be used by a FFT core compiler to generate FFTs which may be
+//	used as part of an FFT core.  Specifically, this file encapsulates
+//	the options of an FFT-stage.  For any 2^N length FFT, there shall be
+//	(N-1) of these stages.
+//
+//
+// Operation:
+// 	Given a stream of values, operate upon them as though they were
+// 	value pairs, x[n] and x[n+N/2].  The stream begins when n=0, and ends
+// 	when n=N/2-1 (i.e. there's a full set of N values).  When the value
+// 	x[0] enters, the synchronization input, i_sync, must be true as well.
+//
+// 	For this stream, produce outputs
+// 	y[n    ] = x[n] + x[n+N/2], and
+// 	y[n+N/2] = (x[n] - x[n+N/2]) * c[n],
+// 			where c[n] is a complex coefficient found in the
+// 			external memory file COEFFILE.
+// 	When y[0] is output, a synchronization bit o_sync will be true as
+// 	well, otherwise it will be zero.
+//
+// 	Most of the work to do this is done within the butterfly, whether the
+// 	hardware accelerated butterfly (uses a DSP) or not.
+//
+// Creator:	Dan Gisselquist, Ph.D.
+//		Gisselquist Technology, LLC
+//
+////////////////////////////////////////////////////////////////////////////////
+// }}}
+// Copyright (C) 2015-2021, Gisselquist Technology, LLC
+// {{{
+// This file is part of the general purpose pipelined FFT project.
+//
+// The pipelined FFT project is free software (firmware): you can redistribute
+// it and/or modify it under the terms of the GNU Lesser General Public License
+// as published by the Free Software Foundation, either version 3 of the
+// License, or (at your option) any later version.
+//
+// The pipelined FFT project is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTIBILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser
+// General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program.  (It's in the $(ROOT)/doc directory.  Run make
+// with no target there if the PDF file isn't present.)  If not, see
+// <http://www.gnu.org/licenses/> for a copy.
+// }}}
+// License:	LGPL, v3, as defined and found on www.gnu.org,
+// {{{
+//		http://www.gnu.org/licenses/lgpl.html
+//
+// }}}
+////////////////////////////////////////////////////////////////////////////////
+//
+//
+`default_nettype	none
+//
+module	fftstage #(
+		// {{{
+		parameter	IWIDTH=16,CWIDTH=20,OWIDTH=17,
+		// Parameters specific to the core that should be changed when
+		// this core is built ... Note that the minimum LGSPAN (the base
+		// two log of the span, or the base two log of the current FFT
+		// size) is 3.  Smaller spans (i.e. the span of 2) must use the
+		// dbl laststage module.
+		// Verilator lint_off UNUSED
+		parameter	LGSPAN=7, BFLYSHIFT=0, // LGWIDTH=8
+		parameter [0:0]	OPT_HWMPY = 1,
+		// Clocks per CE.  If your incoming data rate is less than 50%
+		// of your clock speed, you can set CKPCE to 2'b10, make sure
+		// there's at least one clock between cycles when i_ce is high,
+		// and then use two multiplies instead of three.  Setting CKPCE
+		// to 2'b11, and insisting on at least two clocks with i_ce low
+		// between cycles with i_ce high, then the hardware optimized
+		// butterfly code will used one multiply instead of two.
+		parameter	CKPCE = 1,
+		// The COEFFILE parameter contains the name of the file
+		// containing the FFT twiddle factors
+		parameter	COEFFILE="cmem_256.hex"
+		// Verilator lint_on  UNUSED
+
+// `ifdef	VERILATOR
+		// parameter  [0:0]	ZERO_ON_IDLE = 1'b0
+// `else
+		// localparam [0:0]	ZERO_ON_IDLE = 1'b0
+// `endif // VERILATOR
+		// }}}
+	) (
+		// {{{
+		input	wire				i_clk, i_reset,
+							i_ce, i_sync,
+		input	wire	[(2*IWIDTH-1):0]	i_data,
+		output	reg	[(2*OWIDTH-1):0]	o_data,
+		output	reg				o_sync
+
+		// }}}
+	);
+		localparam [0:0]	ZERO_ON_IDLE = 1'b0;
+
+	// Local signal definitions
+	// {{{
+	// I am using the prefixes
+	// 	ib_*	to reference the inputs to the butterfly, and
+	// 	ob_*	to reference the outputs from the butterfly
+	reg	wait_for_sync;
+	reg	[(2*IWIDTH-1):0]	ib_a, ib_b;
+	reg	[(2*CWIDTH-1):0]	ib_c;
+	reg	ib_sync;
+
+	reg	b_started;
+	wire	ob_sync;
+	wire	[(2*OWIDTH-1):0]	ob_a, ob_b;
+
+	// cmem is defined as an array of real and complex values,
+	// where the top CWIDTH bits are the real value and the bottom
+	// CWIDTH bits are the imaginary value.
+	//
+	// cmem[i] = { (2^(CWIDTH-2)) * cos(2*pi*i/(2^LGWIDTH)),
+	//		(2^(CWIDTH-2)) * sin(2*pi*i/(2^LGWIDTH)) };
+	//
+	// reg	[(2*CWIDTH-1):0]	cmem [0:((1<<LGSPAN)-1)];
+    reg	[(2*CWIDTH-1):0]	cmem;
+`ifdef	FORMAL
+// Let the formal tool pick the coefficients
+`else
+	// initial	$readmemh(COEFFILE,cmem);
+    generate
+    if (COEFFILE == "cmem_256.hex") begin
+        always @(*) begin
+            case (iaddr[(LGSPAN-1):0])
+                0   : cmem = 40'h4000000000;
+                1   : cmem = 40'h3ffb1fe6df;
+                2   : cmem = 40'h3fec4fcdc1;
+                3   : cmem = 40'h3fd3afb4ab;
+                4   : cmem = 40'h3fb12f9ba1;
+                5   : cmem = 40'h3f84df82a7;
+                6   : cmem = 40'h3f4ebf69bf;
+                7   : cmem = 40'h3f0edf50ef;
+                8   : cmem = 40'h3ec53f383a;
+                9   : cmem = 40'h3e71ef1fa4;
+                10  : cmem = 40'h3e150f0730;
+                11  : cmem = 40'h3dae8eeee3;
+                12  : cmem = 40'h3d3e8ed6c0;
+                13  : cmem = 40'h3cc51ebeca;
+                14  : cmem = 40'h3c424ea706;
+                15  : cmem = 40'h3bb62e8f78;
+                16  : cmem = 40'h3b20de7822;
+                17  : cmem = 40'h3a827e6108;
+                18  : cmem = 40'h39dafe4a2f;
+                19  : cmem = 40'h392a9e3399;
+                20  : cmem = 40'h38716e1d4a;
+                21  : cmem = 40'h37af8e0746;
+                22  : cmem = 40'h36e50df18f;
+                23  : cmem = 40'h36121ddc2a;
+                24  : cmem = 40'h3536ddc719;
+                25  : cmem = 40'h34535db25f;
+                26  : cmem = 40'h3367cd9e01;
+                27  : cmem = 40'h32744d8a01;
+                28  : cmem = 40'h31790d7662;
+                29  : cmem = 40'h30762d6327;
+                30  : cmem = 40'h2f6bcd5053;
+                31  : cmem = 40'h2e5a1d3de9;
+                32  : cmem = 40'h2d414d2bec;
+                33  : cmem = 40'h2c217d1a5f;
+                34  : cmem = 40'h2afadd0944;
+                35  : cmem = 40'h29cd9cf89e;
+                36  : cmem = 40'h2899ece870;
+                37  : cmem = 40'h275ffcd8bc;
+                38  : cmem = 40'h261ffcc984;
+                39  : cmem = 40'h24da1cbacb;
+                40  : cmem = 40'h238e7cac93;
+                41  : cmem = 40'h223d6c9edf;
+                42  : cmem = 40'h20e71c91b0;
+                43  : cmem = 40'h1f8bac8508;
+                44  : cmem = 40'h1e2b6c78ea;
+                45  : cmem = 40'h1cc67c6d57;
+                46  : cmem = 40'h1b5d1c6251;
+                47  : cmem = 40'h19ef8c57d9;
+                48  : cmem = 40'h187dec4df3;
+                49  : cmem = 40'h17088c449e;
+                50  : cmem = 40'h158fac3bdc;
+                51  : cmem = 40'h14136c33af;
+                52  : cmem = 40'h12940c2c18;
+                53  : cmem = 40'h1111dc2518;
+                54  : cmem = 40'h0f8d0c1eb0;
+                55  : cmem = 40'h0e05cc18e2;
+                56  : cmem = 40'h0c7c6c13ad;
+                57  : cmem = 40'h0af11c0f13;
+                58  : cmem = 40'h09641c0b15;
+                59  : cmem = 40'h07d59c07b3;
+                60  : cmem = 40'h0645fc04ee;
+                61  : cmem = 40'h04b55c02c6;
+                62  : cmem = 40'h0323fc013c;
+                63  : cmem = 40'h01921c004f;
+                64  : cmem = 40'h00000c0000;
+                65  : cmem = 40'hfe6dfc004f;
+                66  : cmem = 40'hfcdc1c013c;
+                67  : cmem = 40'hfb4abc02c6;
+                68  : cmem = 40'hf9ba1c04ee;
+                69  : cmem = 40'hf82a7c07b3;
+                70  : cmem = 40'hf69bfc0b15;
+                71  : cmem = 40'hf50efc0f13;
+                72  : cmem = 40'hf383ac13ad;
+                73  : cmem = 40'hf1fa4c18e2;
+                74  : cmem = 40'hf0730c1eb0;
+                75  : cmem = 40'heeee3c2518;
+                76  : cmem = 40'hed6c0c2c18;
+                77  : cmem = 40'hebecac33af;
+                78  : cmem = 40'hea706c3bdc;
+                79  : cmem = 40'he8f78c449e;
+                80  : cmem = 40'he7822c4df3;
+                81  : cmem = 40'he6108c57d9;
+                82  : cmem = 40'he4a2fc6251;
+                83  : cmem = 40'he3399c6d57;
+                84  : cmem = 40'he1d4ac78ea;
+                85  : cmem = 40'he0746c8508;
+                86  : cmem = 40'hdf18fc91b0;
+                87  : cmem = 40'hddc2ac9edf;
+                88  : cmem = 40'hdc719cac93;
+                89  : cmem = 40'hdb25fcbacb;
+                90  : cmem = 40'hd9e01cc984;
+                91  : cmem = 40'hd8a01cd8bc;
+                92  : cmem = 40'hd7662ce870;
+                93  : cmem = 40'hd6327cf89e;
+                94  : cmem = 40'hd5053d0944;
+                95  : cmem = 40'hd3de9d1a5f;
+                96  : cmem = 40'hd2becd2bec;
+                97  : cmem = 40'hd1a5fd3de9;
+                98  : cmem = 40'hd0944d5053;
+                99  : cmem = 40'hcf89ed6327;
+                100 : cmem = 40'hce870d7662;
+                101 : cmem = 40'hcd8bcd8a01;
+                102 : cmem = 40'hcc984d9e01;
+                103 : cmem = 40'hcbacbdb25f;
+                104 : cmem = 40'hcac93dc719;
+                105 : cmem = 40'hc9edfddc2a;
+                106 : cmem = 40'hc91b0df18f;
+                107 : cmem = 40'hc8508e0746;
+                108 : cmem = 40'hc78eae1d4a;
+                109 : cmem = 40'hc6d57e3399;
+                110 : cmem = 40'hc6251e4a2f;
+                111 : cmem = 40'hc57d9e6108;
+                112 : cmem = 40'hc4df3e7822;
+                113 : cmem = 40'hc449ee8f78;
+                114 : cmem = 40'hc3bdcea706;
+                115 : cmem = 40'hc33afebeca;
+                116 : cmem = 40'hc2c18ed6c0;
+                117 : cmem = 40'hc2518eeee3;
+                118 : cmem = 40'hc1eb0f0730;
+                119 : cmem = 40'hc18e2f1fa4;
+                120 : cmem = 40'hc13adf383a;
+                121 : cmem = 40'hc0f13f50ef;
+                122 : cmem = 40'hc0b15f69bf;
+                123 : cmem = 40'hc07b3f82a7;
+                124 : cmem = 40'hc04eef9ba1;
+                125 : cmem = 40'hc02c6fb4ab;
+                126 : cmem = 40'hc013cfcdc1;
+                127 : cmem = 40'hc004ffe6df;
+            endcase
+        end
+    end else if (COEFFILE == "cmem_128.hex") begin
+        always @(*) begin
+            case (iaddr[(LGSPAN-1):0])
+                0   : cmem = 42'h10000000000;
+                1   : cmem = 42'h0ffb11f9b82;
+                2   : cmem = 42'h0fec47f3743;
+                3   : cmem = 42'h0fd3abed37f;
+                4   : cmem = 42'h0fb14de7074;
+                5   : cmem = 42'h0f8541e0e60;
+                6   : cmem = 42'h0f4fa1dad7f;
+                7   : cmem = 42'h0f1091d4e0d;
+                8   : cmem = 42'h0ec837cf044;
+                9   : cmem = 42'h0e76bfc945e;
+                10  : cmem = 42'h0e1c5bc3a94;
+                11  : cmem = 42'h0db943be31e;
+                12  : cmem = 42'h0d4db5b8e31;
+                13  : cmem = 42'h0cd9f1b3c02;
+                14  : cmem = 42'h0c5e41aecc3;
+                15  : cmem = 42'h0bdaf1aa0a6;
+                16  : cmem = 42'h0b5051a57d8;
+                17  : cmem = 42'h0abeb5a1288;
+                18  : cmem = 42'h0a267b9d0e0;
+                19  : cmem = 42'h0987fd99308;
+                20  : cmem = 42'h08e39f95926;
+                21  : cmem = 42'h0839c59235f;
+                22  : cmem = 42'h078ad98f1d3;
+                23  : cmem = 42'h06d7458c4a1;
+                24  : cmem = 42'h061f7989be5;
+                25  : cmem = 42'h0563e7877b8;
+                26  : cmem = 42'h04a50385830;
+                27  : cmem = 42'h03e34183d60;
+                28  : cmem = 42'h031f198275a;
+                29  : cmem = 42'h0259038162b;
+                30  : cmem = 42'h01917b809dd;
+                31  : cmem = 42'h00c8fd80278;
+                32  : cmem = 42'h00000180000;
+                33  : cmem = 42'h3f370580278;
+                34  : cmem = 42'h3e6e87809dd;
+                35  : cmem = 42'h3da6ff8162b;
+                36  : cmem = 42'h3ce0e98275a;
+                37  : cmem = 42'h3c1cc183d60;
+                38  : cmem = 42'h3b5aff85830;
+                39  : cmem = 42'h3a9c1b877b8;
+                40  : cmem = 42'h39e08989be5;
+                41  : cmem = 42'h3928bd8c4a1;
+                42  : cmem = 42'h3875298f1d3;
+                43  : cmem = 42'h37c63d9235f;
+                44  : cmem = 42'h371c6395926;
+                45  : cmem = 42'h36780599308;
+                46  : cmem = 42'h35d9879d0e0;
+                47  : cmem = 42'h35414da1288;
+                48  : cmem = 42'h34afb1a57d8;
+                49  : cmem = 42'h342511aa0a6;
+                50  : cmem = 42'h33a1c1aecc3;
+                51  : cmem = 42'h332611b3c02;
+                52  : cmem = 42'h32b24db8e31;
+                53  : cmem = 42'h3246bfbe31e;
+                54  : cmem = 42'h31e3a7c3a94;
+                55  : cmem = 42'h318943c945e;
+                56  : cmem = 42'h3137cbcf044;
+                57  : cmem = 42'h30ef71d4e0d;
+                58  : cmem = 42'h30b061dad7f;
+                59  : cmem = 42'h307ac1e0e60;
+                60  : cmem = 42'h304eb5e7074;
+                61  : cmem = 42'h302c57ed37f;
+                62  : cmem = 42'h3013bbf3743;
+                63  : cmem = 42'h3004f1f9b82;
+            endcase
+        end
+    end else if (COEFFILE == "cmem_64.hex") begin
+        always @(*) begin
+            case (iaddr[(LGSPAN-1):0])
+                0   : cmem = 44'h40000000000;
+                1   : cmem = 44'h3fb11fe6e86;
+                2   : cmem = 44'h3ec533ce0e9;
+                3   : cmem = 44'h3d3e87b5afe;
+                4   : cmem = 44'h3b20db9e087;
+                5   : cmem = 44'h38716787529;
+                6   : cmem = 44'h3536cf71c62;
+                7   : cmem = 44'h3179035d986;
+                8   : cmem = 44'h2d413f4afb1;
+                9   : cmem = 44'h2899eb3a1c0;
+                10  : cmem = 44'h238e7b2b24d;
+                11  : cmem = 44'h1e2b5f1e3a7;
+                12  : cmem = 44'h187de7137ca;
+                13  : cmem = 44'h12940b0b05f;
+                14  : cmem = 44'h0c7c5f04eb4;
+                15  : cmem = 44'h0645eb013b9;
+                16  : cmem = 44'h00000300000;
+                17  : cmem = 44'hf9ba1b013b9;
+                18  : cmem = 44'hf383a704eb4;
+                19  : cmem = 44'hed6bfb0b05f;
+                20  : cmem = 44'he7821f137ca;
+                21  : cmem = 44'he1d4a71e3a7;
+                22  : cmem = 44'hdc718b2b24d;
+                23  : cmem = 44'hd7661b3a1c0;
+                24  : cmem = 44'hd2bec74afb1;
+                25  : cmem = 44'hce87035d986;
+                26  : cmem = 44'hcac93771c62;
+                27  : cmem = 44'hc78e9f87529;
+                28  : cmem = 44'hc4df2b9e087;
+                29  : cmem = 44'hc2c17fb5afe;
+                30  : cmem = 44'hc13ad3ce0e9;
+                31  : cmem = 44'hc04ee7e6e86;
+            endcase
+        end
+    end else if (COEFFILE == "cmem_32.hex") begin
+        always @(*) begin
+            case (iaddr[(LGSPAN-1):0])
+                0   : cmem = 44'h40000000000;
+                1   : cmem = 44'h3ec533ce0e9;
+                2   : cmem = 44'h3b20db9e087;
+                3   : cmem = 44'h3536cf71c62;
+                4   : cmem = 44'h2d413f4afb1;
+                5   : cmem = 44'h238e7b2b24d;
+                6   : cmem = 44'h187de7137ca;
+                7   : cmem = 44'h0c7c5f04eb4;
+                8   : cmem = 44'h00000300000;
+                9   : cmem = 44'hf383a704eb4;
+                10  : cmem = 44'he7821f137ca;
+                11  : cmem = 44'hdc718b2b24d;
+                12  : cmem = 44'hd2bec74afb1;
+                13  : cmem = 44'hcac93771c62;
+                14  : cmem = 44'hc4df2b9e087;
+                15  : cmem = 44'hc13ad3ce0e9;
+            endcase
+        end
+    end else if (COEFFILE == "cmem_16.hex") begin
+        always @(*) begin
+            case (iaddr[(LGSPAN-1):0])
+                0   : cmem = 46'h100000000000;
+                1   : cmem = 46'h0ec83673c10f;
+                2   : cmem = 46'h0b504f695f62;
+                3   : cmem = 46'h061f78e26f94;
+                4   : cmem = 46'h000000600000;
+                5   : cmem = 46'h39e087e26f94;
+                6   : cmem = 46'h34afb1695f62;
+                7   : cmem = 46'h3137ca73c10f;
+            endcase
+        end
+    end else begin
+        always @(*) begin
+            case (iaddr[(LGSPAN-1):0])
+                0   : cmem = 46'h100000000000;
+                1   : cmem = 46'h0b504f695f62;
+                2   : cmem = 46'h000000600000;
+                3   : cmem = 46'h34afb1695f62;
+            endcase
+        end
+    end
+    endgenerate
+
+`endif
+
+	reg	[(LGSPAN):0]		iaddr;
+	reg	[(2*IWIDTH-1):0]	imem	[0:((1<<LGSPAN)-1)];
+
+	reg	[LGSPAN:0]		oaddr;
+	reg	[(2*OWIDTH-1):0]	omem	[0:((1<<LGSPAN)-1)];
+
+	wire				idle;
+	reg	[(LGSPAN-1):0]		nxt_oaddr;
+	reg	[(2*OWIDTH-1):0]	pre_ovalue;
+	// }}}
+
+	// wait_for_sync, iaddr
+	// {{{
+	initial wait_for_sync = 1'b1;
+	initial iaddr = 0;
+	always @(posedge i_clk)
+	if (i_reset)
+	begin
+		wait_for_sync <= 1'b1;
+		iaddr <= 0;
+	end else if ((i_ce)&&((!wait_for_sync)||(i_sync)))
+	begin
+		//
+		// First step: Record what we're not ready to use yet
+		//
+		iaddr <= iaddr + { {(LGSPAN){1'b0}}, 1'b1 };
+		wait_for_sync <= 1'b0;
+	end
+	// }}}
+
+	// Write to imem
+	// {{{
+	always @(posedge i_clk) // Need to make certain here that we don't read
+	if ((i_ce)&&(!iaddr[LGSPAN])) // and write the same address on
+		imem[iaddr[(LGSPAN-1):0]] <= i_data; // the same clk
+	// }}}
+
+	// ib_sync
+	// {{{
+	// Now, we have all the inputs, so let's feed the butterfly
+	//
+	// ib_sync is the synchronization bit to the butterfly.  It will
+	// be tracked within the butterfly, and used to create the o_sync
+	// value when the results from this output are produced
+	initial ib_sync = 1'b0;
+	always @(posedge i_clk)
+	if (i_reset)
+		ib_sync <= 1'b0;
+	else if (i_ce)
+	begin
+		// Set the sync to true on the very first
+		// valid input in, and hence on the very
+		// first valid data out per FFT.
+		ib_sync <= (iaddr==(1<<(LGSPAN)));
+	end
+	// }}}
+
+	// ib_a, ib_b, ib_c
+	// {{{
+	// Read the values from our input memory, and use them to feed
+	// first of two butterfly inputs
+	always	@(posedge i_clk)
+	if (i_ce)
+	begin
+		// One input from memory, ...
+		ib_a <= imem[iaddr[(LGSPAN-1):0]];
+		// One input clocked in from the top
+		ib_b <= i_data;
+		// and the coefficient or twiddle factor
+		// ib_c <= cmem[iaddr[(LGSPAN-1):0]];
+        ib_c <= cmem;
+	end
+	// }}}
+
+	// idle
+	// {{{
+	// The idle register is designed to keep track of when an input
+	// to the butterfly is important and going to be used.  It's used
+	// in a flag following, so that when useful values are placed
+	// into the butterfly they'll be non-zero (idle=0), otherwise when
+	// the inputs to the butterfly are irrelevant and will be ignored,
+	// then (idle=1) those inputs will be set to zero.  This
+	// functionality is not designed to be used in operation, but only
+	// within a Verilator simulation context when chasing a bug.
+	// In this limited environment, the non-zero answers will stand
+	// in a trace making it easier to highlight a bug.
+	generate if (ZERO_ON_IDLE)
+	begin : GEN_ZERO_ON_IDLE
+		reg	r_idle;
+
+		initial	r_idle = 1;
+		always @(posedge i_clk)
+		if (i_reset)
+			r_idle <= 1'b1;
+		else if (i_ce)
+			r_idle <= (!iaddr[LGSPAN])&&(!wait_for_sync);
+
+		assign	idle = r_idle;
+
+	end else begin : NO_IDLE_GENERATION
+
+		assign	idle = 0;
+
+	end endgenerate
+	// }}}
+
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Instantiate the butterfly
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
+// For the formal proof, we'll assume the outputs of hwbfly and/or
+// butterfly, rather than actually calculating them.  This will simplify
+// the proof and (if done properly) will be equivalent.  Be careful of
+// defining FORMAL if you want the full logic!
+`ifndef	FORMAL
+	//
+	generate if (OPT_HWMPY)
+	begin : HWBFLY
+
+		hwbfly #(
+			// {{{
+			.IWIDTH(IWIDTH),
+			.CWIDTH(CWIDTH),
+			.OWIDTH(OWIDTH),
+			.CKPCE(CKPCE),
+			.SHIFT(BFLYSHIFT)
+			// }}}
+		) bfly(
+			// {{{
+			.i_clk(i_clk), .i_reset(i_reset), .i_ce(i_ce),
+			.i_coef((idle && !i_ce) ? 0:ib_c),
+			.i_left((idle && !i_ce) ? 0:ib_a),
+			.i_right((idle && !i_ce) ? 0:ib_b),
+			.i_aux(ib_sync && i_ce),
+			.o_left(ob_a), .o_right(ob_b), .o_aux(ob_sync)
+			// }}}
+		);
+
+	end else begin : FWBFLY
+
+		butterfly #(
+			// {{{
+			.IWIDTH(IWIDTH),
+			.CWIDTH(CWIDTH),
+			.OWIDTH(OWIDTH),
+			.CKPCE(CKPCE),
+			.SHIFT(BFLYSHIFT)
+			// }}}
+		) bfly(
+			// {{{
+			.i_clk(i_clk), .i_reset(i_reset), .i_ce(i_ce),
+			.i_coef( (idle && !i_ce)?0:ib_c),
+			.i_left( (idle && !i_ce)?0:ib_a),
+			.i_right((idle && !i_ce)?0:ib_b),
+			.i_aux(ib_sync && i_ce),
+			.o_left(ob_a), .o_right(ob_b), .o_aux(ob_sync)
+			// }}}
+		);
+
+	end endgenerate
+`else
+
+	// Verilator lint_off UNDRIVEN
+	(* anyseq *)    wire    [(2*OWIDTH-1):0]        f_ob_a, f_ob_b;
+	(* anyseq *)    wire    f_ob_sync;
+	// Verilator lint_on  UNDRIVEN
+
+	assign  ob_sync = f_ob_sync;
+	assign  ob_a    = f_ob_a;
+	assign  ob_b    = f_ob_b;
+
+`endif
+
+	// }}}
+
+	// oaddr, o_sync, b_started
+	// {{{
+	// Next step: recover the outputs from the butterfly
+	//
+	// The first output can go immediately to the output of this routine
+	// The second output must wait until this time in the idle cycle
+	// oaddr is the output memory address, keeping track of where we are
+	// in this output cycle.
+	initial oaddr     = 0;
+	initial o_sync    = 0;
+	initial b_started = 0;
+	always @(posedge i_clk)
+	if (i_reset)
+	begin
+		oaddr     <= 0;
+		o_sync    <= 0;
+		// b_started will be true once we've seen the first ob_sync
+		b_started <= 0;
+	end else if (i_ce)
+	begin
+		o_sync <= (!oaddr[LGSPAN])?ob_sync : 1'b0;
+		if (ob_sync||b_started)
+			oaddr <= oaddr + 1'b1;
+		if ((ob_sync)&&(!oaddr[LGSPAN]))
+			// If b_started is true, then a butterfly output
+			// is available
+			b_started <= 1'b1;
+	end
+	// }}}
+
+	// nxt_oaddr
+	// {{{
+	always @(posedge i_clk)
+	if (i_ce)
+		nxt_oaddr[0] <= oaddr[0];
+	generate if (LGSPAN>1)
+	begin
+
+		always @(posedge i_clk)
+		if (i_ce)
+			nxt_oaddr[LGSPAN-1:1] <= oaddr[LGSPAN-1:1] + 1'b1;
+
+	end endgenerate
+	// }}}
+
+	// omem
+	// {{{
+	// Only write to the memory on the first half of the outputs
+	// We'll use the memory value on the second half of the outputs
+	always @(posedge i_clk)
+	if ((i_ce)&&(!oaddr[LGSPAN]))
+		omem[oaddr[(LGSPAN-1):0]] <= ob_b;
+	// }}}
+
+	// pre_ovalue
+	// {{{
+	always @(posedge i_clk)
+	if (i_ce)
+		pre_ovalue <= omem[nxt_oaddr[(LGSPAN-1):0]];
+	// }}}
+
+	// o_data
+	// {{{
+	always @(posedge i_clk)
+	if (i_ce)
+		o_data <= (!oaddr[LGSPAN]) ? ob_a : pre_ovalue;
+	// }}}
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//
+// Formal properties
+// {{{
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+`ifdef	FORMAL
+	// Local (formal) declarations
+	// {{{
+	// An arbitrary processing delay from butterfly input to
+	// butterfly output(s)
+	// Verilator lint_off UNDRIVEN
+	(* anyconst *) reg	[LGSPAN:0]	f_mpydelay;
+	(* anyconst *)	reg	[LGSPAN:0]	f_addr;
+	// Verilator lint_on  UNDRIVEN
+	reg	[2*IWIDTH-1:0]			f_left, f_right;
+	reg	[2*OWIDTH-1:0]	f_oleft, f_oright;
+	reg	[LGSPAN:0]	f_oaddr;
+	wire	[LGSPAN:0]	f_oaddr_m1 = f_oaddr - 1'b1;
+	reg	f_output_active;
+	// }}}
+
+
+	always @(*)
+		assume(f_mpydelay > 1);
+
+	reg	f_past_valid;
+	initial	f_past_valid = 1'b0;
+	always @(posedge i_clk)
+		f_past_valid <= 1'b1;
+
+	always @(posedge i_clk)
+	if ((!f_past_valid)||($past(i_reset)))
+	begin
+		assert(iaddr == 0);
+		assert(wait_for_sync);
+		assert(o_sync == 0);
+		assert(oaddr == 0);
+		assert(!b_started);
+		assert(!o_sync);
+	end
+
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Formally verify the input half, from the inputs to this module
+	// to the inputs of the butterfly
+	//
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
+
+	// Let's  verify a specific set of inputs
+
+	always @(posedge i_clk)
+	if (!$past(i_ce) && !$past(i_ce,2) && !$past(i_ce,3) && !$past(i_ce,4))
+		assume(!i_ce);
+
+	always @(*)
+		assume(f_addr[LGSPAN]==1'b0);
+
+	always @(posedge i_clk)
+	if ((i_ce)&&(iaddr[LGSPAN:0] == f_addr))
+		f_left <= i_data;
+
+	always @(*)
+	if (wait_for_sync)
+		assert(iaddr == 0);
+
+	wire	[LGSPAN:0]	f_last_addr = iaddr - 1'b1;
+
+	always @(posedge i_clk)
+	if ((!wait_for_sync)&&(f_last_addr >= { 1'b0, f_addr[LGSPAN-1:0]}))
+		assert(f_left == imem[f_addr[LGSPAN-1:0]]);
+
+	always @(posedge i_clk)
+	if ((i_ce)&&(iaddr == { 1'b1, f_addr[LGSPAN-1:0]}))
+		f_right <= i_data;
+
+	always @(posedge i_clk)
+	if (i_ce && !wait_for_sync
+		&& (f_last_addr == { 1'b1, f_addr[LGSPAN-1:0]}))
+	begin
+		assert(ib_a == f_left);
+		assert(ib_b == f_right);
+		assert(ib_c == cmem[f_addr[LGSPAN-1:0]]);
+	end
+
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Formally verify the output half, from the output of the butterfly
+	// to the outputs of this module
+	//
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
+
+	always @(*)
+		f_oaddr = iaddr - f_mpydelay + {1'b1,{(LGSPAN-1){1'b0}} };
+
+	assign	f_oaddr_m1 = f_oaddr - 1'b1;
+
+	initial	f_output_active = 1'b0;
+	always @(posedge i_clk)
+	if (i_reset)
+		f_output_active <= 1'b0;
+	else if ((i_ce)&&(ob_sync))
+		f_output_active <= 1'b1;
+
+	always @(*)
+		assert(f_output_active == b_started);
+
+	always @(*)
+	if (wait_for_sync)
+		assert(!f_output_active);
+
+	always @(*)
+	if (f_output_active)
+	begin
+		assert(oaddr == f_oaddr);
+	end else
+		assert(oaddr == 0);
+
+	always @(*)
+	if (wait_for_sync)
+		assume(!ob_sync);
+
+	always @(*)
+		assume(ob_sync == (f_oaddr == 0));
+
+	always @(posedge i_clk)
+	if ((f_past_valid)&&(!$past(i_ce)))
+	begin
+		assume($stable(ob_a));
+		assume($stable(ob_b));
+	end
+
+	initial	f_oleft  = 0;
+	initial	f_oright = 0;
+	always @(posedge i_clk)
+	if ((i_ce)&&(f_oaddr == f_addr))
+	begin
+		f_oleft  <= ob_a;
+		f_oright <= ob_b;
+	end
+
+	always @(posedge i_clk)
+	if ((f_output_active)&&(f_oaddr_m1 >= { 1'b0, f_addr[LGSPAN-1:0]}))
+		assert(omem[f_addr[LGSPAN-1:0]] == f_oright);
+
+	always @(posedge i_clk)
+	if ((i_ce)&&(f_oaddr_m1 == 0)&&(f_output_active))
+	begin
+		assert(o_sync);
+	end else if ((i_ce)||(!f_output_active))
+		assert(!o_sync);
+
+	always @(posedge i_clk)
+	if ((i_ce)&&(f_output_active)&&(f_oaddr_m1 == f_addr))
+		assert(o_data == f_oleft);
+
+	always @(posedge i_clk)
+	if ((i_ce)&&(f_output_active)&&(f_oaddr[LGSPAN])
+			&&(f_oaddr[LGSPAN-1:0] == f_addr[LGSPAN-1:0]))
+		assert(pre_ovalue == f_oright);
+
+	always @(posedge i_clk)
+	if ((i_ce)&&(f_output_active)&&(f_oaddr_m1[LGSPAN])
+			&&(f_oaddr_m1[LGSPAN-1:0] == f_addr[LGSPAN-1:0]))
+		assert(o_data == f_oright);
+
+	// Make Verilator happy
+	// {{{
+	// Verilator lint_off UNUSED
+	wire	unused_formal;
+	assign unused_formal = &{ 1'b0, idle, ib_sync };
+	// Verilator lint_on  UNUSED
+	// }}}
+
+`endif // FORMAL
+// }}}
 endmodule

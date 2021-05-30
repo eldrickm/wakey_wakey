@@ -35,7 +35,7 @@ set ::env(FP_SIZING) absolute
 # Wakey Wakey Change: Expand DIE_AREA
 # set ::env(DIE_AREA) "0 0 900 600"
 # set ::env(DIE_AREA) "0 0 2920 3520"
-set ::env(DIE_AREA) "0 0 2336 2816"
+set ::env(DIE_AREA) "0 0 2628 3168"
 set ::env(DESIGN_IS_CORE) 0
 
 # Wakey Wakey Change: Remove analog power nets
