@@ -111,7 +111,7 @@ def cicn(x):
     x = x.astype(np.int16)  # same here
     return x
 
-def pdm_to_pcm(x, n_cic):
+def pdm_to_pcm(x, n_cic=1):
     '''n_cic is fixed to 1 stage for Wakey Wakey.'''
     # assert n_cic == 1
     x = cic1(x)

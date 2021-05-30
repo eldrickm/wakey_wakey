@@ -5,8 +5,7 @@ import matplotlib.pyplot as plt
 import struct
 
 import sys
-sys.path.append('../../wakey_wakey/py/')  # assume eldrickm/wakey_wakey is
-                                          # cloned in same dir as this repo
+sys.path.append('../../../py/')
 import pdm
 
 def get_pdm():
@@ -28,8 +27,8 @@ def process_pdm(x):
     y = signal.decimate(x, 25)  # ideal FIR decimating filter
     y = signal.decimate(y, 10)
     wavfile.write('out_perfect_fir.wav', 16000, y)
-    wavfile.write('out_dfe_1cic_2mhz.wav', 16000, (dfe_y_1cic + 125).astype(np.uint8))
-    wavfile.write('out_dfe_2cic_2mhz.wav', 16000, dfe_y_2cic)
+    wavfile.write('out_dfe_1cic_4mhz.wav', 16000, (dfe_y_1cic + 125).astype(np.uint8))
+    wavfile.write('out_dfe_2cic_4mhz.wav', 16000, dfe_y_2cic)
 
     return y, dfe_y_1cic, dfe_y_2cic
 
