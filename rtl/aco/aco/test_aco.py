@@ -4,6 +4,7 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import pickle
 
 import cocotb
 from cocotb.clock import Clock
@@ -109,7 +110,6 @@ async def check_preemphasis(dut, y):
     print('Preemphasis: received expected output.')
 
 async def check_framing(dut, y):
-    print('Expected first 10 elements of framing: ', y[0,:10])
     for i in range(N_FRAMES):  # 50 frames of PCM data should be generated
         while (dut.fft_framing_valid_o != 1):
             await FallingEdge(dut.clk_i)
@@ -149,46 +149,33 @@ async def check_fft(dut, y, test_num):
         assert absmax <= threshold, ('FFT: deviation of {} exceeds threshold'
                                         .format(absmax))
         full_sig[i, :] = sig
-    percent_err = (full_sig - y) / np.abs(y).max() * 100
-    print('FFT: max percent error: {}'.format(percent_err.max()))
+        print('\r{}/50'.format(i+1), end='')
+    percent_err = np.abs(full_sig - y) / np.abs(y).max() * 100
+    print('FFT: max percent error: {:.03f}%'.format(percent_err.max()))
     print('FFT: received expected output.')
     plot_features((y, full_sig), test_num, '1FFT')
+    return full_sig
 
 async def check_power_spectrum(dut, y, test_num):
-    threshold = 500  # percent error permissible
-    max_percent_err_all = 0
     full_sig = np.zeros((N_FRAMES, RFFT_LEN))
     for i in range(N_FRAMES):
         while (dut.power_spectrum_valid_o != 1):
             await FallingEdge(dut.clk_i)
-        sig = np.zeros(RFFT_LEN)
+        sig = np.zeros(RFFT_LEN, dtype=np.int64)
         for j in range(RFFT_LEN):
             await Timer(1, units='us')
             sig[j] = dut.power_spectrum_data_o.value.integer
+            assert sig[j] == y[i,j]
             if j == RFFT_LEN - 1:
                 assert dut.power_spectrum_last_o == 1
             else:
                 assert dut.power_spectrum_last_o == 0
             await FallingEdge(dut.clk_i)
-        sig_max = np.abs(y[i,:]).max()
-        if sig_max > 0:
-            percent_err = (y[i,:] - sig) * 100 / sig_max
-            max_percent_err = np.abs(percent_err).max()
-            if max_percent_err > max_percent_err_all:
-                max_percent_err_all = max_percent_err
-            msg = 'Power Spectrum: {} exceeds threshold'.format(max_percent_err)
-            assert max_percent_err <= threshold, msg
         full_sig[i, :] = sig
     print('Power Spectrum: received expected output.')
-    print('Power Spectrum: Max percent error in a frame: {}.'
-                .format(max_percent_err_all))
-    percent_err = (full_sig - y) / np.abs(y).max() * 100
-    print('Power Spectrum: max percent error: {}'.format(percent_err.max()))
     plot_features((y, full_sig), test_num, '2Power_spectrum')
 
 async def check_filterbank(dut, y, test_num):
-    threshold = 2000  # percent error permissible
-    max_percent_err_all = 0
     full_sig = np.zeros((N_FRAMES, N_MFE))
     for i in range(N_FRAMES):
         sig = np.zeros(N_MFE)
@@ -197,30 +184,17 @@ async def check_filterbank(dut, y, test_num):
                 await FallingEdge(dut.clk_i)
             await Timer(1, units='us')
             sig[j] = dut.filterbank_data_o.value.integer
+            assert sig[j] == y[i,j]
             if j == N_MFE - 1:
                 assert dut.filterbank_last_o == 1
             else:
                 assert dut.filterbank_last_o == 0
             await FallingEdge(dut.clk_i)
-        sig_max = np.abs(y[i,:]).max()
-        if sig_max > 0:
-            percent_err = (y[i,:] - sig) * 100 / sig_max
-            max_percent_err = np.abs(percent_err).max()
-            if max_percent_err > max_percent_err_all:
-                max_percent_err_all = max_percent_err
-            msg = 'Filterbank: {} exceeds threshold'.format(max_percent_err)
-            assert max_percent_err <= threshold, msg
         full_sig[i, :] = sig
     print('Filterbank: received expected output.')
-    print('Filterbank: Max percent error in a frame: {}.'
-                .format(max_percent_err_all))
-    percent_err = (full_sig - y) / np.abs(y).max() * 100
-    print('Filterbank: max percent error: {}'.format(percent_err.max()))
     plot_features((y, full_sig), test_num, '3Filterbank')
 
 async def check_log(dut, y, test_num):
-    threshold = 5  # maximum permissible difference
-    max_err_all = 0
     full_sig = np.zeros((N_FRAMES, N_MFE))
     for i in range(N_FRAMES):
         sig = np.zeros(N_MFE)
@@ -229,60 +203,38 @@ async def check_log(dut, y, test_num):
                 await FallingEdge(dut.clk_i)
             await Timer(1, units='us')
             sig[j] = dut.log_data_o.value.integer
+            assert sig[j] == y[i,j]
             if j == N_MFE - 1:
                 assert dut.log_last_o == 1
             else:
                 assert dut.log_last_o == 0
             await FallingEdge(dut.clk_i)
-        diff = y[i,:] - sig
-        max_diff = np.abs(diff).max()
-        if max_diff > max_err_all:
-            max_err_all = max_diff
-        msg = 'Log: {} exceeds threshold'.format(max_diff)
-        assert max_diff <= threshold, msg
         full_sig[i, :] = sig
     print('Log: received expected output.')
-    print('Log: Max difference: {}.'.format(max_err_all))
-    percent_err = (full_sig - y) / np.abs(y).max() * 100
-    print('Log: max percent error: {}'.format(percent_err.max()))
     plot_features((y, full_sig), test_num, '4Log')
 
 async def check_dct(dut, y, test_num):
-    threshold = 1000  # maximum permissible percent error
-    max_percent_err_all = 0
     full_sig = np.zeros((N_FRAMES, N_DCT))
     for i in range(N_FRAMES):
         while (dut.dct_valid_o != 1):
             await FallingEdge(dut.clk_i)
         sig = np.zeros(N_DCT)
+        was_problem = False
         for j in range(N_DCT):
             await Timer(1, units='us')
             assert dut.dct_valid_o == 1
             sig[j] = dut.dct_data_o.value.signed_integer
+            assert sig[j] == y[i,j], 'exp {}, rec {}'.format(sig[j], y[i,j])
             if j == N_DCT - 1:
                 assert dut.dct_last_o == 1
             else:
                 assert dut.dct_last_o == 0
             await FallingEdge(dut.clk_i)
-        sig_max = np.abs(y[i,:]).max()
-        if sig_max > 0:
-            percent_err = (y[i,:] - sig) * 100 / sig_max
-            max_percent_err = np.abs(percent_err).max()
-            if max_percent_err > max_percent_err_all:
-                max_percent_err_all = max_percent_err
-            msg = 'DCT: {} exceeds threshold'.format(max_percent_err)
-            assert max_percent_err <= threshold, msg
         full_sig[i, :] = sig
     print('DCT: received expected output.')
-    print('DCT: Max percent err in a frame: {}.'
-                .format(max_percent_err_all))
-    percent_err = (full_sig - y) / np.abs(y).max() * 100
-    print('DCT: max percent error: {}'.format(percent_err.max()))
     plot_features((y, full_sig), test_num, '5DCT')
 
 async def check_quant(dut, y, test_num):
-    threshold = 1000  # maximum permissible percent error
-    max_percent_err_all = 0
     full_sig = np.zeros((N_FRAMES, N_DCT))
     for i in range(N_FRAMES):
         while (dut.quant_valid_o != 1):
@@ -292,31 +244,18 @@ async def check_quant(dut, y, test_num):
             await Timer(1, units='us')
             assert dut.quant_valid_o == 1
             sig[j] = dut.quant_data_o.value.signed_integer
+            assert sig[j] == y[i,j]
             if j == N_DCT - 1:
                 assert dut.quant_last_o == 1
             else:
                 assert dut.quant_last_o == 0
             await FallingEdge(dut.clk_i)
-        sig_max = np.abs(y[i,:]).max()
-        if sig_max > 0:
-            percent_err = (y[i,:] - sig) * 100 / sig_max
-            max_percent_err = np.abs(percent_err).max()
-            if max_percent_err > max_percent_err_all:
-                max_percent_err_all = max_percent_err
-            msg = 'Quant: {} exceeds threshold'.format(max_percent_err)
-            assert max_percent_err <= threshold, msg
-        print('\r{}/50'.format(i+1), end='')
         full_sig[i, :] = sig
-    print('\nQuant: received expected output.')
-    print('Quant: Max percent err in a frame: {}.'
-                .format(max_percent_err_all))
-    percent_err = (full_sig - y) / np.abs(y).max() * 100
-    print('Quant: max percent error: {}'.format(percent_err.max()))
+    print('Quant: received expected output.')
     plot_features((y, full_sig), test_num, '6Quant')
 
 async def check_final(dut, y, test_num):
-    threshold = 500  # maximum permissible percent error
-    max_percent_err_all = 0
+    y = y.reshape((N_FRAMES, N_DCT))
     while (dut.valid_o != 1):
         await FallingEdge(dut.clk_i)
     sig = np.zeros((N_FRAMES, N_DCT))
@@ -327,22 +266,13 @@ async def check_final(dut, y, test_num):
         for j in range(N_DCT):
             section = binstr[j*8 : (j+1)*8]
             sig[i, j] = BinaryValue(section).signed_integer
+            assert sig[i, j] == y[i,j]
         if i == N_FRAMES - 1:
             assert dut.last_o == 1
         else:
             assert dut.last_o == 0
         await FallingEdge(dut.clk_i)
-    sig = sig.reshape(N_FRAMES * N_DCT)
-    sig_max = np.abs(y).max()
-    if sig_max > 0:
-        percent_err = (y - sig) * 100 / sig_max
-        max_percent_err = np.abs(percent_err).max()
-        if max_percent_err > max_percent_err_all:
-            max_percent_err_all = max_percent_err
-        msg = 'Final: {} exceeds threshold'.format(max_percent_err)
-        assert max_percent_err <= threshold, msg
     print('Final: received expected output.')
-    print('Final: Max percent err: {}.'.format(max_percent_err_all))
     plot_features((y, sig), test_num, '7Final')
 
 def plot_features(sigs, test_num, name):
@@ -353,11 +283,12 @@ def plot_features(sigs, test_num, name):
     plt.figure()
     for i in range(2):
         plt.subplot(2,1,i+1)
-        sig = np.abs(sigs[i]).astype(np.float)
+        sig = np.abs(sigs[i]).astype(float)
         size = sig.size
         plt.imshow(sig.reshape((N_FRAMES, size//N_FRAMES)).T)
         plt.title(titles[i])
     plt.savefig(plotdir + '{}.png'.format(name), dpi=400)
+    plt.close()
 
 async def do_test(dut, test_num):
     print('Beginning test #{}.'.format(test_num))
@@ -377,6 +308,16 @@ async def do_test(dut, test_num):
     else:
         x, y = get_random_sample_test_vector(test_num)
     cocotb.fork(write_input(dut, x))
+    cocotb.fork(check_preemphasis   (dut, y[0]))
+    cocotb.fork(check_framing       (dut, y[1]))
+    fft_out = await check_fft       (dut, y[2], test_num)
+    # Take RTL FFT output and feed it to the ACO model to obtain the rest of the
+    # expected signals. This is because we don't have a bit-accurate model of
+    # the FFT.
+    y = aco.aco(x, fft_override=fft_out)
+    await reset(dut)  # reset to clear out previous values in pipeline
+    dut.en_i <= 1
+    cocotb.fork(write_input(dut, x))  # rewrite the input
     cocotb.fork(check_preemphasis   (dut, y[0]))
     cocotb.fork(check_framing       (dut, y[1]))
     cocotb.fork(check_fft           (dut, y[2], test_num))
@@ -422,6 +363,7 @@ async def main(dut):
 
     for i in range(12):
         await do_test(dut, i)
+    # await do_test(dut, 1)
 
     print('Max bitwidths encountered in python ACO model:')
     aco.print_maxes()

@@ -46,7 +46,7 @@ def write_coef_file():
         for i in range(DCT_LEN * N_COEFS):
             f.write('{:04x}\n'.format(0xffff & coefs[i]))
 
-def get_expected_output(x):
+def get_expected_output_old(x):
     '''Calculate the expected output.'''
     coefs = gen_dct_coefs()
     xl = np.split(x, N_FRAMES)
@@ -57,9 +57,17 @@ def get_expected_output(x):
         y[i*N_COEFS : (i+1)*N_COEFS] = s
     return y
 
+def get_expected_output(x):
+    '''Calculate the expected output.'''
+    coefs = gen_dct_coefs()
+    x = x.reshape((N_FRAMES, DCT_LEN))
+    y = np.dot(x, coefs).astype(np.int64)
+    y = np.right_shift(y, 15)
+    return y.flatten()
+
 def get_test_vector():
     n = DCT_LEN * N_FRAMES
-    x = np.random.randint(2**8, size=n)
+    x = np.random.randint(2**8 - 1, size=n)
     # x = np.ones(n)
     y = get_expected_output(x)
     return x, y

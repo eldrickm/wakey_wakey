@@ -111,8 +111,30 @@ def print_maxes():
     for k in maxes:
         print('\t{:20} {}'.format(k, maxes[k]))
 
-def aco(signal):
-    '''Quantized python model of the ACO pipeline.'''
+def gen_dct_coefs():
+    '''Type 2 dct with 'ortho' norm.
+    See https://docs.scipy.org/doc/scipy/reference/generated/scipy.fft.dct.html.
+    '''
+    DCT_LEN = 32
+    N_COEFS = 13
+    coefs = np.zeros((N_COEFS, DCT_LEN))
+    n = np.arange(DCT_LEN)
+    for k in range(N_COEFS):
+        coefs[k,:] = np.cos(np.pi * k * (2*n + 1) / (2 * DCT_LEN))
+        if k == 0:
+            coefs[k,:] *= 2 * np.sqrt(1/(4*DCT_LEN))
+        else:
+            coefs[k,:] *= 2 * np.sqrt(1/(2*DCT_LEN))
+    coefs = np.round(coefs * 2**15).astype(np.int16)
+    return coefs.T
+
+dct_coefs = gen_dct_coefs().astype(np.int64)
+
+def aco(signal, fft_override=None):
+    '''Quantized python model of the ACO pipeline.
+
+    If fft_override is not None, use the value supplied as the fft output for
+    the rest of the calculations.'''
     fs = 16000
     signal = signal.astype(np.int16)  # increase bitwidth for preemphasis
     detect_max(signal, 'signal')
@@ -150,7 +172,10 @@ def aco(signal):
     # TODO: Check 32b quantization, scaling
     # =========================================================================
     # fft_out = np.fft.rfft(framing_out)
-    fft_out = np.fft.rfft(framing_out) / 8  # RTL FFT scaled down by 8
+    if fft_override is None:
+        fft_out = np.fft.rfft(framing_out) / 8  # RTL FFT scaled down by 8
+    else:
+        fft_out = fft_override
 
     # split into real and imag
     fft_out_real = fft_out.real
@@ -180,38 +205,22 @@ def aco(signal):
 
     # 5) mel filterbank construction
     # =========================================================================
-    # mfcc_filterbank = speechpy.feature.filterbanks(NUM_MEL_FILTERS,
-                                                   # FFT_LENGTH // 2 + 1,
-                                                   # FS)
     mfcc_filterbank = speechpy.feature.filterbanks(NUM_MEL_FILTERS,
                                                    FFT_LENGTH,
                                                    FS)[:,:129]
 
     # quantize
-    # mfcc_filterbank = (mfcc_filterbank * (2 ** 15 - 1)).astype(np.int16)
     mfcc_filterbank = (mfcc_filterbank * (2 ** 16 - 1)).astype(np.uint16)
 
     # 6) mel filterbank application
     # =========================================================================
-    # shift by 15 to cancel initial quantization in step 5)
+    # shift by 16 to cancel initial quantization in step 5)
     mfcc_out = np.dot(power_spectrum_out, mfcc_filterbank.T)
-    # mfcc_out = np.right_shift(mfcc_out, 15)
     mfcc_out = np.right_shift(mfcc_out, 16)
     detect_max(mfcc_out, 'mfcc_out')
 
     # 7) log
     # =========================================================================
-    # deal with zero values for log
-    '''
-    mfcc_out[mfcc_out == 0] = 1
-
-    # log base 2
-    log_out = np.log2(mfcc_out)
-
-    # quantize, max value is 64, so can use 8b
-    log_out = np.floor(log_out)
-    log_out = log_out.astype(np.int8)
-    '''
     n_frames, n_mfcc = mfcc_out.shape
     log_out = np.zeros((n_frames, n_mfcc), dtype=np.uint8)
     for i in range(n_frames):
@@ -226,7 +235,9 @@ def aco(signal):
     # TODO: Check 16b quantization
     # =========================================================================
     # scipy.fft.dct
-    dct_out_raw = dct(log_out, type=2, axis=-1, norm='ortho')[:, :NUM_CEPSTRAL]
+    log_out = log_out.astype(np.int64)
+    dct_out_raw = np.dot(log_out, dct_coefs).astype(np.int64)
+    dct_out_raw = np.right_shift(dct_out_raw, 15)
 
     # quantize
     dct_out = dct_out_raw.astype(np.int16)
