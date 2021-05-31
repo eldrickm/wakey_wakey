@@ -284,10 +284,6 @@ module cfg #(
     // =========================================================================
     // Load
     // =========================================================================
-    assign conv1_rd_en_o = (ctrl == 'h2) && (conv1_sel);
-    assign conv2_rd_en_o = (ctrl == 'h2) && (conv2_sel);
-    assign fc_rd_en_o    = (ctrl == 'h2) && (fc_sel);
-
     reg conv1_rd_en_d;
     reg conv2_rd_en_d;
     reg fc_rd_en_d;
@@ -298,11 +294,15 @@ module cfg #(
             conv2_rd_en_d <= 1'b0;
             fc_rd_en_d    <= 1'b0;
         end else begin
-            conv1_rd_en_d <= conv1_rd_en_o;
-            conv2_rd_en_d <= conv2_rd_en_o;
-            fc_rd_en_d    <= fc_rd_en_o;
+            conv1_rd_en_d <= (ctrl == 'h2) && (conv1_sel);
+            conv2_rd_en_d <= (ctrl == 'h2) && (conv2_sel);
+            fc_rd_en_d    <= (ctrl == 'h2) && (fc_sel);
         end
     end
+
+    assign conv1_rd_en_o = conv1_rd_en_d;
+    assign conv2_rd_en_o = conv2_rd_en_d;
+    assign fc_rd_en_o    = fc_rd_en_d;
 
 
     // =========================================================================
