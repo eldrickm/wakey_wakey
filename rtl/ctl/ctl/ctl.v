@@ -8,7 +8,7 @@
 // =============================================================================
 
 module ctl # (
-    parameter F_SYSTEM_CLK = 100  // 100 is used for unit test bench
+    parameter F_SYSTEM_CLK = 1000  // 100 is used for unit test bench
 ) (
     // clock and reset
     input                                   clk_i,
@@ -26,7 +26,8 @@ module ctl # (
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam COUNT_CYCLES   = $rtoi(0.05 * F_SYSTEM_CLK);
+    // 5ms empirically determined with microphone. See test/pdm_capture_test.
+    localparam COUNT_CYCLES   = $rtoi(0.005 * F_SYSTEM_CLK);
     localparam COUNTER_BW     = $clog2(COUNT_CYCLES + 1);
 
     // =========================================================================
