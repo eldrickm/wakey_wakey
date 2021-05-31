@@ -50,7 +50,7 @@ set ::env(FP_PIN_ORDER_CFG) $script_dir/pin_order.cfg
 # set ::env(PL_BASIC_PLACEMENT) 1
 # set ::env(PL_TARGET_DENSITY) 0.05
 # set ::env(PL_BASIC_PLACEMENT) 0
-set ::env(PL_TARGET_DENSITY) 0.50
+set ::env(PL_TARGET_DENSITY) 0.70
 
 # If you're going to use multiple power domains, then keep this disabled.
 set ::env(RUN_CVC) 0
