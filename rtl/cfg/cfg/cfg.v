@@ -159,9 +159,25 @@ module cfg #(
     // =========================================================================
     // Address Assignment
     // =========================================================================
-    assign conv1_rd_wr_addr_o = addr[2:0];
-    assign conv2_rd_wr_addr_o = addr[3:0];
-    assign fc_rd_wr_addr_o    = addr[7:0];
+    reg [CONV1_ADDR_BW - 1 : 0] conv1_addr;
+    reg [CONV2_ADDR_BW - 1 : 0] conv2_addr;
+    reg [FC_ADDR_BW - 1 : 0] fc_addr;
+
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            conv1_addr <= 'b0;
+            conv2_addr <= 'b0;
+            fc_addr    <= 'b0;
+        end else begin
+            conv1_addr <= addr[2:0];
+            conv2_addr <= addr[3:0];
+            fc_addr    <= addr[7:0];
+        end
+    end
+
+    assign conv1_rd_wr_addr_o = conv1_addr;
+    assign conv2_rd_wr_addr_o = conv2_addr;
+    assign fc_rd_wr_addr_o    = fc_addr;
 
     // =========================================================================
     // Data Assignment
@@ -244,9 +260,25 @@ module cfg #(
     // =========================================================================
     // Store
     // =========================================================================
-    assign conv1_wr_en_o = (ctrl == 'h1) && (conv1_sel);
-    assign conv2_wr_en_o = (ctrl == 'h1) && (conv2_sel);
-    assign fc_wr_en_o    = (ctrl == 'h1) && (fc_sel);
+    reg conv1_store;
+    reg conv2_store;
+    reg fc_store;
+
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            conv1_store <= 1'b0;
+            conv2_store <= 1'b0;
+            fc_store    <= 1'b0;
+        end else begin
+            conv1_store <= (ctrl == 'h1) && (conv1_sel);
+            conv2_store <= (ctrl == 'h1) && (conv2_sel);
+            fc_store    <= (ctrl == 'h1) && (fc_sel);
+        end
+    end
+
+    assign conv1_wr_en_o = conv1_store;
+    assign conv2_wr_en_o = conv2_store;
+    assign fc_wr_en_o    = fc_store;
 
 
     // =========================================================================
