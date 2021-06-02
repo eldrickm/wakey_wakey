@@ -17,6 +17,7 @@ ratio_in = 250
 f_pdm = f_pcm_in * ratio_in  # 4 MHz
 f_pcm_out = 16000
 ratio_out = int(f_pdm / f_pcm_out)  # 250
+# ratio_out = 125
 
 def read_sample_file(fname):
     return wavfile.read(fname)[1]
@@ -49,6 +50,11 @@ def pcm_to_pdm_pwm(x):
     signal, effectively creating PWM. This results in much less high frequency
     noise in the signal.'''
     x = shift_zero_to_one(x)
+    # added
+    x -= 0.5
+    x /= 13
+    x += 0.5
+    # end
     x = x * ratio_in  # scale up by window so that value is # ones
     x = x.astype(np.uint8)
     repeats = np.zeros(x.size * 2, dtype=np.uint8)
@@ -118,8 +124,8 @@ def pdm_to_pcm(x, n_cic=1):
     for i in range(n_cic - 1):
         x = cicn(x)
     x = x[::ratio_out]
-    # x[0] = 0
-    x = x[1:]  # skip first value, which is garbage
+    x[0] = 0
+    # x = x[1:]  # skip first value, which is garbage
     return x
 
 # =========== Plotting ============

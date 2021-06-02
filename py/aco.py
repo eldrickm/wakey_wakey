@@ -345,6 +345,7 @@ def get_features_quantized(all_fnames):
 def shuffle_and_split(all_features, all_labels):
     '''First shuffle the data randomly, then split it into test and train.'''
     np.random.seed(1)
+    n = len(all_labels)
     idx = np.arange(n, dtype=int)
     np.random.shuffle(idx)
     features_shuffled = all_features[idx,:]

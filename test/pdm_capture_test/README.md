@@ -22,3 +22,12 @@ cat [serial device] > py/out.bin
 
 Run `py/parse_pdm_data.py` to process the PDM bitstream into .wav files that can
 be listened to.
+
+### Results
+
+- At 4MHz, the PDM clock has to be held low for at least 500us for the
+microphone's VAD pin to reset. To ensure enough margin, a timeout of 5ms is
+baked into the CTL block of the RTL.
+- 2MHz and 4MHz sound quality is comparable. Single CIC stage leaves a decent
+amount of high frequency noise, but voice is still clearly audible. A second
+CIC stage removes this effectively. You can listen to the results in py/.
