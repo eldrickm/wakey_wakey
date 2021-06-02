@@ -7,7 +7,7 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import FallingEdge, Timer
 
-F_SYSTEM_CLK = 100  # test frequency
+F_SYSTEM_CLK = 1000  # test frequency
 COUNT_CYCLES = 5  # cycles to wait after VAD goes low
 
 def get_msg(i, received, expected):
