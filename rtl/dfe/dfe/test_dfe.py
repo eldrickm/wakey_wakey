@@ -23,7 +23,7 @@ def get_test_vector():
     n = 40  # 40 PCM samples, takes a few seconds to simulate
     x = pdm.read_sample_file(pdm.SAMPLE_FNAME)
     x = pdm.pcm_to_pdm_err(x)
-    y = pdm.pdm_to_pcm(x, 1)
+    y = pdm.pdm_to_pcm(x, 2)
     
     # cut to a reasonable length
     start_pdm = start * WINDOW_LEN
@@ -46,12 +46,13 @@ async def check_output(dut):
         dut.pdm_data_i <= int(x[i])
         await Timer(1, units='us')  # let combinational logic work
         if (dut.valid_o.value.integer):
-            expected_val = y[j]
-            received_val = dut.data_o.value.signed_integer
-            assert received_val == expected_val, get_msg(i, received_val,
-                                                         expected_val)
-            print(' \tRecived expected value of {} from DUT.'
-                    .format(expected_val))
+            if (j >= 2):
+                expected_val = y[j]
+                received_val = dut.data_o.value.signed_integer
+                assert received_val == expected_val, get_msg(j, received_val,
+                                                             expected_val)
+                print(' \tRecived expected value of {} from DUT.'
+                        .format(expected_val))
             j += 1
 
         pdm_clk_val = dut.pdm_clk_o.value.integer
