@@ -131,6 +131,20 @@ module filter (
         .data_o(integrator_data_o2),
         .valid_o(integrator_valid_o2)
     );
+    // register outputs to reduce long path length
+    reg signed [INTEGRATOR_O_BW2 - 1 : 0] integrator_data_o_q2;
+    reg integrator_valid_o_q2;
+
+    always @(posedge clk_i) begin
+        if (!rst_n_i | !en_i) begin
+            integrator_data_o_q2 <= 'd0;
+            integrator_valid_o_q2 <= 'd0;
+        end else begin
+            integrator_data_o_q2 <= integrator_data_o2;
+            integrator_valid_o_q2 <= integrator_valid_o2;
+        end
+    end
+
 
     // =========================================================================
     // Quantization
@@ -139,11 +153,11 @@ module filter (
     wire quant_valid_o;
     wire signed [INTEGRATOR_O_BW2 - QUANT_SHIFT - 1 : 0] shifted;
     wire signed [INTEGRATOR_O_BW2 - QUANT_SHIFT - 1 : 0] clipped;
-    assign shifted = integrator_data_o2 >>> QUANT_SHIFT;
+    assign shifted = integrator_data_o_q2 >>> QUANT_SHIFT;
     assign clipped = (shifted > 'sd127) ? 'sd127
                         : ((shifted < (-'sd128)) ? (-'sd128) : shifted);
     assign quant_data_o = clipped;
-    assign quant_valid_o = integrator_valid_o2;
+    assign quant_valid_o = integrator_valid_o_q2;
 
     // =========================================================================
     // Decimation
