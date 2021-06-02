@@ -29,7 +29,9 @@ module filter (
     // These are not parameterized in the downstream modules; they are only
     // here for readability
     localparam OUTPUT_BW = 8;
-    localparam COMB_O_BW = 2;
+    localparam COMB_I_BW = 2;  // comb input bw must be 2 so two's complement
+                               // can represent +1
+    localparam COMB_O_BW = 3;
     localparam INTEGRATOR_O_BW = 8;
     localparam DECIMATOR_O_BW = 8;
     localparam DC_CANCEL_O_BW = 8;
@@ -40,7 +42,9 @@ module filter (
     // =========================================================================
     wire signed [COMB_O_BW - 1 : 0] comb_data_o;
     wire comb_valid_o;
-    comb comb_inst (
+    comb comb_inst # (
+        .I_BW(2)
+    ) (
         .clk_i(clk_i),
         .rst_n_i(rst_n_i),
         .en_i(en_i),

@@ -13,7 +13,8 @@ def get_msg(i, received, expected):
     return 'idx {}, dut output of {}, expected {}'.format(i, received, expected)
 
 def get_test_vector():
-    x = np.random.randint(2, size=(WINDOW_LEN * 3))
+    # x = np.random.randint(2, size=(WINDOW_LEN * 3))
+    x = np.random.randint(-128, 127, size=(WINDOW_LEN * 3))
     rolled = np.roll(x, WINDOW_LEN)
     rolled[:WINDOW_LEN] = 0
     y = x - rolled

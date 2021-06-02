@@ -8,19 +8,21 @@
 // WINDOW_LEN subtracted from the input.
 // =============================================================================
 
-module comb (
+module comb # (
+    parameter I_BW              = 8   // preemphasis input
+) (
     // clock and reset
-    input               clk_i,
-    input               rst_n_i,
+    input                       clk_i,
+    input                       rst_n_i,
+    input                       en_i,
 
     // streaming input
-    input               en_i,
-    input               data_i,
-    input               valid_i,
+    input signed [I_BW - 1 : 0] data_i,
+    input                       valid_i,
 
     // streaming output
-    output signed [1:0] data_o,
-    output              valid_o
+    output signed [I_BW : 0]    data_o,
+    output                      valid_o
 );
 
     // =========================================================================
@@ -31,7 +33,7 @@ module comb (
     // =========================================================================
     // Delay Block
     // =========================================================================
-    reg [WINDOW_LEN - 1 : 0] reg_fifo;
+    reg signed [I_BW - 1 : 0] reg_fifo [WINDOW_LEN - 1 : 0];
     // First register
     always @(posedge clk_i) begin
         if (!rst_n_i | !en_i) begin
