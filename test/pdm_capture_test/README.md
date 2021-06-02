@@ -31,3 +31,6 @@ baked into the CTL block of the RTL.
 - 2MHz and 4MHz sound quality is comparable. Single CIC stage leaves a decent
 amount of high frequency noise, but voice is still clearly audible. A second
 CIC stage removes this effectively. You can listen to the results in py/.
+- However, The low bit depth from the microphone leaves detection of the wake
+word difficult for the rest of the pipeline. For this reason, we are switching
+to using a second CIC filter stage. This is now implemented in pdm.py.

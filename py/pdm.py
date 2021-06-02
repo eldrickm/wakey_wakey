@@ -123,6 +123,8 @@ def pdm_to_pcm(x, n_cic=1):
     x = cic1(x)
     for i in range(n_cic - 1):
         x = cicn(x)
+        x = x / 2**5
+    x = np.clip(x, -128, 127).astype(np.int8)
     x = x[::ratio_out]
     x[0] = 0
     # x = x[1:]  # skip first value, which is garbage

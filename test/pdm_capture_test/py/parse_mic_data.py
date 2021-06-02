@@ -65,8 +65,27 @@ def pad_pdm(x_pdm):
     x[-REC_LEN:] = x_pdm
     return x
 
+maxes = {}
+log_maxes = {}
+def detect_max(arr, name):
+    '''Detect the maximum bit width at various stages of the pipeline. Does
+    not include the sign bit for signed numbers.'''
+    global maxes
+    absmax = np.abs(arr.astype(np.float64)).max()
+    absmax = np.max((absmax, 1))  # avoid inf in log
+    val = np.log2(absmax)  # consider absolute magnitude bits
+    # print(name, 'bitwidth', val)
+    if (name not in log_maxes) or (log_maxes[name] < val):
+        log_maxes[name] = val
+    if (name not in maxes) or (maxes[name] < absmax):
+        maxes[name] = absmax
+
+def print_maxes():
+    print('Max bit values detected during featurisation:')
+    for k in maxes:
+        print('\t{:20} {:.03f}   {:.03f}'.format(k, log_maxes[k], maxes[k]))
+
 def process_pdm_wake(source='mic', method='cic1'):
-    rescale = True
     if source[-4:] == '.wav':  # 16b wavfile saved on computer
         fs, x = wavfile.read(source)
         x = x[:16000] / 2**8
@@ -81,18 +100,21 @@ def process_pdm_wake(source='mic', method='cic1'):
         raise Exception('unkown source ' + source)
     if source[-4] != '.wav':  # process pdm to pcm if not a wav file
         if method == 'cic1':
-            dfe_out = pdm.pdm_to_pcm(x, 1)
-            dfe_out *= 15  # cic1
+            dfe_out = pdm.pdm_to_pcm(x, 1).astype(np.int16)
+            dfe_out *= 8
+            dfe_out = np.clip(dfe_out, -128, 127).astype(np.int8)
         elif method == 'cic2':
             dfe_out = pdm.pdm_to_pcm(x, 2)
-            dfe_out = dfe_out / 10  # cic2
+            # dfe_out = dfe_out / 2**5  # scaling now in pdm.py
+            # dfe_out = np.clip(dfe_out, -128, 127).astype(np.int8)
         elif method == 'ideal':  # ideal decimation
             dfe_out = signal.decimate(x, 10)
             dfe_out = signal.decimate(dfe_out, 5)
             dfe_out = signal.decimate(dfe_out, 5)
         else:
             raise Exception('unkown method ' + method)
-    if rescale:  # rescaling
+    detect_max(dfe_out, 'dfe_out')
+    if False:  # rescaling
         dfe_out = dfe_out.astype(np.float32)
         dfe_out[:5] = dfe_out.mean()
         dfe_out -= dfe_out.min()
@@ -178,9 +200,8 @@ def eval_pipeline(method='cic1'):
                     n_valid_sleep += 1
     total = n_valid_wake + n_valid_sleep + n_false_wake + n_false_sleep
     accuracy = (n_valid_wake + n_valid_sleep) / total * 100
-    import ipdb
-    ipdb.set_trace()
     print('Accuracy: {:.03f}%'.format(accuracy))
+    print_maxes()
 
 if __name__ == '__main__':
     process_pdm_dfe()
