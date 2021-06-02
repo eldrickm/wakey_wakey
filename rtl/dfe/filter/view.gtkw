@@ -1,29 +1,110 @@
 [*]
 [*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
-[*] Sun May  9 23:06:41 2021
+[*] Wed Jun  2 06:49:11 2021
 [*]
 [dumpfile] "/home/mjpauly/repos/wakey_wakey/rtl/dfe/filter/wave.vcd"
-[dumpfile_mtime] "Sun May  9 23:06:05 2021"
-[dumpfile_size] 728270
+[dumpfile_mtime] "Wed Jun  2 06:49:11 2021"
+[dumpfile_size] 1261568
 [savefile] "/home/mjpauly/repos/wakey_wakey/rtl/dfe/filter/view.gtkw"
-[timestart] 0
-[size] 1396 859
+[timestart] 4840800000
+[size] 1625 904
 [pos] -1 -1
-*-23.000000 16860000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-25.000000 2519600000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] filter.
 [sst_width] 233
-[signals_width] 118
+[signals_width] 302
 [sst_expanded] 1
-[sst_vpaned_height] 243
+[sst_vpaned_height] 259
+@200
+-Filter Top
 @28
 filter.clk_i
 filter.rst_n_i
+filter.en_i
+@200
+-
+@28
 filter.data_i
+filter.valid_i
 @200
 -
 @28
 filter.valid_o
-@421
+@420
 filter.data_o[7:0]
+@200
+-
+-Comb1
+@28
+filter.comb_inst1.data_i[1:0]
+filter.comb_inst1.valid_i
+filter.comb_inst1.data_o[1:0]
+filter.comb_inst1.valid_o
+@200
+-
+-Integrator1
+@28
+filter.integrator_inst1.data_i[1:0]
+filter.integrator_inst1.valid_i
+@420
+filter.integrator_inst1.data_o[8:0]
+@28
+filter.integrator_inst1.valid_o
+@200
+-
+-DC Cancel
+@420
+filter.dc_cancel_data_o[7:0]
+@28
+filter.dc_cancel_valid_o
+@200
+-
+-Comb2
+@420
+filter.comb_inst2.data_i[7:0]
+@28
+filter.comb_inst2.valid_i
+@420
+filter.comb_inst2.data_o[8:0]
+@28
+filter.comb_inst2.valid_o
+@200
+-
+-Integrator2
+@420
+filter.integrator_inst2.data_i[8:0]
+@28
+filter.integrator_inst2.valid_i
+@420
+filter.integrator_inst2.data_o[16:0]
+@28
+filter.integrator_inst2.valid_o
+@420
+filter.integrator_inst2.accumulated[16:0]
+@200
+-
+-Quant
+@421
+filter.shifted[0:10]
+@420
+filter.quant_data_o[7:0]
+@28
+filter.quant_valid_o
+@200
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
 [pattern_trace] 1
 [pattern_trace] 0

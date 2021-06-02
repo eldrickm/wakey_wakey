@@ -16,12 +16,15 @@ def get_test_vector():
     x = np.zeros(n+1)
     current = 0
     for i in range(n):
-        if y[i] == 0:
-            new = np.random.randint(0, 2)  # 0 or 1
-        elif y[i] == 250:
-            new = np.random.randint(-1, 1)  # -1 or 0
+        if y[i] < 10:
+            new = np.random.randint(0, 11)  # 0 to 10
+            # new = np.random.randint(0, 1)  # 0 to 10
+        elif y[i] > 240:
+            new = np.random.randint(-10, 1)  # -10 to 0
+            # new = np.random.randint(-1, 1)  # -10 to 0
         else:
-            new = np.random.randint(-1, 2)  # -1, 0, or 1
+            new = np.random.randint(-10, 11)  # -10 to 10
+            # new = np.random.randint(-1, 2)  # -10 to 10
         x[i+1] = new
         y[i+1] = y[i] + new
     return x[1:], y[1:]

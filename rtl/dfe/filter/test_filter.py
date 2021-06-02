@@ -17,12 +17,17 @@ def get_msg(i, received, expected):
     return 'idx {}, dut output of {}, expected {}'.format(i, received, expected)
 
 def get_test_vector():
-    n = 10
-    x = np.random.randint(2**15, size=n)
+    n = 100
+    # x = np.random.randint(2**15, size=n)
+    t = np.linspace(0, 1, n)
+    x = np.cos(2*np.pi * 5 * t) * (2**15 - 1)
+
     x = pdm.pcm_to_pdm_pwm(x)
+    # x = pdm.pcm_to_pdm_random(x)
+    # x = pdm.pcm_to_pdm_err(x)
     print('generated pdm sig', x[10:])
     print('len x', len(x))
-    y = pdm.pdm_to_pcm(x, 1)
+    y = pdm.pdm_to_pcm(x, 2)
     print('expected values', y)
     print('len y', len(y))
     return x, y
@@ -34,15 +39,18 @@ async def check_output(dut):
     j = 0  # index into y
     while i < len(x):
         dut.data_i <= int(x[i])
-        valid = np.random.randint(2)  # randomly de-assert valid
+        # valid = np.random.randint(2)  # randomly de-assert valid
+        valid = 1
         dut.valid_i <= (1 if valid else 0)
         await Timer(1, units='us')  # let combinational logic work
         if (dut.valid_o.value.integer):
             expected_val = y[j]
             received_val = dut.data_o.value.signed_integer
-            assert received_val == expected_val, get_msg(i, received_val,
-                                                         expected_val)
+            if (j >= 2):  # first TWO values are garbage
+                assert received_val == expected_val, get_msg(i, received_val,
+                                                             expected_val)
             j += 1
+            print('\r{}/{}'.format(j, len(y)), end='')
         if (valid):
             i += 1
         await FallingEdge(dut.clk_i)

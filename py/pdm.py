@@ -51,9 +51,9 @@ def pcm_to_pdm_pwm(x):
     noise in the signal.'''
     x = shift_zero_to_one(x)
     # added
-    x -= 0.5
-    x /= 13
-    x += 0.5
+    # x -= 0.5
+    # x /= 13
+    # x += 0.5
     # end
     x = x * ratio_in  # scale up by window so that value is # ones
     x = x.astype(np.uint8)
@@ -123,7 +123,8 @@ def pdm_to_pcm(x, n_cic=1):
     x = cic1(x)
     for i in range(n_cic - 1):
         x = cicn(x)
-        x = x / 2**5
+        # x = x / 2**5
+        x = np.right_shift(x, 5)
     x = np.clip(x, -128, 127).astype(np.int8)
     x = x[::ratio_out]
     x[0] = 0

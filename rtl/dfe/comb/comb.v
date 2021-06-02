@@ -9,20 +9,21 @@
 // =============================================================================
 
 module comb # (
-    parameter I_BW              = 8   // preemphasis input
+    parameter I_BW              = 8,
+    parameter O_BW              = 9
 ) (
     // clock and reset
-    input                       clk_i,
-    input                       rst_n_i,
-    input                       en_i,
+    input                               clk_i,
+    input                               rst_n_i,
+    input                               en_i,
 
     // streaming input
-    input signed [I_BW - 1 : 0] data_i,
-    input                       valid_i,
+    input signed [I_BW - 1 : 0]         data_i,
+    input                               valid_i,
 
     // streaming output
-    output signed [I_BW : 0]    data_o,
-    output                      valid_o
+    output signed [O_BW - 1 : 0]        data_o,
+    output                              valid_o
 );
 
     // =========================================================================

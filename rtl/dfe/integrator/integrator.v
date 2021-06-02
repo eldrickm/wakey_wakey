@@ -9,30 +9,35 @@
 // misinterpreted as a -1, so it is not allowed.
 // =============================================================================
 
-module integrator (
+module integrator # (
+    parameter I_BW = 5,
+    parameter O_BW = 8
+) (
     // clock and reset
     input                               clk_i,
     input                               rst_n_i,
 
     // streaming input
     input                               en_i,
-    input signed [1:0]                  data_i,
+    input signed [I_BW - 1 : 0]         data_i,
     input                               valid_i,
 
     // streaming output
-    output [OUTPUT_BW - 1 : 0]          data_o,
+    output signed [O_BW - 1 : 0]        data_o,
     output                              valid_o
 );
 
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam OUTPUT_BW = 8;
+    // localparam O_BW = I_BW + 8;  // WINDOW_LEN of 250 means bitwidth could be up
+                                 // 8 times greater
 
     // =========================================================================
     // Accumulation Register
     // =========================================================================
-    reg [OUTPUT_BW - 1 : 0] accumulated;
+    reg signed [O_BW - 1: 0] accumulated;  // accumulated is signed to make
+                                        // signed math work
     always @(posedge clk_i) begin
         if (!rst_n_i | !en_i) begin
             accumulated <= 'd0;
@@ -48,8 +53,7 @@ module integrator (
     // =========================================================================
     // Output Assignment
     // =========================================================================
-    assign data_o  = (data_i[1]) ? accumulated - 'd1
-                                 : accumulated + data_i[0];
+    assign data_o  = accumulated + data_i;
     assign valid_o = (en_i & valid_i);
 
     // =========================================================================
