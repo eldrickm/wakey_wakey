@@ -85,7 +85,7 @@ def print_maxes():
     for k in maxes:
         print('\t{:20} {:.03f}   {:.03f}'.format(k, log_maxes[k], maxes[k]))
 
-def process_pdm_wake(source='mic', method='cic1'):
+def process_pdm_wake(source='mic', method='cic2'):
     if source[-4:] == '.wav':  # 16b wavfile saved on computer
         fs, x = wavfile.read(source)
         x = x[:16000] / 2**8
@@ -98,7 +98,7 @@ def process_pdm_wake(source='mic', method='cic1'):
         x = pad_pdm(x)
     else:
         raise Exception('unkown source ' + source)
-    if source[-4] != '.wav':  # process pdm to pcm if not a wav file
+    if source[-4:] != '.wav':  # process pdm to pcm if not a wav file
         if method == 'cic1':
             dfe_out = pdm.pdm_to_pcm(x, 1).astype(np.int16)
             dfe_out *= 8
