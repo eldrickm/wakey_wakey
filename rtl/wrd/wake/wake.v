@@ -28,7 +28,7 @@ module wake #(
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam SUSTAIN_LEN = 1024;  // TODO: increase sustain len
+    localparam SUSTAIN_LEN = 8000000;  // half second
     localparam COUNTER_BW = $clog2(SUSTAIN_LEN);
 
     // =========================================================================
