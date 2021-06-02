@@ -137,8 +137,8 @@ module filter (
     // =========================================================================
     wire signed [QUANT_O_BW - 1 : 0] quant_data_o;
     wire quant_valid_o;
-    wire signed [INTEGRATOR_O_BW2 - QUANT_SHIFT - 1] shifted;
-    wire signed [INTEGRATOR_O_BW2 - QUANT_SHIFT - 1] clipped;
+    wire signed [INTEGRATOR_O_BW2 - QUANT_SHIFT - 1 : 0] shifted;
+    wire signed [INTEGRATOR_O_BW2 - QUANT_SHIFT - 1 : 0] clipped;
     assign shifted = integrator_data_o2 >>> QUANT_SHIFT;
     assign clipped = (shifted > 'sd127) ? 'sd127
                         : ((shifted < (-'sd128)) ? (-'sd128) : shifted);
