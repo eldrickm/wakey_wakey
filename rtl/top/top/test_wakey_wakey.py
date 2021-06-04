@@ -565,7 +565,7 @@ async def do_mfcc_test(dut):
 
 
 @cocotb.test()
-async def test_cfg(dut):
+async def test_wakey_wakey(dut):
     # Create a 10us period clock on port clk
     clock = Clock(dut.clk_i, 10, units="us")
     cocotb.fork(clock.start())
@@ -579,38 +579,149 @@ async def test_cfg(dut):
     dut.wbs_sel_i <= 0
     dut.wbs_dat_i <= 0
     dut.wbs_adr_i <= 0
-    dut.data_i <= 0
-    dut.valid_i <= 0
-    dut.last_i <= 0
+    dut.pdm_data_i <= 0
+    dut.vad_i <= 0
 
     # wait long enough for reset to be effective
     for _ in range(50):
         await FallingEdge(dut.clk_i)
     dut.rst_n_i <= 1
+    dut.vad_i <= 1
     await FallingEdge(dut.clk_i)
 
-    n_fixed_tests = 4  # number of different types of fixed tests
-    for i in range(n_fixed_tests):
-        print('=' * 100)
-        print('Beginning fixed test {}/{}.'.format(i+1, n_fixed_tests))
-        print('=' * 100)
-        await do_fixed_test(dut, i)
+    print('=' * 100)
+    print('Beginning Load/Store Test')
+    print('=' * 100)
+    # Store Test
+    # Sequential Store - Conv 1 Memory Bank 0 (Weight - 104b)
+    for i in range(8):
+        await cfg_store(dut, i, i + 3, i + 2, i + 1, i)
+    # Sequential Store - Conv 1 Memory Bank 1 (Weight - 104b)
+    for i in range(8):
+        await cfg_store(dut, i + 0x10, i + 3, i + 2, i + 1, i)
+    # Sequential Store - Conv 1 Memory Bank 2 (Weight - 104b)
+    for i in range(8):
+        await cfg_store(dut, i + 0x20, i + 3, i + 2, i + 1, i)
+    # Sequential Store - Conv 1 Memory Bank 3 (Bias - 32b)
+    for i in range(8):
+        await cfg_store(dut, i + 0x30, i + 3, i + 2, i + 1, i)
+    # Sequential Store - Conv 1 Memory Bank 4 (Shift - 5b)
+    await cfg_store(dut, 0x40, i + 3, i + 2, i + 1, i)
+    # Sequential Store - Conv 2 Memory Bank 0 (Weight - 64b)
+    for i in range(16):
+        await cfg_store(dut, i + 0x50, i + 3, i + 2, i + 1, i)
+    # Sequential Store - Conv 2 Memory Bank 1 (Weight - 64b)
+    for i in range(16):
+        await cfg_store(dut, i + 0x60, i + 3, i + 2, i + 1, i)
+    # Sequential Store - Conv 2 Memory Bank 2 (Weight - 64b)
+    for i in range(16):
+        await cfg_store(dut, i + 0x70, i + 3, i + 2, i + 1, i)
+    # Sequential Store - Conv 2 Memory Bank 3 (Bias - 32b)
+    for i in range(16):
+        await cfg_store(dut, i + 0x80, i + 3, i + 2, i + 1, i)
+    # Sequential Store - Conv 2 Memory Bank 4 (Shift - 5b)
+    await cfg_store(dut, 0x90, i + 3, i + 2, i + 1, i)
+    # Sequential Store - FC Memory Bank 0 (Weight - 8b)
+    for i in range(208):
+        await cfg_store(dut, i + 0x100, i + 3, i + 2, i + 1, i)
+    # Sequential Store - FC Memory Bank 1 (Weight - 8b)
+    for i in range(208):
+        await cfg_store(dut, i + 0x200, i + 3, i + 2, i + 1, i)
+    # Sequential Store - FC Memory Bank 3 (Bias - 32b)
+    await cfg_store(dut, 0x300, i + 3, i + 2, i + 1, i)
+    # Sequential Store - FC Memory Bank 3 (Bias - 32b)
+    await cfg_store(dut, 0x400, i + 3, i + 2, i + 1, i)
 
-    n_random_tests = 3  # number of different types of random tests
-    n_repeats = 5  # how many times to repeat each random test
-    for i in range(n_random_tests):
-        for j in range(n_repeats):
-            print('=' * 100)
-            print('Beginning random test {}/{} repeat num {}/{}.' \
-                    .format(i+1, n_random_tests, j+1, n_repeats))
-            print('=' * 100)
-            await do_random_test(dut, i)
+    # Load Test
+    # Sequential Load - Conv 1 Memory Bank 0 (Weight - 104b)
+    for i in range(8):
+        observed = await cfg_load(dut, i)
+        expected = [i + 3, i + 2, i + 1, i]
+        assert observed == expected
+    # Sequential Load - Conv 1 Memory Bank 1 (Weight - 104b)
+    for i in range(8):
+        observed = await cfg_load(dut, i + 0x10)
+        expected = [i + 3, i + 2, i + 1, i]
+        assert observed == expected
+    # Sequential Load - Conv 1 Memory Bank 2 (Weight - 104b)
+    for i in range(8):
+        observed = await cfg_load(dut, i + 0x20)
+        expected = [i + 3, i + 2, i + 1, i]
+        assert observed == expected
+    # Sequential Load - Conv 1 Memory Bank 3 (Bias - 32b)
+    for i in range(8):
+        observed = await cfg_load(dut, i + 0x30)
+        expected = [0, 0, 0, i]
+        assert observed == expected
+    # Sequential Load - Conv 1 Memory Bank 4 (Shift - 5b)
+    observed = await cfg_load(dut, 0x40)
+    expected = [0, 0, 0, i]
+    assert observed == expected
+    # Sequential Load - Conv 2 Memory Bank 0 (Weight - 64b)
+    for i in range(16):
+        observed = await cfg_load(dut, i + 0x50)
+        expected = [0, 0, i + 1, i]
+        assert observed == expected
+    # Sequential Load - Conv 2 Memory Bank 1 (Weight - 64b)
+    for i in range(16):
+        observed = await cfg_load(dut, i + 0x60)
+        expected = [0, 0, i + 1, i]
+        assert observed == expected
+    # Sequential Load - Conv 2 Memory Bank 2 (Weight - 64b)
+    for i in range(16):
+        observed = await cfg_load(dut, i + 0x70)
+        expected = [0, 0, i + 1, i]
+        assert observed == expected
+    # Sequential Load - Conv 2 Memory Bank 3 (Bias - 32b)
+    for i in range(16):
+        observed = await cfg_load(dut, i + 0x80)
+        expected = [0, 0, 0, i]
+        assert observed == expected
+    # Sequential Load - Conv 2 Memory Bank 4 (Shift - 5b)
+    observed = await cfg_load(dut, 0x90)
+    expected = [0, 0, 0, i]
+    assert observed == expected
+    # Sequential Load - FC Memory Bank 0 (Weight - 8b)
+    for i in range(208):
+        observed = await cfg_load(dut, i + 0x100)
+        expected = [0, 0, 0, i]
+        assert observed == expected
+    # Sequential Load - FC Memory Bank 1 (Weight - 8b)
+    for i in range(208):
+        observed = await cfg_load(dut, i + 0x200)
+        expected = [0, 0, 0, i]
+        assert observed == expected
+    # Sequential Load - FC Memory Bank 3 (Bias - 32b)
+    observed = await cfg_load(dut, 0x300)
+    expected = [0, 0, 0, i]
+    assert observed == expected
+    # Sequential Load - FC Memory Bank 3 (Bias - 32b)
+    observed = await cfg_load(dut, 0x400)
+    expected = [0, 0, 0, i]
+    assert observed == expected
 
-    n_mfcc_tests = 10  # number of tests to do with real MFCC features
-    for i in range(n_mfcc_tests):
-        print('=' * 100)
-        print('Beginning MFCC test {}/{} '.format(i+1, n_mfcc_tests))
-        print('=' * 100)
-        params = na.get_params()
-        await write_mem_params(dut, params)
-        await do_mfcc_test(dut)
+    #  n_fixed_tests = 4  # number of different types of fixed tests
+    #  for i in range(n_fixed_tests):
+    #      print('=' * 100)
+    #      print('Beginning fixed test {}/{}.'.format(i+1, n_fixed_tests))
+    #      print('=' * 100)
+    #      await do_fixed_test(dut, i)
+    #
+    #  n_random_tests = 3  # number of different types of random tests
+    #  n_repeats = 5  # how many times to repeat each random test
+    #  for i in range(n_random_tests):
+    #      for j in range(n_repeats):
+    #          print('=' * 100)
+    #          print('Beginning random test {}/{} repeat num {}/{}.' \
+    #                  .format(i+1, n_random_tests, j+1, n_repeats))
+    #          print('=' * 100)
+    #          await do_random_test(dut, i)
+    #
+    #  n_mfcc_tests = 10  # number of tests to do with real MFCC features
+    #  for i in range(n_mfcc_tests):
+    #      print('=' * 100)
+    #      print('Beginning MFCC test {}/{} '.format(i+1, n_mfcc_tests))
+    #      print('=' * 100)
+    #      params = na.get_params()
+    #      await write_mem_params(dut, params)
+    #      await do_mfcc_test(dut)

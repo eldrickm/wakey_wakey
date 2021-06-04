@@ -59,12 +59,18 @@ module quantizer #(
     assign last_o  = last_q;
     assign ready_o = ready_q;
 
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
     `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
     initial begin
         $dumpfile ("wave.vcd");
         $dumpvars (0, quantizer);
         #1;
     end
+    `endif
     `endif
 
 endmodule

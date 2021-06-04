@@ -97,11 +97,14 @@ module vec_mul #(
     // Simulation Only Waveform Dump (.vcd export)
     // =========================================================================
     `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
     initial begin
         $dumpfile ("wave.vcd");
         $dumpvars (0, vec_mul);
         #1;
     end
+    `endif
     `endif
 
 endmodule

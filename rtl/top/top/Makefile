@@ -8,7 +8,7 @@ TOPLEVEL_LANG   ?= verilog			# hdl (verilog, vhdl)
 # source files
 # ==============================================================================
 VERILOG_SOURCES += ./*.v
-VERILOG_SOURCES += ../../cfg/cfg/*.v
+VERILOG_SOURCES += ../../cfg/cfg/cfg.v
 VERILOG_SOURCES += ../../wrd/zero_pad/*.v
 VERILOG_SOURCES += ../../wrd/vec_mul/*.v
 VERILOG_SOURCES += ../../wrd/vec_add/*.v

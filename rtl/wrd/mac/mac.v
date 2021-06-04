@@ -187,6 +187,8 @@ module mac #(
     // Simulation Only Waveform Dump (.vcd export)
     // =========================================================================
     `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
     initial begin
         $dumpfile ("wave.vcd");
         $dumpvars (0, mac);
@@ -199,6 +201,7 @@ module mac #(
         $dumpvars(0, add_arr[1]);
         #1;
     end
+    `endif
     `endif
 
 endmodule

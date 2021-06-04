@@ -103,12 +103,18 @@ module max_pool #(
     assign last_o  = last_q2;
     assign ready_o = ready_q;
 
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
     `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
     initial begin
         $dumpfile ("wave.vcd");
         $dumpvars (0, max_pool);
         #1;
     end
+    `endif
     `endif
 
 endmodule
