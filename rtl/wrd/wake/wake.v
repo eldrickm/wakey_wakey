@@ -28,7 +28,11 @@ module wake #(
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam SUSTAIN_LEN = 8000000;  // half second
+    `ifdef COCOTB_SIM
+        localparam SUSTAIN_LEN = 1024;  // short sustain for simulation
+    `else
+        localparam SUSTAIN_LEN = 8000000;  // half second
+    `endif
     localparam COUNTER_BW = $clog2(SUSTAIN_LEN);
 
     // =========================================================================

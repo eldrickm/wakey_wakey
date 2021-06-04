@@ -7,6 +7,7 @@
 // TODO: Sensitize to cyc_i?
 // TODO: Adjust wishbone ack for Store and Load on CTRL?
 // TODO: Remove technically unecessary mux to zeros in Data Registers
+// TODO: Check wave timings on ack for new delayed signals
 // =============================================================================
 
 module cfg #(
@@ -32,7 +33,7 @@ module cfg #(
     input         [3  : 0]                  wbs_sel_i,
     input         [31 : 0]                  wbs_dat_i,
     input         [31 : 0]                  wbs_adr_i,
-    output reg                              wbs_ack_o,
+    output                                  wbs_ack_o,
     output reg    [31 : 0]                  wbs_dat_o,
 
     // conv1 memory configuration
@@ -143,41 +144,41 @@ module cfg #(
     // =========================================================================
     // Bank Selection Logic
     // =========================================================================
-    // conv1 address space is laid out so we can use the upper 4 bits in the
-    // LSB to select the bank
-    assign conv1_rd_wr_bank_o = addr[6:4];
+    reg [CONV1_BANK_BW - 1 : 0] conv1_rd_wr_bank;
+    reg [CONV2_BANK_BW - 1 : 0] conv2_rd_wr_bank;
+    reg [FC_BANK_BW - 1 : 0]    fc_rd_wr_bank;
 
-    // conv2 address space is laid out so we can use the upper 4 bits in the
-    // LSB, minus 5, to select the bank
-    assign conv2_rd_wr_bank_o = addr[6:4] - 3'd5;
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            conv1_rd_wr_bank <= 0;
+            conv2_rd_wr_bank <= 0;
+            fc_rd_wr_bank    <= 0;
+        end else begin
+            // conv1 address space is laid out so we can use the upper 4 bits in
+            // the LSB to select the bank
+            conv1_rd_wr_bank <= addr[6:4];
 
-    // fc address space is laid out so we can use the lower 4 bits in the 2nd
-    // byte, minus 1, to select the bank
-    assign fc_rd_wr_bank_o = addr[11:8] - 4'd1;
+            // conv2 address space is laid out so we can use the upper 4 bits in
+            // the LSB, minus 5, to select the bank
+            conv2_rd_wr_bank <= addr[6:4] - 3'd5;
+
+            // fc address space is laid out so we can use the lower 2 bits in
+            // the 2nd byte, minus 1, to select the bank
+            fc_rd_wr_bank    <= addr[9:8] - 2'd1;
+        end
+    end
+
+    assign conv1_rd_wr_bank_o = conv1_rd_wr_bank;
+    assign conv2_rd_wr_bank_o = conv2_rd_wr_bank;
+    assign fc_rd_wr_bank_o    = fc_rd_wr_bank;
 
 
     // =========================================================================
     // Address Assignment
     // =========================================================================
-    reg [CONV1_ADDR_BW - 1 : 0] conv1_addr;
-    reg [CONV2_ADDR_BW - 1 : 0] conv2_addr;
-    reg [FC_ADDR_BW - 1 : 0] fc_addr;
-
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            conv1_addr <= 'b0;
-            conv2_addr <= 'b0;
-            fc_addr    <= 'b0;
-        end else begin
-            conv1_addr <= addr[2:0];
-            conv2_addr <= addr[3:0];
-            fc_addr    <= addr[7:0];
-        end
-    end
-
-    assign conv1_rd_wr_addr_o = conv1_addr;
-    assign conv2_rd_wr_addr_o = conv2_addr;
-    assign fc_rd_wr_addr_o    = fc_addr;
+    assign conv1_rd_wr_addr_o = addr[2:0];
+    assign conv2_rd_wr_addr_o = addr[3:0];
+    assign fc_rd_wr_addr_o    = addr[7:0];
 
     // =========================================================================
     // Data Assignment
@@ -248,42 +249,37 @@ module cfg #(
     // =========================================================================
     // Wishbone Acknowledge
     // =========================================================================
+    reg wbs_ack;
+    reg wbs_ack_q;
+
     always @(posedge clk_i) begin
         if (!rst_n_i) begin
-            wbs_ack_o <= 1'b0;
+            wbs_ack   <= 1'b0;
+            wbs_ack_q <= 1'b0;
         end else begin
-            wbs_ack_o <= wbs_stb_i;
+            wbs_ack   <= wbs_stb_i;
+            wbs_ack_q <= wbs_ack;
         end
     end
+
+    assign wbs_ack_o = wbs_ack_q;
 
 
     // =========================================================================
     // Store
     // =========================================================================
-    reg conv1_store;
-    reg conv2_store;
-    reg fc_store;
-
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            conv1_store <= 1'b0;
-            conv2_store <= 1'b0;
-            fc_store    <= 1'b0;
-        end else begin
-            conv1_store <= (ctrl == 'h1) && (conv1_sel);
-            conv2_store <= (ctrl == 'h1) && (conv2_sel);
-            fc_store    <= (ctrl == 'h1) && (fc_sel);
-        end
-    end
-
-    assign conv1_wr_en_o = conv1_store;
-    assign conv2_wr_en_o = conv2_store;
-    assign fc_wr_en_o    = fc_store;
+    assign conv1_wr_en_o = (ctrl == 'h1) && (conv1_sel);
+    assign conv2_wr_en_o = (ctrl == 'h1) && (conv2_sel);
+    assign fc_wr_en_o    = (ctrl == 'h1) && (fc_sel);
 
 
     // =========================================================================
     // Load
     // =========================================================================
+    assign conv1_rd_en_o = (ctrl == 'h2) && (conv1_sel);
+    assign conv2_rd_en_o = (ctrl == 'h2) && (conv2_sel);
+    assign fc_rd_en_o    = (ctrl == 'h2) && (fc_sel);
+
     reg conv1_rd_en_d;
     reg conv2_rd_en_d;
     reg fc_rd_en_d;
@@ -294,15 +290,11 @@ module cfg #(
             conv2_rd_en_d <= 1'b0;
             fc_rd_en_d    <= 1'b0;
         end else begin
-            conv1_rd_en_d <= (ctrl == 'h2) && (conv1_sel);
-            conv2_rd_en_d <= (ctrl == 'h2) && (conv2_sel);
-            fc_rd_en_d    <= (ctrl == 'h2) && (fc_sel);
+            conv1_rd_en_d <= conv1_rd_en_o;
+            conv2_rd_en_d <= conv2_rd_en_o;
+            fc_rd_en_d    <= fc_rd_en_o;
         end
     end
-
-    assign conv1_rd_en_o = conv1_rd_en_d;
-    assign conv2_rd_en_o = conv2_rd_en_d;
-    assign fc_rd_en_o    = fc_rd_en_d;
 
 
     // =========================================================================
