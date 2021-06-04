@@ -29,13 +29,13 @@ set ::env(VERILOG_FILES) "\
 # set ::env(CLOCK_PERIOD) "10"
 set ::env(CLOCK_PORT) "wb_clk_i"
 # set ::env(CLOCK_NET) "wb_clk_i"
-set ::env(CLOCK_PERIOD) "62.5"
+set ::env(CLOCK_PERIOD) "250"
 
 set ::env(FP_SIZING) absolute
-# Wakey Wakey Change: Expand DIE_AREA
+# Wakey Wakey Change: Expand DIE_AREA, leave 100 micron buffer from max size
 # set ::env(DIE_AREA) "0 0 900 600"
 # set ::env(DIE_AREA) "0 0 2920 3520"
-set ::env(DIE_AREA) "0 0 2628 3168"
+set ::env(DIE_AREA) "0 0 2820 3420"
 set ::env(DESIGN_IS_CORE) 0
 
 # Wakey Wakey Change: Remove analog power nets
@@ -49,8 +49,8 @@ set ::env(FP_PIN_ORDER_CFG) $script_dir/pin_order.cfg
 # Wakey Wakey Change: Disable PL_BASIC_PLACEMENT, increase PL_TARGET_DENSITY
 # set ::env(PL_BASIC_PLACEMENT) 1
 # set ::env(PL_TARGET_DENSITY) 0.05
-# set ::env(PL_BASIC_PLACEMENT) 0
-set ::env(PL_TARGET_DENSITY) 0.70
+set ::env(PL_BASIC_PLACEMENT) 0
+set ::env(PL_TARGET_DENSITY) 0.55
 
 # If you're going to use multiple power domains, then keep this disabled.
 set ::env(RUN_CVC) 0
