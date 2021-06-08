@@ -8,7 +8,12 @@
 // comb filter
 // =============================================================================
 
-module decimator (
+module decimator #(
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter DATA_BW = 8
+) (
     // clock and reset
     input                       clk_i,
     input                       rst_n_i,
@@ -26,7 +31,6 @@ module decimator (
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam DATA_BW = 8;
     localparam DECIM_FACTOR = 250;
     localparam COUNTER_BW = $clog2(DECIM_FACTOR);
 
