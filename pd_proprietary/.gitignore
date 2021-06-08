@@ -1,2 +1,3 @@
 */build/*
+!*/build/README.md
 */design/__pycache__/*
