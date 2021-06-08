@@ -9,7 +9,15 @@
 // sent to ACO.
 // =============================================================================
 
-module dfe (
+module dfe #(
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    // These are not parameterized in the downstream modules; they are only
+    // here for readability
+    parameter OUTPUT_BW = 8
+
+) (
     // clock, reset, and enable
     input                               clk_i,
     input                               rst_n_i,
@@ -27,13 +35,6 @@ module dfe (
 );
 
     // =========================================================================
-    // Local Parameters
-    // =========================================================================
-    // These are not parameterized in the downstream modules; they are only
-    // here for readability
-    localparam OUTPUT_BW = 8;
-
-    // =========================================================================
     // PDM Clock Generator
     // =========================================================================
     pdm_clk comb_inst (
@@ -43,7 +44,7 @@ module dfe (
 
         .pdm_clk_o(pdm_clk_o)
     );
-    
+
     // =========================================================================
     // Sampler
     // =========================================================================
