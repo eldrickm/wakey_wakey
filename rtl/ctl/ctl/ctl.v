@@ -27,7 +27,7 @@ module ctl # (
     // Local Parameters
     // =========================================================================
     // 5ms empirically determined with microphone. See test/pdm_capture_test.
-    localparam COUNT_CYCLES   = $rtoi(0.005 * F_SYSTEM_CLK);
+    localparam COUNT_CYCLES   = 0.005 * F_SYSTEM_CLK;
     localparam COUNTER_BW     = $clog2(COUNT_CYCLES + 1);
 
     // =========================================================================
