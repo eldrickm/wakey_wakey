@@ -14,7 +14,12 @@
 
 module zero_pad #(
     parameter BW         = 8,
-    parameter VECTOR_LEN = 13
+    parameter VECTOR_LEN = 13,
+
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter VECTOR_BW = VECTOR_LEN * BW
 ) (
     // clock and reset
     input                             clk_i,
@@ -32,11 +37,6 @@ module zero_pad #(
     output                            last_o,
     input                             ready_i
 );
-
-    // =========================================================================
-    // Local Parameters
-    // =========================================================================
-    localparam VECTOR_BW = VECTOR_LEN * BW;
 
     // =========================================================================
     // Delay Lines
