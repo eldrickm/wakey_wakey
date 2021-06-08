@@ -9,7 +9,12 @@
 module conv_sipo #(
     parameter BW         = 8,
     parameter FRAME_LEN  = 50,
-    parameter VECTOR_LEN = 8
+    parameter VECTOR_LEN = 8,
+
+    // ========================================================================
+    // Local Parameters - Do Not Edit
+    // ========================================================================
+    parameter VECTOR_BW  = VECTOR_LEN * BW
 ) (
     // clock and reset
     input                      clk_i,
@@ -34,7 +39,6 @@ module conv_sipo #(
     // Local Parameters
     // ========================================================================
     // Bitwidth Definitions
-    localparam VECTOR_BW  = VECTOR_LEN * BW;
     localparam COUNTER_BW = $clog2(FRAME_LEN);
 
     // =========================================================================
@@ -45,6 +49,7 @@ module conv_sipo #(
 
     reg [1:0] state;
     reg [COUNTER_BW - 1 : 0] counter;
+    reg [VECTOR_LEN - 1 : 0] fifo_sel;
 
     always @(posedge clk_i) begin
         if (!rst_n_i) begin
@@ -70,7 +75,6 @@ module conv_sipo #(
         end
     end
 
-    reg [VECTOR_LEN - 1 : 0] fifo_sel;
     always @(posedge clk_i) begin
         if (!rst_n_i) begin
             fifo_sel <= {1'b1, {VECTOR_LEN - 1{1'b0}}};
