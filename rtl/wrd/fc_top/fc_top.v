@@ -97,6 +97,8 @@ module fc_top #(
     // ========================================================================
     // MAC Array
     // ========================================================================
+    wire mac_ready0;
+
     // register stream input array to give fc_mem 1 cycle to ready outputs
     reg signed [I_BW - 1 : 0]        data_i_q;
     reg                              valid_i_q;
@@ -116,8 +118,6 @@ module fc_top #(
             last_i_q  <= last_i;
         end
     end
-
-    wire mac_ready0;
 
     mac #(
         .I_BW(I_BW),
