@@ -5,6 +5,7 @@ export PATH=/cad/mentor/2019.11/Catapult_Synthesis_10.4b-841621/Mgc_home/bin:$PA
 export MGLS_LICENSE_FILE=1717@cadlic0.stanford.edu
 
 export PATH=/cad/openlane/build/bin:$PATH
+export WAKEY_WAKEY_TOP=${PWD}/..
 
 module load base
 module load vcs

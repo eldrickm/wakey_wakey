@@ -1,0 +1,9 @@
+name: rtl
+
+outputs:
+  - design.v
+
+commands:
+  - cd ${{WAKEY_WAKEY_TOP}}/rtl/
+  - make
+  - mv design.v ${{OLDPWD}}/outputs/

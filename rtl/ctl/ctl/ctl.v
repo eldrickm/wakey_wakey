@@ -31,6 +31,19 @@ module ctl # (
     localparam COUNTER_BW     = $clog2(COUNT_CYCLES + 1);
 
     // =========================================================================
+    // Falling Edge Detection for wake_valid_i
+    // =========================================================================
+    reg wake_valid_q;
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            wake_valid_q <= 'd0;
+        end else begin
+            wake_valid_q <= wake_valid_i;
+        end
+    end
+    wire wake_valid_falling_edge = (wake_valid_q & !wake_valid_i);
+
+    // =========================================================================
     // State Machine
     //
     // STATE_IDLE:              Waiting for voice activity on vad_i.
@@ -74,19 +87,6 @@ module ctl # (
             endcase
         end
     end
-
-    // =========================================================================
-    // Falling Edge Detection for wake_valid_i
-    // =========================================================================
-    reg wake_valid_q;
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            wake_valid_q <= 'd0;
-        end else begin
-            wake_valid_q <= wake_valid_i;
-        end
-    end
-    wire wake_valid_falling_edge = (wake_valid_q & !wake_valid_i);
 
     // =========================================================================
     // Output Assignment

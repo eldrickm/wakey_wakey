@@ -1,3 +1,5 @@
 */build/*
 !*/build/README.md
 */design/__pycache__/*
+mflowgen/
+venv/
