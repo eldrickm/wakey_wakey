@@ -8,7 +8,7 @@ from cocotb.clock import Clock
 from cocotb.triggers import FallingEdge
 from cocotb.binary import BinaryValue
 
-DUT_VECTOR_SIZE = 3
+DUT_VECTOR_SIZE = 2
 
 def np2bv(int_arr, n_bits=8):
     """ Convert a n_bits integer numpy array to cocotb BinaryValue """
