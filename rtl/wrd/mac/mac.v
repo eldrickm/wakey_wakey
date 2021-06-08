@@ -40,10 +40,21 @@ module mac #(
     input                                           ready_i
 );
 
+
+    genvar i;
+
+    // =========================================================================
+    // Local Parameters
+    // =========================================================================
     localparam VALID_TIMEOUT_CYCLES         = 8;  // num cycles to reset after
     localparam VALID_TIMEOUT_BW             = $clog2(VALID_TIMEOUT_CYCLES + 1);
 
-    genvar i;
+    // =========================================================================
+    // Output Register Declaratons
+    // =========================================================================
+    reg valid_q, valid_q2, valid_q3;
+    reg last_q, last_q2, last_q3;
+    reg ready_q;
 
     // =========================================================================
     // Delay Lines
@@ -153,9 +164,6 @@ module mac #(
     end
 
     // register all outputs
-    reg valid_q, valid_q2, valid_q3;
-    reg last_q, last_q2, last_q3;
-    reg ready_q;
     always @(posedge clk_i) begin
         if (!rst_n_i) begin
             valid_q  <= 'b0;
