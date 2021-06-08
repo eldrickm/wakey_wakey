@@ -8,7 +8,12 @@
 // a 4MHz PDM input signal into a 8b 16kHz signal.
 // =============================================================================
 
-module filter (
+module filter #(
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter OUTPUT_BW = 8
+) (
     // clock and reset
     input                               clk_i,
     input                               rst_n_i,
@@ -26,7 +31,6 @@ module filter (
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam OUTPUT_BW = 8;
     localparam COMB_I_BW1 = 2;  // comb input bw must be 2 so two's complement
                                // can represent +1
     localparam COMB_O_BW1 = 2;  // -1, 0, or 1
