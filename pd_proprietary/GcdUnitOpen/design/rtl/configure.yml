@@ -1,0 +1,7 @@
+name: rtl
+
+outputs:
+  - design.v
+
+commands:
+  - cat GcdUnit-demo.v > outputs/design.v 

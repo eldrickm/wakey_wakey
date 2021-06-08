@@ -1,0 +1,14 @@
+name: testbench
+
+inputs:
+  - adk
+
+outputs:
+  - testbench.sv
+  - design.args
+  - design.args.gls
+
+commands:
+  - cp SramUnitTb.sv outputs/testbench.sv
+  - cp design.args outputs/design.args
+  - cp design.args.gls outputs/design.args.gls

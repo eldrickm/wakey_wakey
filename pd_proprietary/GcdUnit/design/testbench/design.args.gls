@@ -1,0 +1,1 @@
+-DUSE_POWER_PINS -DFUNCTIONAL -DUNIT_DELAY=#1 -DSIM -DGL -I /afs/ir/class/ee272/PDKS/sky130A/ /afs/ir/class/ee272/PDKS/sky130A/libs.ref/sky130_fd_sc_hd/verilog/sky130_fd_sc_hd.v /afs/ir/class/ee272/PDKS/sky130A/libs.ref/sky130_fd_sc_hd/verilog/primitives.v

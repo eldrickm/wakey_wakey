@@ -1,0 +1,1 @@
+vcs -full64 -sverilog -timescale=1ns/1ps -debug_access+pp -lca -cflags "-std=c++11" +vc+abstract SramUnitTb.sv ../rtl/SramUnit.v /afs/ir/class/ee272/skywater-openram/sky130_fd_bd_sram/macros/sky130_sram_4kbyte_1rw1r_32x1024_8/sky130_sram_4kbyte_1rw1r_32x1024_8.v
