@@ -25,6 +25,15 @@ module max_pool #(
     input                      ready_i
 );
 
+    // =========================================================================
+    // Output Register Declaratons
+    // =========================================================================
+    reg signed [BW - 1 : 0] data_q, data_q2, max;
+    reg valid_q, valid_q2, valid_q3, last_q, last_q2, ready_q;
+
+    // =========================================================================
+    // State Machine
+    // =========================================================================
     localparam STATE_IDLE   = 2'd0,
                STATE_LOAD_1 = 2'd1,
                STATE_LOAD_2 = 2'd2,
@@ -56,11 +65,7 @@ module max_pool #(
         end
     end
 
-
     // register all outputs
-    reg signed [BW - 1 : 0] data_q, data_q2, max;
-
-    reg valid_q, valid_q2, valid_q3, last_q, last_q2, last_q3, ready_q;
     always @(posedge clk_i) begin
         if (!rst_n_i) begin
             valid_q  <= 'b0;
@@ -68,7 +73,6 @@ module max_pool #(
             valid_q3 <= 'b0;
             last_q   <= 'b0;
             last_q2  <= 'b0;
-            last_q3  <= 'b0;
             ready_q  <= 'b0;
             data_q   <= 'b0;
             data_q2  <= 'b0;
@@ -79,7 +83,6 @@ module max_pool #(
             valid_q3 <= valid_q2;
             last_q   <= last_i;
             last_q2  <= last_q;
-            last_q3  <= last_q2;
             ready_q  <= ready_i;
             data_q   <= data_i;
             data_q2  <= data_q;
@@ -90,15 +93,8 @@ module max_pool #(
         end
     end
 
-    // positive edge detector to emit initial 0
-    wire valid_i_pos_edge  = valid_i  & (!valid_q);
-
-    // negative edge detectors to extend valid_o, emit last 0
-    wire valid_q_neg_edge  = valid_q2 & (!valid_q);
-    wire valid_q2_neg_edge = valid_q3 & (!valid_q2);
 
     assign data_o  = max;
-    // assign valid_o = valid_q | valid_q_neg_edge | valid_q2_neg_edge;
     assign valid_o = (state == STATE_VALID);
     assign last_o  = last_q2;
     assign ready_o = ready_q;
