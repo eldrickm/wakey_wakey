@@ -17,7 +17,21 @@ module conv_mem #(
     parameter SHIFT_BW    = $clog2(BIAS_BW),
     parameter FRAME_LEN   = 50,
     parameter VECTOR_LEN  = 13,
-    parameter NUM_FILTERS = 8
+    parameter NUM_FILTERS = 8,
+
+    // =========================================================================
+    // Local Parameters - DO NOT EDIT
+    // =========================================================================
+    // This unit is hard coded for width 3 filters
+    parameter FILTER_LEN = 3,
+
+    // Bitwidth Definitions
+    parameter VECTOR_BW = VECTOR_LEN * BW,
+    parameter ADDR_BW   = $clog2(NUM_FILTERS),
+    // Number of weight banks + bias bank + shift bank
+    parameter BANK_BW   = $clog2(FILTER_LEN + 2),
+    parameter FRAME_COUNTER_BW = $clog2(FRAME_LEN),
+    parameter FILTER_COUNTER_BW = $clog2(NUM_FILTERS)
 ) (
     // clock and reset
     input                             clk_i,
@@ -46,20 +60,6 @@ module conv_mem #(
 );
 
     genvar i;
-
-    // =========================================================================
-    // Local Parameters
-    // =========================================================================
-    // This unit is hard coded for width 3 filters
-    localparam FILTER_LEN = 3;
-
-    // Bitwidth Definitions
-    localparam VECTOR_BW = VECTOR_LEN * BW;
-    localparam ADDR_BW   = $clog2(NUM_FILTERS);
-    // Number of weight banks + bias bank + shift bank
-    localparam BANK_BW   = $clog2(FILTER_LEN + 2);
-    localparam FRAME_COUNTER_BW = $clog2(FRAME_LEN);
-    localparam FILTER_COUNTER_BW = $clog2(NUM_FILTERS);
 
     // ========================================================================
     // Convolution Memory Controller
