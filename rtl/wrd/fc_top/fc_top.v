@@ -13,7 +13,14 @@ module fc_top #(
     parameter BIAS_BW     = 16,
     parameter O_BW        = 24,
     parameter FRAME_LEN   = 208,
-    parameter NUM_CLASSES = 3
+    parameter NUM_CLASSES = 3,
+
+    // ========================================================================
+    // Local Parameters - Do Not Edit
+    // ========================================================================
+    parameter VECTOR_O_BW = O_BW * NUM_CLASSES,
+    parameter ADDR_BW     = $clog2(FRAME_LEN),
+    parameter BANK_BW     = $clog2(NUM_CLASSES * 2)
 ) (
     // clock and reset
     input                               clk_i,
@@ -46,13 +53,10 @@ module fc_top #(
     // Local Parameters
     // ========================================================================
     // Bitwidth Definitions
-    localparam ADDR_BW   = $clog2(FRAME_LEN);
     localparam VECTOR_I_BW = I_BW * NUM_CLASSES;
     localparam VECTOR_BIAS_BW = BIAS_BW * NUM_CLASSES;
-    localparam VECTOR_O_BW = O_BW * NUM_CLASSES;
 
     // Number of weight banks + bias bank per class
-    localparam BANK_BW          = $clog2(NUM_CLASSES * 2);
     localparam FRAME_COUNTER_BW = $clog2(FRAME_LEN);
     // ========================================================================
 
