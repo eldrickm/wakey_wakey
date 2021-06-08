@@ -16,7 +16,12 @@ module recycler #(
     parameter BW          = 8,
     parameter FRAME_LEN   = 50,
     parameter VECTOR_LEN  = 13,
-    parameter NUM_FILTERS = 8
+    parameter NUM_FILTERS = 8,
+
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter VECTOR_BW  = VECTOR_LEN * BW
 ) (
     // clock and reset
     input                             clk_i,
@@ -53,7 +58,6 @@ module recycler #(
     localparam MAX_CYCLES_REQUEUE = (NUM_FILTERS - 1) * CYCLE_PERIOD;
 
     // bitwidth definitions
-    localparam VECTOR_BW  = VECTOR_LEN * BW;
     localparam COUNTER_BW = $clog2(MAX_CYCLES);
     localparam FRAME_COUNTER_BW = $clog2(FRAME_LEN + FILTER_LEN - 1);
 
