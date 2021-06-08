@@ -11,7 +11,15 @@ module fc_mem #(
     parameter BW          = 8,
     parameter BIAS_BW     = 16,
     parameter FRAME_LEN   = 208,
-    parameter NUM_CLASSES = 2
+    parameter NUM_CLASSES = 2,
+
+    // ========================================================================
+    // Local Parameters - Do Not Edit
+    // ========================================================================
+    // Bitwidth Definitions
+    parameter ADDR_BW = $clog2(FRAME_LEN),
+    // Number of weight banks + bias bank per class
+    parameter BANK_BW = $clog2(NUM_CLASSES * 2)
 ) (
     // clock and reset
     input                                           clk_i,
@@ -41,10 +49,6 @@ module fc_mem #(
     // ========================================================================
     // Local Parameters
     // ========================================================================
-    // Bitwidth Definitions
-    localparam ADDR_BW   = $clog2(FRAME_LEN);
-    // Number of weight banks + bias bank per class
-    localparam BANK_BW          = $clog2(NUM_CLASSES * 2);
     localparam FRAME_COUNTER_BW = $clog2(FRAME_LEN);
 
     // ========================================================================
