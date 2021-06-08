@@ -15,6 +15,9 @@ __pycache__/
 # ctags
 tags
 
+# python virtualenv
+venv
+
 # downloadable audio data and extracted MFCC features
 py/__MACOSX/
 py/keywords2.zip
