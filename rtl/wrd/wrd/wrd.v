@@ -37,7 +37,9 @@ module wrd #(
 
     // conv_sipo module parameters
     parameter CONV_SIPO_BW         = MAX_POOL1_BW,                    // 8
-    parameter CONV_SIPO_FRAME_LEN  = $rtoi($ceil(I_FRAME_LEN / 2.0)), // 25
+    // TODO: $rtoi and $ceil are not supported in Design Compiler
+    // parameter CONV_SIPO_FRAME_LEN  = $rtoi($ceil(I_FRAME_LEN / 2.0)), // 25
+    parameter CONV_SIPO_FRAME_LEN  = I_FRAME_LEN / 2, // 25
     parameter CONV_SIPO_VECTOR_LEN = CONV1_NUM_FILTERS,               // 8
     // conv_sipo helper parameters
     parameter CONV_SIPO_VECTOR_BW = CONV_SIPO_BW * CONV_SIPO_VECTOR_LEN, // 64
@@ -62,7 +64,9 @@ module wrd #(
 
     // max_pool2 module parameters
     parameter MAX_POOL2_BW        = CONV_SIPO_BW, // 8
-    parameter MAX_POOL2_FRAME_LEN = $rtoi($ceil(CONV_SIPO_FRAME_LEN / 2.0)), //13
+    // TODO: $rtoi and $ceil are not supported in Design Compiler
+    // parameter MAX_POOL2_FRAME_LEN = $rtoi($ceil(CONV_SIPO_FRAME_LEN / 2.0)), //13
+    parameter MAX_POOL2_FRAME_LEN = CONV_SIPO_FRAME_LEN / 2 + 1, //13
 
     // fc module parameters
     parameter FC_I_BW        = I_BW, // 8
