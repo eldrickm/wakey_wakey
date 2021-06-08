@@ -29,9 +29,7 @@ module conv_mem #(
     parameter VECTOR_BW = VECTOR_LEN * BW,
     parameter ADDR_BW   = $clog2(NUM_FILTERS),
     // Number of weight banks + bias bank + shift bank
-    parameter BANK_BW   = $clog2(FILTER_LEN + 2),
-    parameter FRAME_COUNTER_BW = $clog2(FRAME_LEN),
-    parameter FILTER_COUNTER_BW = $clog2(NUM_FILTERS)
+    parameter BANK_BW   = $clog2(FILTER_LEN + 2)
 ) (
     // clock and reset
     input                             clk_i,
@@ -58,6 +56,12 @@ module conv_mem #(
     output                            last_o,
     input                             ready_i
 );
+
+    // =========================================================================
+    // Local Parameters
+    // =========================================================================
+    localparam FRAME_COUNTER_BW = $clog2(FRAME_LEN);
+    localparam FILTER_COUNTER_BW = $clog2(NUM_FILTERS);
 
     genvar i;
 
