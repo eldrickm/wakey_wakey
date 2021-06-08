@@ -5,7 +5,88 @@
 // Notes:
 // =============================================================================
 
-module wrd (
+module wrd #(
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    // input parameters
+    parameter I_BW         = 8,
+    parameter I_FRAME_LEN  = 50,
+    parameter I_VECTOR_LEN = 13,
+
+    // zero_pad1 module parameters
+    parameter ZERO_PAD1_BW         = I_BW,         // 8
+    parameter ZERO_PAD1_VECTOR_LEN = I_VECTOR_LEN, // 13
+    // zero_pad1 helper parameters
+    parameter ZERO_PAD1_VECTOR_BW = ZERO_PAD1_BW * ZERO_PAD1_VECTOR_LEN, // 104
+
+    // conv1 module parameters
+    parameter CONV1_FRAME_LEN   = I_FRAME_LEN,  // 50
+    parameter CONV1_VECTOR_LEN  = I_VECTOR_LEN, // 13
+    parameter CONV1_NUM_FILTERS = 8,
+    // conv1 helper parameters
+    parameter CONV1_BW         = ZERO_PAD1_BW, // 8
+    parameter CONV1_FILTER_LEN = 3,
+    parameter CONV1_VECTOR_BW  = CONV1_BW * CONV1_VECTOR_LEN, // 104
+    // conv1 memory configuration parameters
+    parameter CONV1_BANK_BW = $clog2(CONV1_FILTER_LEN + 2), // 3
+    parameter CONV1_ADDR_BW = $clog2(CONV1_NUM_FILTERS),    // 3
+
+    // max_pool1 module parameters
+    parameter MAX_POOL1_BW = CONV1_BW, // 8
+
+    // conv_sipo module parameters
+    parameter CONV_SIPO_BW         = MAX_POOL1_BW,                    // 8
+    parameter CONV_SIPO_FRAME_LEN  = $rtoi($ceil(I_FRAME_LEN / 2.0)), // 25
+    parameter CONV_SIPO_VECTOR_LEN = CONV1_NUM_FILTERS,               // 8
+    // conv_sipo helper parameters
+    parameter CONV_SIPO_VECTOR_BW = CONV_SIPO_BW * CONV_SIPO_VECTOR_LEN, // 64
+
+    // zero_pad2 module parameters
+    parameter ZERO_PAD2_BW         = I_BW,              // 8
+    parameter ZERO_PAD2_VECTOR_LEN = CONV1_NUM_FILTERS, // 8
+    // zero_pad2 helper parameters
+    parameter ZERO_PAD2_VECTOR_BW = ZERO_PAD2_BW * ZERO_PAD2_VECTOR_LEN, // 128
+
+    // conv2 module parameters
+    parameter CONV2_FRAME_LEN   = CONV_SIPO_FRAME_LEN, // 25
+    parameter CONV2_VECTOR_LEN  = CONV1_NUM_FILTERS,   // 8
+    parameter CONV2_NUM_FILTERS = 16,
+    // conv2 helper parameters
+    parameter CONV2_BW         = CONV_SIPO_BW,                // 8
+    parameter CONV2_FILTER_LEN = 3,
+    parameter CONV2_VECTOR_BW  = CONV2_BW * CONV2_VECTOR_LEN, // 64
+    // conv2 memory configuration parameters
+    parameter CONV2_BANK_BW = $clog2(CONV2_FILTER_LEN + 2), // 3
+    parameter CONV2_ADDR_BW = $clog2(CONV2_NUM_FILTERS),    // 4
+
+    // max_pool2 module parameters
+    parameter MAX_POOL2_BW        = CONV_SIPO_BW, // 8
+    parameter MAX_POOL2_FRAME_LEN = $rtoi($ceil(CONV_SIPO_FRAME_LEN / 2.0)), //13
+
+    // fc module parameters
+    parameter FC_I_BW        = I_BW, // 8
+    parameter FC_BIAS_BW     = 32,
+    parameter FC_O_BW        = 32,
+    parameter FC_FRAME_LEN   = MAX_POOL2_FRAME_LEN * CONV2_NUM_FILTERS, // 208
+    parameter FC_NUM_CLASSES = 2,
+    // fc helper parameters
+    parameter FC_VECTOR_O_BW = FC_O_BW * FC_NUM_CLASSES, // 64
+    // fc memory configuration parameters
+    parameter FC_BANK_BW = $clog2(FC_NUM_CLASSES * 2),
+    // TODO: Yosys will not resolve FC_FRAME_LEN, need to hard code
+    // parameter FC_ADDR_BW = $clog2(FC_FRAME_LEN),
+    parameter FC_ADDR_BW = $clog2(208),
+
+    // argmax module parameters
+    parameter ARGMAX_I_BW = FC_O_BW, // 24
+    // argmax helper parameters
+    parameter ARGMAX_O_BW = FC_NUM_CLASSES,
+
+    // wake module parameters
+    parameter WAKE_NUM_CLASSES = FC_NUM_CLASSES // 2
+
+) (
     // clock and reset
     input                                   clk_i,
     input                                   rst_n_i,
@@ -44,85 +125,6 @@ module wrd (
     input  signed [FC_BIAS_BW - 1 : 0]      fc_wr_data_i,
     output signed [FC_BIAS_BW - 1 : 0]      fc_rd_data_o
 );
-    // =========================================================================
-    // Local Parameters
-    // =========================================================================
-    // input parameters
-    localparam I_BW         = 8;
-    localparam I_FRAME_LEN  = 50;
-    localparam I_VECTOR_LEN = 13;
-
-    // zero_pad1 module parameters
-    localparam ZERO_PAD1_BW         = I_BW;         // 8
-    localparam ZERO_PAD1_VECTOR_LEN = I_VECTOR_LEN; // 13
-    // zero_pad1 helper parameters
-    localparam ZERO_PAD1_VECTOR_BW = ZERO_PAD1_BW * ZERO_PAD1_VECTOR_LEN; // 104
-
-    // conv1 module parameters
-    localparam CONV1_FRAME_LEN   = I_FRAME_LEN;  // 50
-    localparam CONV1_VECTOR_LEN  = I_VECTOR_LEN; // 13
-    localparam CONV1_NUM_FILTERS = 8;
-    // conv1 helper parameters
-    localparam CONV1_BW         = ZERO_PAD1_BW; // 8
-    localparam CONV1_FILTER_LEN = 3;
-    localparam CONV1_VECTOR_BW  = CONV1_BW * CONV1_VECTOR_LEN; // 104
-    // conv1 memory configuration parameters
-    localparam CONV1_BANK_BW = $clog2(CONV1_FILTER_LEN + 2); // 3
-    localparam CONV1_ADDR_BW = $clog2(CONV1_NUM_FILTERS);    // 3
-
-    // max_pool1 module parameters
-    localparam MAX_POOL1_BW = CONV1_BW; // 8
-
-    // conv_sipo module parameters
-    localparam CONV_SIPO_BW         = MAX_POOL1_BW;                    // 8
-    localparam CONV_SIPO_FRAME_LEN  = $rtoi($ceil(I_FRAME_LEN / 2.0)); // 25
-    localparam CONV_SIPO_VECTOR_LEN = CONV1_NUM_FILTERS;               // 8
-    // conv_sipo helper parameters
-    localparam CONV_SIPO_VECTOR_BW = CONV_SIPO_BW * CONV_SIPO_VECTOR_LEN; // 64
-
-    // zero_pad2 module parameters
-    localparam ZERO_PAD2_BW         = I_BW;              // 8
-    localparam ZERO_PAD2_VECTOR_LEN = CONV1_NUM_FILTERS; // 8
-    // zero_pad2 helper parameters
-    localparam ZERO_PAD2_VECTOR_BW = ZERO_PAD2_BW * ZERO_PAD2_VECTOR_LEN; // 128
-
-    // conv2 module parameters
-    localparam CONV2_FRAME_LEN   = CONV_SIPO_FRAME_LEN; // 25
-    localparam CONV2_VECTOR_LEN  = CONV1_NUM_FILTERS;   // 8
-    localparam CONV2_NUM_FILTERS = 16;
-    // conv2 helper parameters
-    localparam CONV2_BW         = CONV_SIPO_BW;                // 8
-    localparam CONV2_FILTER_LEN = 3;
-    localparam CONV2_VECTOR_BW  = CONV2_BW * CONV2_VECTOR_LEN; // 64
-    // conv2 memory configuration parameters
-    localparam CONV2_BANK_BW = $clog2(CONV2_FILTER_LEN + 2); // 3
-    localparam CONV2_ADDR_BW = $clog2(CONV2_NUM_FILTERS);    // 4
-
-    // max_pool2 module parameters
-    localparam MAX_POOL2_BW        = CONV_SIPO_BW; // 8
-    localparam MAX_POOL2_FRAME_LEN = $rtoi($ceil(CONV_SIPO_FRAME_LEN / 2.0)); //13
-
-    // fc module parameters
-    localparam FC_I_BW        = I_BW; // 8
-    localparam FC_BIAS_BW     = 32;
-    localparam FC_O_BW        = 32;
-    localparam FC_FRAME_LEN   = MAX_POOL2_FRAME_LEN * CONV2_NUM_FILTERS; // 208
-    localparam FC_NUM_CLASSES = 2;
-    // fc helper parameters
-    localparam FC_VECTOR_O_BW = FC_O_BW * FC_NUM_CLASSES; // 64
-    // fc memory configuration parameters
-    localparam FC_BANK_BW = $clog2(FC_NUM_CLASSES * 2);
-    // TODO: Yosys will not resolve FC_FRAME_LEN, need to hard code
-    // localparam FC_ADDR_BW = $clog2(FC_FRAME_LEN);
-    localparam FC_ADDR_BW = $clog2(208);
-
-    // argmax module parameters
-    localparam ARGMAX_I_BW = FC_O_BW; // 24
-    // argmax helper parameters
-    localparam ARGMAX_O_BW = FC_NUM_CLASSES;
-
-    // wake module parameters
-    localparam WAKE_NUM_CLASSES = FC_NUM_CLASSES; // 2
 
     // =========================================================================
     // zero_pad1
