@@ -11,7 +11,16 @@
 module conv_top #(
     parameter FRAME_LEN   = 50,  // output frame length
     parameter VECTOR_LEN  = 13,
-    parameter NUM_FILTERS = 8
+    parameter NUM_FILTERS = 8,
+
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter FILTER_LEN = 3,
+    parameter BW                = 8,
+    parameter VECTOR_BW         = VECTOR_LEN * BW,
+    parameter BANK_BW           = $clog2(FILTER_LEN + 2),
+    parameter ADDR_BW           = $clog2(NUM_FILTERS)
 ) (
     // clock and reset
     input                             clk_i,
@@ -43,19 +52,14 @@ module conv_top #(
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam FILTER_LEN = 3;
     localparam MAX_CYCLES = NUM_FILTERS * FRAME_LEN;
 
     // bitwidth definitions
-    localparam BW                = 8;
     localparam MUL_BW            = 16;
     localparam ADD_BW            = 18;
     localparam BIAS_BW           = 32;
-    localparam VECTOR_BW         = VECTOR_LEN * BW;
     localparam MUL_VECTOR_BW     = VECTOR_LEN * MUL_BW;
     localparam ADD_VECTOR_BW     = VECTOR_LEN * ADD_BW;
-    localparam ADDR_BW           = $clog2(NUM_FILTERS);
-    localparam BANK_BW           = $clog2(FILTER_LEN + 2);
     localparam FRAME_COUNTER_BW  = $clog2(FRAME_LEN);
     localparam FILTER_COUNTER_BW = $clog2(NUM_FILTERS);
     localparam SHIFT_BW          = $clog2(BIAS_BW);
