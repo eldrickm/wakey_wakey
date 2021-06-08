@@ -112,23 +112,18 @@ def cicn(x):
     rolled = np.roll(x, ratio_out)
     rolled[:ratio_out] = 0
     x = np.cumsum(x) - np.cumsum(rolled)
-    # x = x / ratio_out
-    # x = x.astype(np.int8)
-    x = x.astype(np.int16)  # same here
+    x = x.astype(np.int16)
     return x
 
 def pdm_to_pcm(x, n_cic=1):
     '''n_cic is fixed to 1 stage for Wakey Wakey.'''
-    # assert n_cic == 1
+    assert n_cic == 2  # new arch has 2 cic stages
     x = cic1(x)
-    for i in range(n_cic - 1):
-        x = cicn(x)
-        # x = x / 2**5
-        x = np.right_shift(x, 5)
+    x = cicn(x)
+    x = np.right_shift(x, 5)
     x = np.clip(x, -128, 127).astype(np.int8)
     x = x[::ratio_out]
     x[0] = 0
-    # x = x[1:]  # skip first value, which is garbage
     return x
 
 # =========== Plotting ============

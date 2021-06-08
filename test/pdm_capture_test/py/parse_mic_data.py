@@ -4,12 +4,11 @@ from scipy.io import wavfile
 from scipy import signal
 import matplotlib.pyplot as plt
 import struct
-import serial
-# import sounddevice as sd
-import pyaudio
+import pathlib
 
 import sys
-sys.path.append('../../../py/')
+this_path = pathlib.Path(__file__).parent.absolute()
+sys.path.append(str(this_path / '../../../py/'))
 import pdm
 import aco
 import numpy_arch as na
@@ -27,6 +26,7 @@ REC_LEN = 2000000
 def get_pdm(serial_port=None):
     '''Parse the PDM bitstream into a numpy array of ones and zeros.'''
     if serial_port is not None:
+        import serial
         ser = serial.Serial(port=serial_port)
         ser.timeout = 1
         cleared = ser.read(ONE_SEC_LEN * 100)  # clear out buffer
@@ -174,7 +174,7 @@ def pdm_to_wav_multiple():
                 continue
             pdm_to_wav(in_dir + fname, out_dir + fname[:-4] + '.wav')
 
-def eval_pipeline(method='cic1'):
+def eval_pipeline(method='cic2'):
     n_valid_wake = 0
     n_false_wake = 0
     n_valid_sleep = 0
@@ -204,5 +204,6 @@ def eval_pipeline(method='cic1'):
     print_maxes()
 
 if __name__ == '__main__':
-    process_pdm_dfe()
+    # process_pdm_dfe()
+    eval_pipeline(method='cic2')
 
