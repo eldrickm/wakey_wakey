@@ -8,8 +8,14 @@
 // =============================================================================
 
 module filterbank_half # (
-    parameter COEFFILE          = "coef_even.hex",
-    parameter BOUNDARYFILE      = "boundary_even.hex"
+    parameter COEFFILE     = "coef_even.hex",
+    parameter BOUNDARYFILE = "boundary_even.hex",
+
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter I_BW = 32,
+    parameter O_BW = 32
 ) (
     // clock and reset
     input                                   clk_i,
@@ -29,14 +35,19 @@ module filterbank_half # (
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam I_BW         = 32;
     localparam INTERNAL_BW  = 64;   // 48 would be sufficient but why not
-    localparam O_BW         = 32;
     localparam COEF_BW      = 16;   // bitwidth of the filterbank coefficients
     localparam INPUT_LEN    = 129;  // length of the power spectrum
     localparam NUM_BOUNDARY = 16;   // number of triangle boundary indices
                                     // Signals when a MFCC coefficient is done
     localparam BOUNDARY_BW  = 8;
+
+    // =========================================================================
+    // Signal Declarations
+    // =========================================================================
+    reg [COEF_BW - 1 : 0] coef;  // filters 0,2,...30 (even)
+                                                     // or      1,3,...31 (odd)
+    reg [BOUNDARY_BW - 1 : 0] boundary;  // boundaries
 
     // =========================================================================
     // Element counter
@@ -115,9 +126,6 @@ module filterbank_half # (
     // reg [COEF_BW - 1 : 0] coef [0 : INPUT_LEN - 1];  // filters 0,2,...30 (even)
     //                                                  // or      1,3,...31 (odd)
     // reg [BOUNDARY_BW - 1 : 0] boundary [0 : NUM_BOUNDARY - 1];  // boundaries
-    reg [COEF_BW - 1 : 0] coef;  // filters 0,2,...30 (even)
-                                                     // or      1,3,...31 (odd)
-    reg [BOUNDARY_BW - 1 : 0] boundary;  // boundaries
 
     generate
     if (COEFFILE == "coef_even.hex") begin
