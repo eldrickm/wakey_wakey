@@ -31,12 +31,6 @@ module dct #(
     output                                  valid_o,
     output                                  last_o
 );
-    // =========================================================================
-    // Signal Declarations
-    // =========================================================================
-    reg [ELEM_COUNT_BW - 1 : 0] elem_counter;
-    wire last_elem = (elem_counter == FRAME_LEN - 1);
-    reg signed [COEF_BW - 1 : 0] coefs;
 
     // =========================================================================
     // Local Parameters
@@ -51,6 +45,13 @@ module dct #(
     localparam SHIFT         = 15;
 
     localparam COEFFILE     = "dct.hex";
+
+    // =========================================================================
+    // Signal Declarations
+    // =========================================================================
+    reg [ELEM_COUNT_BW - 1 : 0] elem_counter;
+    wire last_elem = (elem_counter == FRAME_LEN - 1);
+    reg signed [COEF_BW - 1 : 0] coefs;
 
     // =========================================================================
     // Element Counter
