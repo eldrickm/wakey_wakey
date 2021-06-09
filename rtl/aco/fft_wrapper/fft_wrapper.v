@@ -15,7 +15,13 @@
 //      reset the fft core, keeping it reset until the next valid frame
 // =============================================================================
 
-module fft_wrapper (
+module fft_wrapper #(
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter I_BW = 16,     // real input
+    parameter O_BW = 21 * 2  // complex output
+)(
     // clock and reset
     input                                   clk_i,
     input                                   rst_n_i,
@@ -34,9 +40,6 @@ module fft_wrapper (
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam I_BW         = 16;  // real input
-    localparam O_BW         = 21 * 2;  // complex output
-
     // output sample counter for holding valid_o
     localparam FFT_LEN                  = 256;
     localparam RFFT_LEN                 = $rtoi(FFT_LEN / 2 + 1);
