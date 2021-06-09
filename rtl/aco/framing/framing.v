@@ -38,6 +38,9 @@ module framing # (
     localparam SKIP_COUNTER_BW  = $clog2(FIFO_DEPTH + SKIP_ELEMS);
     localparam CADENCE_BW       = $clog2(CADENCE_CYC);
 
+    localparam STATE_LOAD   = 1'd0,
+               STATE_UNLOAD = 1'd1;
+
     // =========================================================================
     // Signal Declarations
     // =========================================================================
@@ -65,8 +68,6 @@ module framing # (
     // =========================================================================
     // State Machine
     // =========================================================================
-    localparam STATE_LOAD   = 1'd0,
-               STATE_UNLOAD = 1'd1;
     always @(posedge clk_i) begin
         if (!rst_n_i | !en_i) begin
             frame_elem <= 'd0;
