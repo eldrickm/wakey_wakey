@@ -135,4 +135,18 @@ module user_proj_example (
     // =========================================================================
     assign la_data_out = 128'b0;    // unused
 
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
+    initial begin
+      $dumpfile ("wave.vcd");
+      $dumpvars (0, user_proj_example);
+      #1;
+    end
+    `endif
+    `endif
+
 endmodule
