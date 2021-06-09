@@ -7,7 +7,18 @@
 // Top level module for the acoustic featurization pipeline.
 // =============================================================================
 
-module aco (
+module aco #(
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter PREEMPH_I_BW     = 8,
+    parameter I_BW             = PREEMPH_I_BW,
+    parameter PACKING_I_BW     = 8,
+    parameter DCT_COEFS        = 13,
+    parameter PACKING_O_BW     = PACKING_I_BW * DCT_COEFS,
+    parameter WRD_FRAMING_O_BW = PACKING_O_BW,
+    parameter O_BW             = WRD_FRAMING_O_BW
+) (
     // clock and reset
     input                                   clk_i,
     input                                   rst_n_i,
@@ -25,8 +36,6 @@ module aco (
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam PREEMPH_I_BW             = 8;
-    localparam I_BW                     = PREEMPH_I_BW;
     localparam PREEMPH_O_BW             = 9;
 
     localparam FFT_FRAMING_I_BW         = 9;
@@ -55,22 +64,16 @@ module aco (
     localparam DCT_FRAMING_SKIP_ELEMS   = 0;
 
     localparam DCT_I_BW                 = 8;
-    localparam DCT_COEFS                = 13;
     localparam DCT_O_BW                 = 16;
 
     localparam QUANT_I_BW               = 16;
     localparam QUANT_O_BW               = 8;
 
-    localparam PACKING_I_BW             = 8;
-    localparam PACKING_O_BW             = PACKING_I_BW * DCT_COEFS;
-
     localparam WRD_FRAMING_I_BW         = PACKING_O_BW;
-    localparam WRD_FRAMING_O_BW         = PACKING_O_BW;
     localparam WRD_FRAME_LEN            = 50;
     localparam WRD_FRAMING_CADENCE      = 1;
     localparam WRD_FRAMING_SKIP_ELEMS   = 0;
 
-    localparam O_BW                     = WRD_FRAMING_O_BW;
 
     // =========================================================================
     // Preemphasis
