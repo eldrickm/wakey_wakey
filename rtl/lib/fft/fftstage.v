@@ -127,6 +127,7 @@ module	fftstage #(
 	//
 	// reg	[(2*CWIDTH-1):0]	cmem [0:((1<<LGSPAN)-1)];
     reg	[(2*CWIDTH-1):0]	cmem;
+	reg	[(LGSPAN):0]		iaddr;
 `ifdef	FORMAL
 // Let the formal tool pick the coefficients
 `else
@@ -419,7 +420,6 @@ module	fftstage #(
 
 `endif
 
-	reg	[(LGSPAN):0]		iaddr;
 	reg	[(2*IWIDTH-1):0]	imem	[0:((1<<LGSPAN)-1)];
 
 	reg	[LGSPAN:0]		oaddr;
