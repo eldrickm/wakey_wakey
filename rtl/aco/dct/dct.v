@@ -49,13 +49,14 @@ module dct #(
     // =========================================================================
     // Signal Declarations
     // =========================================================================
-    reg [ELEM_COUNT_BW - 1 : 0] elem_counter;
-    wire last_elem = (elem_counter == FRAME_LEN - 1);
     reg signed [COEF_BW - 1 : 0] coefs;
+    reg [COEF_COUNT_BW - 1 : 0] coef_counter;
+    wire next_elem = (coef_counter == N_COEF - 'd1);
 
     // =========================================================================
     // Element Counter
     // =========================================================================
+    reg [ELEM_COUNT_BW - 1 : 0] elem_counter;
     always @(posedge clk_i) begin
         if (!rst_n_i | !en_i) begin
             elem_counter <= 'd0;
@@ -69,11 +70,11 @@ module dct #(
             end
         end
     end
+    wire last_elem = (elem_counter == FRAME_LEN - 1);
 
     // =========================================================================
     // Coefficient Counter (aka Cadence)
     // =========================================================================
-    reg [COEF_COUNT_BW - 1 : 0] coef_counter;
     always @(posedge clk_i) begin
         if (!rst_n_i | !en_i) begin
             coef_counter <= 'd0;
@@ -87,7 +88,6 @@ module dct #(
             end
         end
     end
-    wire next_elem = (coef_counter == N_COEF - 'd1);
 
     // =========================================================================
     // Multiplication
