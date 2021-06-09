@@ -41,6 +41,7 @@ module packing #(
     // Counter
     // =========================================================================
     reg [COUNTER_BW - 1 : 0] counter;
+    wire last_elem = (counter == N_COEF - 1);
     always @(posedge clk_i) begin
         if (!rst_n_i | !en_i) begin
             counter <= 'd0;
@@ -54,7 +55,6 @@ module packing #(
             end
         end
     end
-    wire last_elem = (counter == N_COEF - 1);
     reg last_elem_q;  // emit result after packing all data
     always @(posedge clk_i) begin
         last_elem_q <= last_elem;
