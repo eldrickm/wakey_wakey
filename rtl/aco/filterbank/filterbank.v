@@ -7,7 +7,13 @@
 //               Deassertions of valid are not permitted.
 // =============================================================================
 
-module filterbank (
+module filterbank #(
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter I_BW = 32,
+    parameter O_BW = 32
+) (
     // clock and reset
     input                                   clk_i,
     input                                   rst_n_i,
@@ -26,9 +32,6 @@ module filterbank (
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam I_BW         = 32;
-    localparam O_BW         = 32;
-
     localparam EVEN_COEFFILE            = "coef_even.hex";
     localparam ODD_COEFFILE             = "coef_odd.hex";
     localparam EVEN_BOUNDARYFILE        = "boundary_even.hex";
