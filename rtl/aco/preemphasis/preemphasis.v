@@ -8,7 +8,13 @@
 //               multiplication by 31 and a right-shift by 5.
 // =============================================================================
 
-module preemphasis (
+module preemphasis #(
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter I_BW = 8,   // PCM input
+    parameter O_BW = 9
+) (
     // clock and reset
     input                                   clk_i,
     input                                   rst_n_i,
@@ -25,8 +31,6 @@ module preemphasis (
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam I_BW         = 8;   // PCM input
-    localparam O_BW         = 9;
     localparam MUL          = 31;
     localparam SHIFT        = 5;
 

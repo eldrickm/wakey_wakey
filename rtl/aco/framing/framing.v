@@ -32,9 +32,6 @@ module framing # (
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    // localparam I_BW         = 9;   // preemphasis input
-    // localparam O_BW         = 16;  // FFT output
-    // localparam FRAME_LEN    = 256;
     localparam FIFO_DEPTH       = FRAME_LEN + 4;   // 4 spaces of headroom
     localparam COUNTER_BW       = $clog2(FIFO_DEPTH);
     localparam FULL_PERIOD      = FRAME_LEN + SKIP_ELEMS;
@@ -42,14 +39,34 @@ module framing # (
     localparam CADENCE_BW       = $clog2(CADENCE_CYC);
 
     // =========================================================================
+    // Signal Declarations
+    // =========================================================================
+    reg state;
+
+    reg [COUNTER_BW - 1 : 0] fifo_count;  // number of elements in the fifo
+
+    reg [COUNTER_BW - 1 : 0] frame_elem;  // Number of frame elements outputted.
+                                          // Zero-indexed counting, so last
+                                          // element is FRAME_LEN - 1
+    wire last_elem = (frame_elem == FRAME_LEN - 'd1);
+
+    // Determines how long to hold an output
+    reg [CADENCE_BW - 1 : 0] cadence;
+    wire next_elem = (cadence == CADENCE_CYC - 'd1);
+
+    wire fifo_deq = ((state == STATE_UNLOAD) & next_elem);
+
+    reg [COUNTER_BW - 1 : 0] skip_count;
+    wire skip = (skip_count >= FRAME_LEN);  // skip if already have FRAME_LEN
+                                            // elements in the current period
+
+    wire fifo_enq = (en_i & valid_i & !skip);
+
+    // =========================================================================
     // State Machine
     // =========================================================================
     localparam STATE_LOAD   = 1'd0,
                STATE_UNLOAD = 1'd1;
-    reg state;
-    reg [COUNTER_BW - 1 : 0] frame_elem;  // Number of frame elements outputted.
-                                          // Zero-indexed counting, so last
-                                          // element is FRAME_LEN - 1
     always @(posedge clk_i) begin
         if (!rst_n_i | !en_i) begin
             frame_elem <= 'd0;
@@ -74,12 +91,10 @@ module framing # (
             endcase
         end
     end
-    wire last_elem = (frame_elem == FRAME_LEN - 'd1);
 
     // =========================================================================
     // FIFO element tracking
     // =========================================================================
-    reg [COUNTER_BW - 1 : 0] fifo_count;  // number of elements in the fifo
     always @(posedge clk_i) begin
         if (!rst_n_i | !en_i) begin
             fifo_count <= 'd0;
@@ -99,7 +114,6 @@ module framing # (
     // =========================================================================
     // Tracks the number of elements seen across one period, including
     // elements that are to be skipped
-    reg [COUNTER_BW - 1 : 0] skip_count;
     always @(posedge clk_i) begin
         if (!rst_n_i | !en_i) begin
             skip_count <= 'd0;
@@ -113,14 +127,10 @@ module framing # (
             end
         end
     end
-    wire skip = (skip_count >= FRAME_LEN);  // skip if already have FRAME_LEN
-                                            // elements in the current period
 
     // =========================================================================
     // Cadence
     // =========================================================================
-    // Determines how long to hold an output
-    reg [CADENCE_BW - 1 : 0] cadence;
     always @(posedge clk_i) begin
         if (!rst_n_i | !en_i) begin
             cadence <= 'd0;
@@ -134,14 +144,11 @@ module framing # (
             end
         end
     end
-    wire next_elem = (cadence == CADENCE_CYC - 'd1);
 
     // =========================================================================
     // FIFO
     // =========================================================================
     wire signed [I_BW - 1 : 0]  fifo_dout;
-    wire                        fifo_deq = ((state == STATE_UNLOAD) & next_elem);
-    wire                        fifo_enq = (en_i & valid_i & !skip);
     fifo #(
         .DATA_WIDTH(I_BW),
         .FIFO_DEPTH(FIFO_DEPTH)

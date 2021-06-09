@@ -8,7 +8,13 @@
 // within 8b.
 // =============================================================================
 
-module quant (
+module quant #(
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter I_BW = 16,
+    parameter O_BW = 8
+) (
     // clock and reset
     input                                   clk_i,
     input                                   rst_n_i,
@@ -27,8 +33,6 @@ module quant (
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam I_BW         = 16;
-    localparam O_BW         = 8;
     localparam CLIP         = $pow(2, O_BW - 1) - 1;  // clip to this if larger
 
     wire signed [O_BW - 1 : 0] lower = data_i[O_BW - 1 : 0]; // lower O_BW bits

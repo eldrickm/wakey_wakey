@@ -7,7 +7,13 @@
 //               imaginary part squared.
 // =============================================================================
 
-module power_spectrum (
+module power_spectrum #(
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter I_BW = 21,
+    parameter O_BW = 32
+) (
     // clock and reset
     input                                   clk_i,
     input                                   rst_n_i,
@@ -23,11 +29,6 @@ module power_spectrum (
     output                                  valid_o,
     output                                  last_o
 );
-    // =========================================================================
-    // Local Parameters
-    // =========================================================================
-    localparam I_BW         = 21;
-    localparam O_BW         = 32;
 
     // =========================================================================
     // Register input to reduce long path length

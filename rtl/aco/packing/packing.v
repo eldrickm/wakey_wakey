@@ -8,7 +8,14 @@
 // highest order bits and the last sample in the lowest order bits.
 // =============================================================================
 
-module packing (
+module packing #(
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter I_BW   = 8,
+    parameter N_COEF = 13,
+    parameter O_BW   = I_BW * N_COEF
+) (
     // clock and reset
     input                                   clk_i,
     input                                   rst_n_i,
@@ -24,13 +31,11 @@ module packing (
     output                                  valid_o,
     output                                  last_o
 );
+
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam I_BW         = 8;
-    localparam N_COEF       = 13;
-    localparam COUNTER_BW   = $clog2(N_COEF);
-    localparam O_BW         = I_BW * N_COEF;
+    localparam COUNTER_BW = $clog2(N_COEF);
 
     // =========================================================================
     // Counter

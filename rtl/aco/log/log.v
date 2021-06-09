@@ -9,7 +9,13 @@
 // https://electronics.stackexchange.com/questions/196914/verilog-synthesize-high-speed-leading-zero-count
 // =============================================================================
 
-module log (
+module log #(
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter I_BW = 32,
+    parameter O_BW = 8
+) (
     // clock and reset
     input                       clk_i,
     input                       rst_n_i,
@@ -25,12 +31,6 @@ module log (
     output                      valid_o,
     output                      last_o
 );
-
-    // =========================================================================
-    // Local Parameters
-    // =========================================================================
-    localparam I_BW = 32;
-    localparam O_BW = 8;
 
     // =========================================================================
     // Encoding
