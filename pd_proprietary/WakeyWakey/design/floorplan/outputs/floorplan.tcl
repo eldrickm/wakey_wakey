@@ -12,8 +12,11 @@
 # aspect ratio (height:width). An aspect ratio of 2.0 here will make a
 # rectangular chip with a height that is twice the width.
 
+# Relative Area Constraint
 # set core_aspect_ratio   1.00; # Aspect ratio 1.0 for a square chip
 # set core_density_target 0.70; # Placement density of 70% is reasonable
+
+# Absolute Area Constraint
 set core_width  2820; # caravel user project area width is 2920, 100um buffer
 set core_height 3420; # caravel user project area height is 3520, 100um buffer
 

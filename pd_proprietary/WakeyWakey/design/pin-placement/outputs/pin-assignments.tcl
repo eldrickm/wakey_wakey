@@ -6,7 +6,7 @@
 # perimeters of the core area. This will work for most designs, but a
 # detail-oriented project should customize or replace this section.
 #
-# Author : Christopher Torng
+# Author : Eldrick Millares, based on Christopher Torng's script
 # Date   : March 26, 2018
 
 #-------------------------------------------------------------------------
@@ -21,17 +21,37 @@
 # to right, then on the right side we go top to bottom, then on the bottom
 # side, we go right to left, then on the left side we go bottom to top.
 
-# Pins on the top side. The first pin in this list (here dout1[31]) is on the
+# Pins on the top side. The first pin in this list (here io_oeb[23]) is on the
 # top left and the last pin is on the top right.
 
 set pins_top {\
-  {dout1[31]} {dout1[30]} {dout1[29]} {dout1[28]}\
-  {dout1[27]} {dout1[26]} {dout1[25]} {dout1[24]} {dout1[23]} {dout1[22]}\
-  {dout1[21]} {dout1[20]} {dout1[19]} {dout1[18]} {dout1[17]} {dout1[16]}\
-  {dout1[15]} {dout1[14]} {dout1[13]} {dout1[12]} {dout1[11]} {dout1[10]}\
-  {dout1[9]}  {dout1[8]}  {dout1[7]}  {dout1[8]}  {dout1[7]}  {dout1[6]}\
-  {dout1[5]}  {dout1[4]}  {dout1[3]}  {dout1[2]}  {dout1[1]}  {dout1[0]}\
-   csb1\
+    {io_oeb[23]}\ 
+    {io_out[23]}\ 
+    {io_in[23] }\ 
+    {io_oeb[22]}\ 
+    {io_out[22]}\ 
+    {io_in[22] }\ 
+    {io_oeb[21]}\ 
+    {io_out[21]}\ 
+    {io_in[21] }\ 
+    {io_oeb[20]}\ 
+    {io_out[20]}\ 
+    {io_in[20] }\ 
+    {io_oeb[19]}\ 
+    {io_out[19]}\ 
+    {io_in[19] }\ 
+    {io_oeb[18]}\ 
+    {io_out[18]}\ 
+    {io_in[18] }\ 
+    {io_oeb[17]}\ 
+    {io_out[17]}\ 
+    {io_in[17] }\ 
+    {io_oeb[16]}\ 
+    {io_out[16]}\ 
+    {io_in[16] }\ 
+    {io_oeb[15]}\ 
+    {io_out[15]}\ 
+    {io_in[15] }\
 }
 
 # Pins on the right side. In this example we are not placing pins on the right
@@ -47,26 +67,31 @@ set pins_right []
 # loop.
 
 set pins_bottom {\
-  {dout0[0]}  {dout0[1]}  {dout0[2]}  {dout0[3]}  {dout0[4]}  {dout0[5]}\
-  {dout0[6]}  {dout0[7]}  {dout0[8]}  {dout0[9]}  {dout0[10]} {dout0[11]}\
-  {dout0[12]} {dout0[13]} {dout0[14]} {dout0[15]} {dout0[16]} {dout0[17]}\
-  {dout0[18]} {din0[0]}   {dout0[19]} {din0[1]}   {din0[2]}   {dout0[20]}\
-  {din0[3]}   {din0[4]}   {dout0[21]} {din0[5]}   {din0[6]}   {din0[7]}\
-  {dout0[22]} {din0[8]}   {din0[9]}   {dout0[23]} {din0[10]}  {din0[11]}\
-  {dout0[24]} {din0[12]}  {din0[13]}  {dout0[25]} {din0[14]}  {din0[15]}\
-  {dout0[26]} {din0[16]}  {din0[17]}  {dout0[27]} {din0[18]}  {din0[19]}\
-  {din0[20]}  {dout0[28]} {din0[21]}  {din0[22]}  {dout0[29]} {din0[23]}\
-  {din0[24]}  {dout0[30]} {din0[25]}  {din0[26]}  {dout0[31]} {din0[27]}\
-  {din0[28]}  {din0[29]}  {din0[30]}  {din0[31]}\
+    {user_irq[2]}\
+    {user_irq[1]}\
+    {user_irq[0]}\
+    {}\
+    {}\
+    {}\
+    {}\
+    {}\
+    {}\
+    {}\
+    {}\
+    {}\
+    {}\
+    {}\
+    {}\
+    {}\
+    {}\
+    {}\
+    {}\
+    {}\
 }
 
 # Pins on the left side from bottom (rst_n) to top (addr0[0]).
 
 set pins_left {\
-   rst_n      {wmask0[0]} {wmask0[1]} {wmask0[2]} {wmask0[3]}\
-  {addr0[9]}  {addr0[8]}   clk         csb0        web0\
-  {addr0[7]}  {addr0[6]}  {addr0[5]}  {addr0[4]}  {addr0[3]}  {addr0[2]}\
-  {addr0[1]}  {addr0[0]}\
 }
 
 # Spread the pins evenly along the sides of the block
