@@ -33,7 +33,9 @@ module quant #(
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam CLIP         = $pow(2, O_BW - 1) - 1;  // clip to this if larger
+    // TODO: Design Compiler does not support $pow()
+    // localparam CLIP = $pow(2, O_BW - 1) - 1;  // clip to this if larger
+    localparam CLIP = (1 << (O_BW - 1)) - 1;  // clip to this if larger
 
     wire signed [O_BW - 1 : 0] lower = data_i[O_BW - 1 : 0]; // lower O_BW bits
 
