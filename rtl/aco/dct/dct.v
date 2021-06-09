@@ -32,6 +32,13 @@ module dct #(
     output                                  last_o
 );
     // =========================================================================
+    // Signal Declarations
+    // =========================================================================
+    reg [ELEM_COUNT_BW - 1 : 0] elem_counter;
+    wire last_elem = (elem_counter == FRAME_LEN - 1);
+    reg signed [COEF_BW - 1 : 0] coefs;
+
+    // =========================================================================
     // Local Parameters
     // =========================================================================
     localparam INTERNAL_BW   = 32;
@@ -48,7 +55,6 @@ module dct #(
     // =========================================================================
     // Element Counter
     // =========================================================================
-    reg [ELEM_COUNT_BW - 1 : 0] elem_counter;
     always @(posedge clk_i) begin
         if (!rst_n_i | !en_i) begin
             elem_counter <= 'd0;
@@ -62,7 +68,6 @@ module dct #(
             end
         end
     end
-    wire last_elem = (elem_counter == FRAME_LEN - 1);
 
     // =========================================================================
     // Coefficient Counter (aka Cadence)
@@ -123,7 +128,6 @@ module dct #(
     // ROM Memory for DCT coefficients
     // =========================================================================
     // reg signed [COEF_BW - 1 : 0] coefs [0 : N_COEF * FRAME_LEN - 1];
-    reg signed [COEF_BW - 1 : 0] coefs;
     always @(*) begin
         case (addr)
             0   : coefs = 'h16a1;
