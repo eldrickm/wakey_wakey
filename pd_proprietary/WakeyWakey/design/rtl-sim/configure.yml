@@ -1,0 +1,9 @@
+name: rtl-sim
+
+outputs:
+  - run.vcd
+
+commands:
+  - cd ${{WAKEY_WAKEY_TOP}}/rtl/top/top/
+  - make
+  - mv wave.vcd ${{OLDPWD}}/outputs/run.vcd

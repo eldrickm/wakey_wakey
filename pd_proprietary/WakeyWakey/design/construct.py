@@ -91,6 +91,9 @@ def construct():
   #  gl_sim          = icarus_sim.clone()
   #  rtl_sim.set_name( 'rtl-sim' )
   #  gl_sim.set_name( 'gl-sim' )
+
+  # cocotb based simulation steps
+  rtl_sim         = Step( this_dir + '/rtl-sim'                             )
   
   #  iflow           = Step( 'cadence-innovus-flowsetup',     default=True )
   #  init            = Step( 'cadence-innovus-init',          default=True )
@@ -101,11 +104,11 @@ def construct():
   #  postroute       = Step( 'cadence-innovus-postroute',     default=True )
   #  gdsmerge        = Step( 'mentor-calibre-gdsmerge',       default=True )
   #  pt_timing       = Step( 'synopsys-pt-timing-signoff',    default=True )
-  #
-  #  gen_saif        = Step( 'synopsys-vcd2saif-convert',     default=True )
-  #  gen_saif_rtl    = gen_saif.clone()
+  
+  gen_saif        = Step( 'synopsys-vcd2saif-convert',     default=True )
+  gen_saif_rtl    = gen_saif.clone()
   #  gen_saif_gl     = gen_saif.clone()
-  #  gen_saif_rtl.set_name( 'gen-saif-rtl' )
+  gen_saif_rtl.set_name( 'gen-saif-rtl' )
   #  gen_saif_gl.set_name( 'gen-saif-gl' )
   #
   #  netgen_lvs_def  = netgen_lvs.clone()
@@ -123,7 +126,7 @@ def construct():
   g.add_step( info            )
   g.add_step( rtl             )
   #  g.add_step( testbench       )
-  #  g.add_step( rtl_sim         )
+  g.add_step( rtl_sim         )
   g.add_step( constraints     )
   g.add_step( dc              )
   #  g.add_step( iflow           )
@@ -137,7 +140,7 @@ def construct():
   #  g.add_step( signoff         )
   #  g.add_step( gdsmerge        )
   #  g.add_step( pt_timing       )
-  #  g.add_step( gen_saif_rtl    )
+  g.add_step( gen_saif_rtl    )
   #  g.add_step( pt_power_rtl    )
   #  g.add_step( gl_sim          )
   #  g.add_step( gen_saif_gl     )
@@ -185,12 +188,12 @@ def construct():
 
   #  g.connect_by_name( rtl,             rtl_sim         ) # design.v
   #  g.connect_by_name( testbench,       rtl_sim         ) # testbench.sv
-  #  g.connect_by_name( rtl_sim,         gen_saif_rtl    ) # run.vcd
+  g.connect_by_name( rtl_sim,         gen_saif_rtl    ) # run.vcd
   #  g.connect_by_name( gl_sim,          gen_saif_gl     ) # run.vcd
   
   g.connect_by_name( rtl,             dc              )
   g.connect_by_name( constraints,     dc              )
-  #  g.connect_by_name( gen_saif_rtl,    dc              ) # run.saif
+  g.connect_by_name( gen_saif_rtl,    dc              ) # run.saif
   
   #  g.connect_by_name( dc,              iflow           )
   #  g.connect_by_name( dc,              init            )
