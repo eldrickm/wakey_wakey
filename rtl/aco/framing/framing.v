@@ -120,7 +120,7 @@ module framing # (
             skip_count <= 'd0;
         end else begin
             if (valid_i & (skip_count == FULL_PERIOD - 'd1)) begin
-                skip_count = 'd0;
+                skip_count <= 'd0;
             end else if (valid_i) begin
                 skip_count <= skip_count + 'd1;
             end else begin
