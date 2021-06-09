@@ -7,7 +7,12 @@
 
 module dffram #(
     parameter WIDTH = 32,
-    parameter DEPTH = 256
+    parameter DEPTH = 256,
+
+    // ========================================================================
+    // Local Parameters - Do Not Edit
+    // ========================================================================
+    parameter ADDR_BW = $clog2(DEPTH)
 ) (
     input                    clk_i,
 
@@ -18,8 +23,6 @@ module dffram #(
     input  [WIDTH - 1 : 0]   data_i,
     output [WIDTH - 1 : 0]   data_o
 );
-
-    localparam ADDR_BW = $clog2(DEPTH);
 
     reg [WIDTH - 1 : 0] read_data;
     reg [WIDTH - 1 : 0] mem [DEPTH - 1 : 0];
