@@ -42,7 +42,9 @@ module fft_wrapper #(
     // =========================================================================
     // output sample counter for holding valid_o
     localparam FFT_LEN                  = 256;
-    localparam RFFT_LEN                 = $rtoi(FFT_LEN / 2 + 1);
+    // TODO: $rtoi and $ceil are not supported in Design Compiler
+    // localparam RFFT_LEN                 = $rtoi(FFT_LEN / 2 + 1);
+    localparam RFFT_LEN                 = FFT_LEN / 2 + 1;
     localparam OUTPUT_COUNTER_BW        = $clog2(RFFT_LEN);
 
     // =========================================================================
