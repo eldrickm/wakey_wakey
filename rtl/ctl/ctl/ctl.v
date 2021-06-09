@@ -27,8 +27,16 @@ module ctl # (
     // Local Parameters
     // =========================================================================
     // 5ms empirically determined with microphone. See test/pdm_capture_test.
-    localparam COUNT_CYCLES   = 0.005 * F_SYSTEM_CLK;
-    localparam COUNTER_BW     = $clog2(COUNT_CYCLES + 1);
+    // Design Compiler does not support rtoi
+    // localparam COUNT_CYCLES   = $rtoi(0.005 * F_SYSTEM_CLK);
+    // integer type needed to keep DC from flaggging COUNT_CYCLES as a non
+    // constant expression
+    // TODO: make sure that this value is as expected after DC Synthesis
+    // Could also use a division by integer if multiplication by decimal does not
+    // expand as expected
+    // localparam integer COUNT_CYCLES   = F_SYSTEM_CLK / 200;
+    localparam integer COUNT_CYCLES  = 0.005 * F_SYSTEM_CLK;
+    localparam COUNTER_BW            = $clog2(COUNT_CYCLES + 1);
 
     // =========================================================================
     // Falling Edge Detection for wake_valid_i

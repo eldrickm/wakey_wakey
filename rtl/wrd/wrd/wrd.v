@@ -131,6 +131,19 @@ module wrd #(
 );
 
     // =========================================================================
+    // Ready Signals - Declare-before-use needed for Design Compiler
+    // =========================================================================
+    wire [0:0] conv1_ready;
+    wire [0:0] max_pool1_ready;
+    wire [0:0] conv_sipo_ready;
+    wire [0:0] zero_pad2_ready;
+    wire [0:0] conv2_ready;
+    wire [0:0] max_pool2_ready;
+    wire [0:0] fc_ready;
+    wire [0:0] argmax_ready;
+    wire [0:0] wake_ready;
+
+    // =========================================================================
     // zero_pad1
     // =========================================================================
     wire [ZERO_PAD1_VECTOR_BW - 1 : 0] zero_pad1_data;
@@ -164,7 +177,6 @@ module wrd #(
     wire [CONV1_BW - 1 : 0] conv1_data;
     wire                    conv1_valid;
     wire                    conv1_last;
-    wire [0:0]              conv1_ready;
 
     conv_top #(
         .FRAME_LEN(CONV1_FRAME_LEN),
@@ -202,7 +214,6 @@ module wrd #(
     wire [MAX_POOL1_BW - 1 : 0] max_pool1_data;
     wire                        max_pool1_valid;
     wire                        max_pool1_last;
-    wire [0:0]                  max_pool1_ready;
 
     max_pool #(
         .BW(MAX_POOL1_BW)
@@ -230,7 +241,6 @@ module wrd #(
     wire [CONV_SIPO_VECTOR_BW - 1 : 0] conv_sipo_data;
     wire                               conv_sipo_valid;
     wire                               conv_sipo_last;
-    wire [0:0]                         conv_sipo_ready;
 
     conv_sipo #(
         .BW(CONV_SIPO_BW),
@@ -260,7 +270,6 @@ module wrd #(
     wire [ZERO_PAD2_VECTOR_BW - 1 : 0] zero_pad2_data;
     wire                               zero_pad2_valid;
     wire                               zero_pad2_last;
-    wire [0:0]                         zero_pad2_ready;
 
     zero_pad #(
         .BW(ZERO_PAD2_BW),
@@ -289,7 +298,6 @@ module wrd #(
     wire [CONV2_BW - 1 : 0] conv2_data;
     wire                    conv2_valid;
     wire                    conv2_last;
-    wire [0:0]              conv2_ready;
 
     conv_top #(
         .FRAME_LEN(CONV2_FRAME_LEN),
@@ -327,7 +335,6 @@ module wrd #(
     wire [MAX_POOL2_BW - 1 : 0] max_pool2_data;
     wire                        max_pool2_valid;
     wire                        max_pool2_last;
-    wire [0:0]                  max_pool2_ready;
 
     max_pool #(
         .BW(MAX_POOL2_BW)
@@ -355,7 +362,6 @@ module wrd #(
     wire [FC_VECTOR_O_BW - 1 : 0] fc_data;
     wire                          fc_valid;
     wire                          fc_last;
-    wire [0:0]                    fc_ready;
 
     fc_top #(
         .I_BW(FC_I_BW),
@@ -395,7 +401,6 @@ module wrd #(
     wire [ARGMAX_O_BW - 1 : 0] argmax_data;
     wire                       argmax_valid;
     wire                       argmax_last;
-    wire [0:0]                 argmax_ready;
 
     argmax #(
         .I_BW(ARGMAX_I_BW)
@@ -420,7 +425,6 @@ module wrd #(
     // =========================================================================
     // wake
     // =========================================================================
-    wire [0:0] wake_ready;
 
     wake #(
         .NUM_CLASSES(WAKE_NUM_CLASSES)

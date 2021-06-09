@@ -65,6 +65,17 @@ module conv_top #(
     localparam SHIFT_BW          = $clog2(BIAS_BW);
 
     // =========================================================================
+    // Ready Signals - Declare-before-use needed for Design Compiler
+    // =========================================================================
+    wire vec_mul_ready0 [FILTER_LEN - 1 : 0];
+    wire vec_mul_ready1 [FILTER_LEN - 1 : 0];
+    wire vec_add_ready  [FILTER_LEN - 1 : 0];
+    wire [0:0] red_add_ready; // [0:0] needed to avoid undecl. error
+    wire bias_add_ready [FILTER_LEN - 1 : 0];
+    wire [0:0] relu_ready;
+    wire [0:0] quantizer_ready;
+
+    // =========================================================================
     // Recycler
     // =========================================================================
     wire [VECTOR_BW - 1 : 0] recycler_data0;
@@ -180,8 +191,6 @@ module conv_top #(
     wire [MUL_VECTOR_BW - 1 : 0] vec_mul_data   [FILTER_LEN - 1 : 0];
     wire                         vec_mul_valid  [FILTER_LEN - 1 : 0];
     wire                         vec_mul_last   [FILTER_LEN - 1 : 0];
-    wire                         vec_mul_ready0 [FILTER_LEN - 1 : 0];
-    wire                         vec_mul_ready1 [FILTER_LEN - 1 : 0];
 
     for (i = 0; i < FILTER_LEN; i = i + 1) begin: vector_multiply
         vec_mul #(
@@ -215,7 +224,6 @@ module conv_top #(
     wire [ADD_VECTOR_BW - 1 : 0] vec_add_data;
     wire                         vec_add_valid;
     wire                         vec_add_last;
-    wire                         vec_add_ready [FILTER_LEN - 1 : 0];
 
     vec_add #(
         .I_BW(MUL_BW),
@@ -252,7 +260,6 @@ module conv_top #(
     wire [BIAS_BW - 1 : 0] red_add_data;
     wire                   red_add_valid;
     wire                   red_add_last;
-    wire [0:0]             red_add_ready; // [0:0] needed to avoid undecl. error
 
     red_add #(
         .I_BW(ADD_BW),
@@ -279,7 +286,6 @@ module conv_top #(
     wire [BIAS_BW - 1 : 0] bias_add_data;
     wire                   bias_add_valid;
     wire                   bias_add_last;
-    wire                   bias_add_ready [FILTER_LEN - 1 : 0];
 
     vec_add #(
         .I_BW(BIAS_BW),
@@ -319,7 +325,6 @@ module conv_top #(
     wire [BIAS_BW - 1 : 0] relu_data;
     wire                   relu_valid;
     wire                   relu_last;
-    wire [0:0]             relu_ready;
 
     relu #(
         .BW(BIAS_BW)
@@ -344,7 +349,6 @@ module conv_top #(
     wire [BW - 1 : 0] quantizer_data;
     wire              quantizer_valid;
     wire              quantizer_last;
-    wire [0:0]        quantizer_ready;
 
     quantizer #(
         .I_BW(BIAS_BW),

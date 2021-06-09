@@ -143,6 +143,9 @@ module recycler #(
         fifo_recycle <= (state == STATE_CYCLE);
     end
 
+    // FIFO Output Shift Register
+    reg [VECTOR_BW - 1 : 0] fifo_out_sr [FILTER_LEN - 1 : 0];
+
     // Assign din to input if loading, otherwise feedback output to recycle
     wire [VECTOR_BW - 1 : 0] fifo_din;
     assign fifo_din = fifo_recycle ? fifo_out_sr[FILTER_LEN - 1] : data_i_q;
@@ -182,7 +185,6 @@ module recycler #(
     assign sr_en = (fifo_recycle | (state == STATE_PRELOAD));
 
     // FIFO Output Shift Register
-    reg [VECTOR_BW - 1 : 0] fifo_out_sr [FILTER_LEN - 1 : 0];
     always @(posedge clk_i) begin
         if (sr_en) begin
             fifo_out_sr[0] <= fifo_dout;
