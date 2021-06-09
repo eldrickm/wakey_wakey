@@ -9,7 +9,13 @@
 // of each output coefficient simultaneously.
 // =============================================================================
 
-module dct (
+module dct #(
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter I_BW = 8,
+    parameter O_BW = 16
+) (
     // clock and reset
     input                                   clk_i,
     input                                   rst_n_i,
@@ -28,8 +34,6 @@ module dct (
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam I_BW          = 8;
-    localparam O_BW          = 16;
     localparam INTERNAL_BW   = 32;
     localparam COEF_BW       = 16;
     localparam FRAME_LEN     = 32;  // length of the DCT
