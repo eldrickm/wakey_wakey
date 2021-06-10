@@ -2,7 +2,7 @@
 # proprietary macro hardening, open source integration
 # ==============================================================================
 # copy over config.tcl file
-cp caravel_integration/openlane/user_project_wrapper/config.tcl caravel_user_project/openlane/user_project_wrapper/config.tcl 
+cp caravel_integration/openlane/user_project_wrapper/config.tcl caravel_user_project/openlane/user_project_wrapper/config.tcl
 
 # copy over macro placement
 cp caravel_integration/openlane/user_project_wrapper/macro.cfg caravel_user_project/openlane/user_project_wrapper/macro.cfg
@@ -10,10 +10,8 @@ cp caravel_integration/openlane/user_project_wrapper/macro.cfg caravel_user_proj
 # copy over hardened macro lef
 cp caravel_integration/lef/user_proj_example.lef caravel_user_project/lef
 
-# unzip gds, keep original file
-gzip -dk caravel_integration/gds/user_proj_example.gds.gz1
-# copy over hardened macro gds
-mv caravel_integration/gds/user_proj_example.gds caravel_user_project/gds
+# unzip gds, keep original file, send to caravel_user_project
+gzip -dc caravel_integration/gds/user_proj_example.gds.gz > caravel_user_project/gds/user_proj_example.gds
 
 # copy over verilog for user_proj_example (blackboxed)
 cp ../rtl/wrapper/wrapper/user_proj_example.v caravel_user_project/verilog/rtl/user_proj_example.v
