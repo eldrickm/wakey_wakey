@@ -772,7 +772,7 @@ async def test_wakey_wakey(dut):
     await write_mem_params(dut, params)
     print('Preparing software model expected output:')
     fnames, wakes_expected = pmd.eval_pipeline()  # get input file names and wakes
-    sort_order = np.argsort(fnames)  # sort fnames so they're ordered in an expected way
+    sort_order = np.argsort(fnames)[::-1]  # sort fnames so they're ordered in an expected way
     fnames = np.array(fnames)[sort_order]
     wakes_expected = np.array(wakes_expected)[sort_order]
     n_total = len(fnames)
