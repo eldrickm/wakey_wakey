@@ -75,6 +75,7 @@ def construct():
   netgen_lvs      = Step( this_dir + '/open-netgen-lvs'                 )
   magic_antenna   = Step( this_dir + '/open-magic-antenna'              )
 
+  export         = Step( this_dir + '/export-to-openlane'         )
 
   # Default steps
 
@@ -133,6 +134,7 @@ def construct():
   g.add_step( postroute       )
   g.add_step( signoff         )
   g.add_step( gdsmerge        )
+  g.add_step( export          )
   g.add_step( pt_timing       )
   g.add_step( gen_saif_rtl    )
   g.add_step( pt_power_rtl    )
@@ -210,7 +212,11 @@ def construct():
   g.connect_by_name( route,           postroute       )
   g.connect_by_name( postroute,       signoff         )
   g.connect_by_name( signoff,         gdsmerge        )
-  
+
+  # Openlane export
+  g.connect_by_name( signoff,         export        )
+  g.connect_by_name( gdsmerge,        export        )
+
   # DRC, LVS, timing signoff and power signoff
   g.connect_by_name( gdsmerge,        magic_drc       )
   g.connect_by_name( signoff,         magic_antenna   )
