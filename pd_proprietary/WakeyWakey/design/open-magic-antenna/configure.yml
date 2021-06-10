@@ -1,0 +1,33 @@
+#=========================================================================
+# Run antenna check
+#=========================================================================
+# Author : Kartik Prabhu
+# Date   : May 25, 2021
+#
+
+name: open-magic-antenna
+
+#-------------------------------------------------------------------------
+# Inputs and Outputs
+#-------------------------------------------------------------------------
+inputs:
+  - adk
+  - design.def.gz
+
+outputs:
+  - antenna_check.log
+
+#-------------------------------------------------------------------------
+# Parameters
+#-------------------------------------------------------------------------
+
+parameters:
+  design_name: undefined
+
+commands:
+  - cp inputs/adk/magicrc .magicrc
+  - cp inputs/adk/rtk-tech.lef rtk-tech-nolicon.lef
+  - sed -i '/LAYER licon/,/END licon/d' rtk-tech-nolicon.lef
+  - cp -L inputs/design.def.gz design.def.gz 
+  - gunzip design.def.gz 
+  - magic -noconsole -dnull run_antenna.tcl | tee outputs/antenna_check.log

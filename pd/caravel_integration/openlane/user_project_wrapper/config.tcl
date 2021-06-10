@@ -29,12 +29,14 @@ set ::env(VERILOG_FILES) "\
 	$script_dir/../../caravel/verilog/rtl/defines.v \
 	$script_dir/../../verilog/rtl/user_project_wrapper.v"
 
+# TODO: What should we set these to?
 ## Clock configurations
 set ::env(CLOCK_PORT) "user_clock2"
 set ::env(CLOCK_NET) "mprj.clk"
 
+# TODO: What should we set these to?
 # set ::env(CLOCK_PERIOD) "10"
-set ::env(CLOCK_PERIOD) "62.5"
+set ::env(CLOCK_PERIOD) "250"
 
 ## Internal Macros
 ### Macro Placement

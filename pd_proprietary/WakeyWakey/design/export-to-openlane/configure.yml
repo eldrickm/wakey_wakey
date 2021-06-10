@@ -1,0 +1,12 @@
+name: export-to-openlane
+
+inputs:
+  - design.lef
+  - design_merged.gds
+
+outputs:
+
+commands:
+  - cp inputs/design.lef ${{WAKEY_WAKEY_TOP}}/pd/caravel_integration/lef/user_proj_example.lef
+  - cp inputs/design_merged.gds ${{WAKEY_WAKEY_TOP}}/pd/caravel_integration/gds/user_proj_example.gds
+  - gzip ${{WAKEY_WAKEY_TOP}}/pd/caravel_integration/gds/user_proj_example.gds
