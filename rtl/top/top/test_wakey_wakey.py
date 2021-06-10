@@ -7,9 +7,13 @@ Top Level Wakey-Wakey Testbench
 
 import sys
 sys.path.append('../../../py/')
+import numpy_arch as na
+
+sys.path.append('../../../test/pdm_capture_test/py/')
+import parse_mic_data as pmd
 
 import numpy as np
-import numpy_arch as na
+# from tqdm.auto import tqdm
 
 import cocotb
 from cocotb.clock import Clock
@@ -287,6 +291,9 @@ async def write_fc_mem(dut, w, b):
         await cfg_store(dut, offsets[j + 2], 0, 0, 0, int(b[j]))
 
 
+# ==============================================================================
+# Write to dut
+# ==============================================================================
 async def write_input_features(dut, x):
     """
     Asynchronously send a full set of MFCC features to the dut.
@@ -307,9 +314,22 @@ async def write_input_features(dut, x):
     dut.last_i <= 0
     dut.data_i <= 0
 
+async def write_pdm_input(dut, x):
+    '''Write a PDM audio stream to the DUT.'''
+    dut.vad_i <= 1  # raise VAD to start DUT processing pipeline
+    n = len(x)
+    print_interval = int(n/100)
+    # for i in tqdm(range(n)):
+    for i in range(n):
+        dut.pdm_data_i <= int(x[i])
+        await FallingEdge(dut.pdm_clk_o)  # wait on PDM clock falling edge
+        if (i % print_interval == 0):
+            print('{}/{}'.format(i, n))
+    dut.vad_i <= 0  # de-assert VAD
+    dut.pdm_data_i <= 0
 
 # ==============================================================================
-# Memory Read Transactions
+# Intermediate Activation Reading
 # ==============================================================================
 async def read_conv_output(dut, conv_num, n_frames, n_channels, expected):
     """Receive the output featuremap and put it in a numpy array."""
@@ -395,8 +415,16 @@ async def read_wake(dut, wake_expected):
         assert wake == 0, 'Wake asserted unexpectedly.'
     print('Wake behavior as expected.')
 
+async def read_wake_no_assert(dut):
+    while (dut.wrd_inst.wake_valid.value != 1):
+        await FallingEdge(dut.clk_i)
+    wake = dut.wrd_inst.wake_o.value
+    print('Received wake determination', wake)
+    return wake
 
-# ==================== Generating inputs ====================
+# ==============================================================================
+# Generating WRD Inputs
+# ==============================================================================
 
 def get_random_int8(size):
     return np.random.randint(INT8_MIN, INT8_MAX, size, dtype=np.int8)
@@ -563,6 +591,17 @@ async def do_mfcc_test(dut):
     await read_fc_output(dut, fc_exp)
     await read_wake(dut, wake)
 
+# ==============================================================================
+# PDM-based testing
+# ==============================================================================
+async def do_pdm_test(dut, pdm_fname):
+    x = np.load(pdm_fname, allow_pickle=True)
+    x = pmd.pad_pdm(x)  # pad half-second signal to 1 second
+    print('Beginning of pdm input: ', x[:10])
+    await write_pdm_input(dut, x)  # change on falling edge of pdm clk
+    wake = await read_wake_no_assert(dut, wake)
+    return wake
+
 
 @cocotb.test()
 async def test_wakey_wakey(dut):
@@ -589,6 +628,7 @@ async def test_wakey_wakey(dut):
     dut.vad_i <= 1
     await FallingEdge(dut.clk_i)
 
+    '''
     print('=' * 100)
     print('Beginning Load/Store Test')
     print('=' * 100)
@@ -699,6 +739,7 @@ async def test_wakey_wakey(dut):
     observed = await cfg_load(dut, 0x400)
     expected = [0, 0, 0, i]
     assert observed == expected
+    '''
 
     #  n_fixed_tests = 4  # number of different types of fixed tests
     #  for i in range(n_fixed_tests):
@@ -725,3 +766,24 @@ async def test_wakey_wakey(dut):
     #      params = na.get_params()
     #      await write_mem_params(dut, params)
     #      await do_mfcc_test(dut)
+
+    print('Make sure to source setup.bashrc!')
+    params = na.get_params()
+    await write_mem_params(dut, params)
+    print('Preparing software model expected output:')
+    fnames, wakes_expected = pmd.eval_pipeline()  # get input file names and wakes
+    sort_order = np.argsort(fnames)  # sort fnames so they're ordered in an expected way
+    fnames = np.array(fnames)[sort_order]
+    wakes_expected = np.array(wakes_expected)[sort_order]
+    n_total = len(fnames)
+    print('cocotb plusargs: ', cocotb.plusargs)
+    test_num = int(cocotb.plusargs['test_num'])
+    print('Running test {}/{} with {}'.format(test_num, n_total-1, fnames[test_num]))
+    print('=' * 100)
+    print('Beginning end-to-end test {}/{} '.format(test_num, n_total-1))
+    print('=' * 100)
+    wake = await do_pdm_test(dut, fnames[test_num])
+    if wake != wakes_expected[test_num]:
+        print('DUT output of {} when expected {}'.format(wake, wakes_expected[test_num]))
+    else:
+        print('DUT output of {} as expected.'.format(wake))

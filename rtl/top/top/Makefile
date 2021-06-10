@@ -3,6 +3,8 @@
 # ==============================================================================
 SIM			    ?= icarus			# simulator (icarus, verilator, ...)
 TOPLEVEL_LANG   ?= verilog			# hdl (verilog, vhdl)
+# Make VVP non-interactive so CTRL-C stops the sim
+SIM_ARGS	+=-n
 
 # ==============================================================================
 # source files
