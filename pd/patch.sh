@@ -16,6 +16,9 @@ gzip -dc caravel_integration/gds/user_proj_example.gds.gz > caravel_user_project
 # copy over verilog for user_proj_example (blackboxed)
 cp ../rtl/wrapper/wrapper/user_proj_example.v caravel_user_project/verilog/rtl/user_proj_example.v
 
+# copy over verilog for user_project_wrapper - remove analogs connections
+cp caravel_integration/verilog/rtl/user_project_wrapper.v caravel_user_project/verilog/rtl/user_project_wrapper.v
+
 # ==============================================================================
 # open-source only flow
 # ==============================================================================
