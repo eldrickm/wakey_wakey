@@ -11,7 +11,7 @@
 # is too large the tools will have no trouble but you will get a very
 # conservative implementation.
 
-set clock_net  clk_i
+set clock_net  wb_clk_i
 set clock_name ideal_clock
 
 create_clock -name ${clock_name} \

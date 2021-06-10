@@ -104,13 +104,10 @@ set pins_right {\
 
 # Pins on the bottom side from right to left. 
 set pins_bottom {\
-    # user_irq
     {user_irq[2]}\
     {user_irq[1]}\
     {user_irq[0]}\
-    # user_clock2
     {user_clock2}\
-    # logic analyzer signals
     {la_oenb[127]}\
     {la_data_out[127]}\
     {la_data_in[127]}\
@@ -495,7 +492,6 @@ set pins_bottom {\
     {la_oenb[0]}\
     {la_data_out[0]}\
     {la_data_in[0]}\
-    # wbs_dat_* and wbs_adr_i signals
     {wbs_dat_o[31]}\
     {wbs_dat_i[31]}\
     {wbs_adr_i[31]}\
@@ -580,7 +576,6 @@ set pins_bottom {\
     {wbs_dat_o[4]}\
     {wbs_dat_i[4]}\
     {wbs_adr_i[4]}\
-    #wbs_sel_i begins here
     {wbs_sel_i[3]}\
     {wbs_dat_o[3]}\
     {wbs_dat_i[3]}\
@@ -597,7 +592,6 @@ set pins_bottom {\
     {wbs_dat_o[0]}\
     {wbs_dat_i[0]}\
     {wbs_adr_i[0]}\
-    # wb control signals
     wbs_we_i\
     wbs_stb_i\
     wbs_cyc_i\

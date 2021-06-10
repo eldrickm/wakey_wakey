@@ -4,6 +4,6 @@ outputs:
   - run.vcd
 
 commands:
-  - cd ${{WAKEY_WAKEY_TOP}}/rtl/top/top/
+  - cd ${{WAKEY_WAKEY_TOP}}/rtl/wrapper/wrapper/
   - make
   - mv wave.vcd ${{OLDPWD}}/outputs/run.vcd

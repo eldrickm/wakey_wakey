@@ -26,14 +26,14 @@ def construct():
 
   parameters = {
     'construct_path' : __file__,
-    'design_name'    : 'wakey_wakey',
+    'design_name'    : 'user_proj_example',
     'clock_period'   : 250.0,
     'adk'            : adk_name,
     'adk_view'       : adk_view,
     'topographical'  : True,
     #  'testbench_name' : 'wakey_wakey', # not used with custom cocotb sims
-    'strip_path'     : 'wakey_wakey',
-    'saif_instance'  : 'wakey_wakey'
+    'strip_path'     : 'user_proj_example',
+    'saif_instance'  : 'user_proj_example'
   }
 
   #-----------------------------------------------------------------------
@@ -54,6 +54,8 @@ def construct():
   rtl             = Step( this_dir + '/rtl'                             )
   constraints     = Step( this_dir + '/constraints'                     )
   #  testbench       = Step( this_dir + '/testbench'                       )
+  pin_placement   = Step( this_dir + '/pin-placement'                   )
+  floorplan       = Step( this_dir + '/floorplan'                       )
   
   # Power node is custom because power and gnd pins are named differently in
   # the standard cells compared to the default node, and the layer numbering is
@@ -130,6 +132,8 @@ def construct():
   g.add_step( constraints     )
   g.add_step( dc              )
   g.add_step( iflow           )
+  g.add_step( pin_placement   )
+  g.add_step( floorplan       )
   g.add_step( init            )
   g.add_step( power           )
   g.add_step( place           )
@@ -161,6 +165,8 @@ def construct():
   #  rtl_sim.extend_inputs(['design.v'])
   #  rtl_sim.extend_inputs(['test_vectors.txt'])
   #  gl_sim.extend_inputs(['test_vectors.txt'])
+
+  init.extend_inputs(['floorplan.tcl', 'pin-assignments.tcl'])
 
   # Connect by name
 
@@ -212,6 +218,8 @@ def construct():
   g.connect_by_name( iflow,           signoff         )
   
   # Core place and route flow
+  g.connect_by_name( floorplan,       init            )
+  g.connect_by_name( pin_placement,   init            )
   g.connect_by_name( init,            power           )
   g.connect_by_name( power,           place           )
   g.connect_by_name( place,           cts             )

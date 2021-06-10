@@ -13,11 +13,12 @@
 // limitations under the License.
 // SPDX-License-Identifier: Apache-2.0
 
-`default_nettype none
+// `default_nettype none
 
-// `ifndef MPRJ_IO_PADS
+`ifndef MPRJ_IO_PADS
     `define MPRJ_IO_PADS 38
-// `endif
+`endif
+
 /*
  *-------------------------------------------------------------
  *
@@ -39,30 +40,32 @@ module user_proj_example (
     inout vssd2,	// User area 2 digital ground
 `endif
 
+    input wire user_clock2,
+
     // Wishbone Slave ports (WB MI A)
-    input wb_clk_i,
-    input wb_rst_i,
-    input wbs_stb_i,
-    input wbs_cyc_i,
-    input wbs_we_i,
-    input [3:0] wbs_sel_i,
-    input [31:0] wbs_dat_i,
-    input [31:0] wbs_adr_i,
-    output wbs_ack_o,
-    output [31:0] wbs_dat_o,
+    input wire wb_clk_i,
+    input wire wb_rst_i,
+    input wire wbs_stb_i,
+    input wire wbs_cyc_i,
+    input wire wbs_we_i,
+    input wire [3:0] wbs_sel_i,
+    input wire [31:0] wbs_dat_i,
+    input wire [31:0] wbs_adr_i,
+    output wire wbs_ack_o,
+    output wire [31:0] wbs_dat_o,
 
     // Logic Analyzer Signals
-    input  [127:0] la_data_in,
-    output [127:0] la_data_out,
-    input  [127:0] la_oenb,
+    input  wire [127:0] la_data_in,
+    output wire [127:0] la_data_out,
+    input  wire [127:0] la_oenb,
 
     // IOs
-    input  [`MPRJ_IO_PADS-1:0] io_in,
-    output [`MPRJ_IO_PADS-1:0] io_out,
-    output [`MPRJ_IO_PADS-1:0] io_oeb,
+    input  wire [`MPRJ_IO_PADS-1:0] io_in,
+    output wire [`MPRJ_IO_PADS-1:0] io_out,
+    output wire [`MPRJ_IO_PADS-1:0] io_oeb,
 
     // IRQ
-    output [2:0] irq
+    output wire [2:0] irq
 );
 
     // =========================================================================
