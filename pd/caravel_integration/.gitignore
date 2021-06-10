@@ -1,4 +1,1 @@
-*.hex
-*.vcd
-*.elf
-*.vvp
+*.gds
