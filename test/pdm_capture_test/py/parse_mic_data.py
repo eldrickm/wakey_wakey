@@ -166,8 +166,8 @@ def pdm_to_wav(fname_in, fname_out):
 def pdm_to_wav_multiple():
     '''Parse pdm files in pdm_dir to check their contents.'''
     for category in categories:
-        in_dir = pdm_dir + category
-        out_dir = pdm_dir + category + wav_save_dir
+        in_dir = this_path/pdm_dir/category
+        out_dir = this_path/pdm_dir/category/wav_save_dir
         fnames = os.listdir(in_dir)
         for fname in fnames:
             if fname[-4:] != '.npy':
@@ -179,15 +179,19 @@ def eval_pipeline(method='cic2'):
     n_false_wake = 0
     n_valid_sleep = 0
     n_false_sleep = 0
+    paths = []
+    wakes = []
     for category in categories:
-        in_dir = pdm_dir + category
+        in_dir = this_path/pdm_dir/category
         fnames = os.listdir(in_dir)
         for fname in fnames:
             if fname[-4:] != '.npy':
                 continue
-            full_path = in_dir + fname
+            full_path = str(in_dir/fname)
+            paths.append(full_path)
             print('Processing', full_path, ': ', end='')
             wake = process_pdm_wake(source=full_path, method=method)[-1]
+            wakes.append(wake)
             if category == 'yes/':
                 if wake:
                     n_valid_wake += 1
@@ -202,6 +206,7 @@ def eval_pipeline(method='cic2'):
     accuracy = (n_valid_wake + n_valid_sleep) / total * 100
     print('Accuracy: {:.03f}%'.format(accuracy))
     print_maxes()
+    return paths, wakes
 
 if __name__ == '__main__':
     # process_pdm_dfe()
