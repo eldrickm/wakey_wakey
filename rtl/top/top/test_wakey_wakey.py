@@ -318,11 +318,13 @@ async def write_pdm_input(dut, x):
     '''Write a PDM audio stream to the DUT.'''
     dut.vad_i <= 1  # raise VAD to start DUT processing pipeline
     n = len(x)
+    print_interval = int(n/100)
     # for i in tqdm(range(n)):
     for i in range(n):
         dut.pdm_data_i <= int(x[i])
         await FallingEdge(dut.pdm_clk_o)  # wait on PDM clock falling edge
-        # print('{}/{}'.format(i, n), end='')
+        if (i % print_interval == 0):
+            print('{}/{}'.format(i, n))
     dut.vad_i <= 0  # de-assert VAD
     dut.pdm_data_i <= 0
 
