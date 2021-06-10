@@ -104,9 +104,9 @@ set pins_right {\
 
 # Pins on the bottom side from right to left. 
 set pins_bottom {\
-    {user_irq[2]}\
-    {user_irq[1]}\
-    {user_irq[0]}\
+    {irq[2]}\
+    {irq[1]}\
+    {irq[0]}\
     {user_clock2}\
     {la_oenb[127]}\
     {la_data_out[127]}\
