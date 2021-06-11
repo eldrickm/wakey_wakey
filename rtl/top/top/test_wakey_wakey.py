@@ -817,19 +817,18 @@ async def test_wakey_wakey(dut):
     sort_order[::2] = sort_order[::-2]
     fnames = np.array(fnames)[sort_order]
     wakes_expected = np.array(wakes_expected)[sort_order]
-    n_total = len(fnames)
     n_correct = 0
     print('cocotb plusargs: ', cocotb.plusargs)
     if 'n_tests' in cocotb.plusargs:
         n_tests = int(cocotb.plusargs['n_tests'])
         print('Running only {} tests'.format(n_tests))
     else:
-        n_tests = 39
+        n_tests = len(fnames)
     # test_num = int(cocotb.plusargs['test_num'])
     for test_num in range(n_tests):
-        print('Running test {}/{} with {}'.format(test_num, n_total-1, fnames[test_num]))
+        print('Running test {}/{} with {}'.format(test_num, n_tests-1, fnames[test_num]))
         print('=' * 100)
-        print('Beginning end-to-end test {}/{} '.format(test_num, n_total-1))
+        print('Beginning end-to-end test {}/{} '.format(test_num, n_tests-1))
         print('=' * 100)
         wake = await do_pcm_test(dut, fnames[test_num])
         if wake != wakes_expected[test_num]:
@@ -837,5 +836,5 @@ async def test_wakey_wakey(dut):
         else:
             print('DUT output of {} as expected.'.format(wake))
             n_correct += 1
-    accuracy = n_correct / n_total * 100
-    print('Results: {}/{} correct, accuracy: {:.03f}'.format(n_correct, n_total, accuracy))
+    accuracy = n_correct / n_tests * 100
+    print('Results: {}/{} correct, accuracy: {:.03f}'.format(n_correct, n_tests, accuracy))
