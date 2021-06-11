@@ -647,8 +647,8 @@ set pins_left {\
 }
 
 # check this in klayout - pins are on different layers depending on orientation
-set top_bottom_ports_layer M2
-set left_right_ports_layer M3
+set top_bottom_ports_layer met2
+set left_right_ports_layer met3
 
 # Spread the pins evenly along the sides of the block
 editPin -layer $left_right_ports_layer -pin $pins_right  -side RIGHT  -spreadType SIDE
