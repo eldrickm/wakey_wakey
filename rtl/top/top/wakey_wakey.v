@@ -21,8 +21,13 @@ module wakey_wakey (
     output [31 : 0] wbs_dat_o,
 
     // microphone i/o
+    `ifdef COCOTB_SIM
+    input [DFE_OUTPUT_BW - 1 : 0] dfe_data,  // bypass DFE for test bench
+    input                         dfe_valid,
+    `else
     input           pdm_data_i,
     output          pdm_clk_o,
+    `endif
     input           vad_i,  // voice activity detection
 
     // wake output
@@ -143,6 +148,7 @@ module wakey_wakey (
     // =========================================================================
     localparam DFE_OUTPUT_BW = 8;
 
+    `ifndef COCOTB_SIM
     wire [DFE_OUTPUT_BW - 1 : 0] dfe_data;
     wire                         dfe_valid;
 
@@ -163,6 +169,7 @@ module wakey_wakey (
         .data_o(dfe_data),
         .valid_o(dfe_valid)
     );
+    `endif
 
     // =========================================================================
     // ACO - Acoustic Featurizer

@@ -8,12 +8,13 @@ Top Level Wakey-Wakey Testbench
 import sys
 sys.path.append('../../../py/')
 import numpy_arch as na
+import pdm
 
 sys.path.append('../../../test/pdm_capture_test/py/')
-import parse_mic_data as pmd
+import parse_mic_data
 
 import numpy as np
-# from tqdm.auto import tqdm
+from tqdm.auto import tqdm
 
 import cocotb
 from cocotb.clock import Clock
@@ -328,6 +329,30 @@ async def write_pdm_input(dut, x):
     dut.vad_i <= 0  # de-assert VAD
     dut.pdm_data_i <= 0
 
+PCM_SPACING = 3  # cycles between writing another PCM input
+                 # must be >= 3 so the FFT isn't over utilised
+async def write_pcm_input(dut, x):
+    '''Write a PCM audio stream directly to ACO.'''
+    dut.vad_i <= 1  # raise VAD to start DUT processing pipeline
+    for i in range(3000):
+        await FallingEdge(dut.clk_i)
+    while (dut.ctl_inst.en_o != 1):  # wait until pipeline reactivates
+        await FallingEdge(dut.clk_i)
+    n = len(x)
+    # print_interval = int(n/100)
+    # for i in range(n):
+    for i in tqdm(range(n)):
+        dut.dfe_data <= int(x[i])
+        dut.dfe_valid <= 1
+        await FallingEdge(dut.clk_i)  # wait on PDM clock falling edge
+        dut.dfe_data <= 0
+        dut.dfe_valid <= 0
+        for j in range(PCM_SPACING):
+            await FallingEdge(dut.clk_i)
+        # if (i % print_interval == 0):
+            # print('{}/{}'.format(i, n))
+    dut.vad_i <= 0  # de-assert VAD
+
 # ==============================================================================
 # Intermediate Activation Reading
 # ==============================================================================
@@ -418,9 +443,12 @@ async def read_wake(dut, wake_expected):
 async def read_wake_no_assert(dut):
     while (dut.wrd_inst.wake_valid.value != 1):
         await FallingEdge(dut.clk_i)
+    for i in range(3):
+        await FallingEdge(dut.clk_i)
     wake = dut.wrd_inst.wake_o.value
     print('Received wake determination', wake)
-    return wake
+    wake_bool = True if (wake == 1) else False
+    return wake_bool
 
 # ==============================================================================
 # Generating WRD Inputs
@@ -596,10 +624,22 @@ async def do_mfcc_test(dut):
 # ==============================================================================
 async def do_pdm_test(dut, pdm_fname):
     x = np.load(pdm_fname, allow_pickle=True)
-    x = pmd.pad_pdm(x)  # pad half-second signal to 1 second
+    x = parse_mic_data.pad_pdm(x)  # pad half-second signal to 1 second
     print('Beginning of pdm input: ', x[:10])
     await write_pdm_input(dut, x)  # change on falling edge of pdm clk
-    wake = await read_wake_no_assert(dut, wake)
+    wake = await read_wake_no_assert(dut)
+    return wake
+
+# ==============================================================================
+# ACO-based testing
+# ==============================================================================
+async def do_pcm_test(dut, pdm_fname):
+    x = np.load(pdm_fname, allow_pickle=True)
+    x = parse_mic_data.pad_pdm(x)  # pad half-second signal to 1 second
+    x = pdm.pdm_to_pcm(x, 2)
+    print('Beginning of pcm input: ', x[:10])
+    await write_pcm_input(dut, x)  # change on falling edge of pdm clk
+    wake = await read_wake_no_assert(dut)
     return wake
 
 
@@ -618,7 +658,9 @@ async def test_wakey_wakey(dut):
     dut.wbs_sel_i <= 0
     dut.wbs_dat_i <= 0
     dut.wbs_adr_i <= 0
-    dut.pdm_data_i <= 0
+    # dut.pdm_data_i <= 0
+    dut.dfe_data <= 0
+    dut.dfe_valid <= 0
     dut.vad_i <= 0
 
     # wait long enough for reset to be effective
@@ -628,7 +670,6 @@ async def test_wakey_wakey(dut):
     dut.vad_i <= 1
     await FallingEdge(dut.clk_i)
 
-    '''
     print('=' * 100)
     print('Beginning Load/Store Test')
     print('=' * 100)
@@ -739,7 +780,6 @@ async def test_wakey_wakey(dut):
     observed = await cfg_load(dut, 0x400)
     expected = [0, 0, 0, i]
     assert observed == expected
-    '''
 
     #  n_fixed_tests = 4  # number of different types of fixed tests
     #  for i in range(n_fixed_tests):
@@ -768,22 +808,34 @@ async def test_wakey_wakey(dut):
     #      await do_mfcc_test(dut)
 
     print('Make sure to source setup.bashrc!')
+    print('To limit the number of tests, run with: make PLUSARGS="+n_tests=2"')
     params = na.get_params()
     await write_mem_params(dut, params)
     print('Preparing software model expected output:')
-    fnames, wakes_expected = pmd.eval_pipeline()  # get input file names and wakes
-    sort_order = np.argsort(fnames)[::-1]  # sort fnames so they're ordered in an expected way
+    fnames, wakes_expected = parse_mic_data.eval_pipeline()  # get input file names and wakes
+    sort_order = np.argsort(fnames)  # sort fnames so they're ordered in an expected way
+    sort_order[::2] = sort_order[::-2]
     fnames = np.array(fnames)[sort_order]
     wakes_expected = np.array(wakes_expected)[sort_order]
     n_total = len(fnames)
+    n_correct = 0
     print('cocotb plusargs: ', cocotb.plusargs)
-    test_num = int(cocotb.plusargs['test_num'])
-    print('Running test {}/{} with {}'.format(test_num, n_total-1, fnames[test_num]))
-    print('=' * 100)
-    print('Beginning end-to-end test {}/{} '.format(test_num, n_total-1))
-    print('=' * 100)
-    wake = await do_pdm_test(dut, fnames[test_num])
-    if wake != wakes_expected[test_num]:
-        print('DUT output of {} when expected {}'.format(wake, wakes_expected[test_num]))
+    if 'n_tests' in cocotb.plusargs:
+        n_tests = int(cocotb.plusargs['n_tests'])
+        print('Running only {} tests'.format(n_tests))
     else:
-        print('DUT output of {} as expected.'.format(wake))
+        n_tests = 39
+    # test_num = int(cocotb.plusargs['test_num'])
+    for test_num in range(n_tests):
+        print('Running test {}/{} with {}'.format(test_num, n_total-1, fnames[test_num]))
+        print('=' * 100)
+        print('Beginning end-to-end test {}/{} '.format(test_num, n_total-1))
+        print('=' * 100)
+        wake = await do_pcm_test(dut, fnames[test_num])
+        if wake != wakes_expected[test_num]:
+            print('DUT output of {} when expected {}'.format(wake, wakes_expected[test_num]))
+        else:
+            print('DUT output of {} as expected.'.format(wake))
+            n_correct += 1
+    accuracy = n_correct / n_total * 100
+    print('Results: {}/{} correct, accuracy: {:.03f}'.format(n_correct, n_total, accuracy))
