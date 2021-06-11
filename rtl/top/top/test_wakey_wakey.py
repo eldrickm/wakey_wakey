@@ -699,7 +699,7 @@ async def check_final(dut, y, test_num):
 def plot_features(sigs, test_num, name):
     plotdir = 'plots/test_{}/'.format(test_num)
     if not os.path.exists(plotdir):
-        os.mkdir(plotdir)
+        os.makedirs(plotdir)
     titles = ['Expected Features', 'Received Features']
     plt.figure()
     max_val_exp = np.abs(sigs[0]).flatten().max()

@@ -7,13 +7,21 @@ Top Level Wakey-Wakey Testbench
 
 import sys
 sys.path.append('../../../py/')
-
-import numpy as np
 import numpy_arch as na
+import pdm
+import aco
+
+sys.path.append('../../../test/pdm_capture_test/py/')
+import parse_mic_data
+
+import os
+import numpy as np
+from tqdm.auto import tqdm
+import matplotlib.pyplot as plt
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import FallingEdge, RisingEdge
+from cocotb.triggers import FallingEdge, RisingEdge, Timer
 from cocotb.binary import BinaryValue
 
 
@@ -386,15 +394,28 @@ async def read_fc_output(dut, expected):
 
 async def read_wake(dut, wake_expected):
     """Check the wake signal is as expected."""
-    for _ in range(10):
+    while (dut.wakey_wakey_inst.wrd_inst.wake_valid.value != 1):
         await FallingEdge(dut.wb_clk_i)
-    wake = dut.wrd_inst.wake_o.value
+    for i in range(3):
+        await FallingEdge(dut.wb_clk_i)
+    # wake = dut.wrd_inst.wake_o.value
+    wake = (dut.io_out.value >> 37) & 1
     if wake_expected:
         assert wake == 1, 'Wake not asserted as expected.'
     else:
         assert wake == 0, 'Wake asserted unexpectedly.'
-    print('Wake behavior as expected.')
+    print('Wake of {} with FFT correction as expected.'.format(wake_expected))
 
+async def read_wake_no_assert(dut):
+    while (dut.wakey_wakey_inst.wrd_inst.wake_valid.value != 1):
+        await FallingEdge(dut.wb_clk_i)
+    for i in range(3):
+        await FallingEdge(dut.wb_clk_i)
+    # wake = dut.wrd_inst.wake_o.value
+    wake = (dut.io_out.value >> 37) & 1
+    print('Received wake determination', wake)
+    wake_bool = True if (wake == 1) else False
+    return wake_bool
 
 # ==================== Generating inputs ====================
 
@@ -563,6 +584,146 @@ async def do_mfcc_test(dut):
     await read_fc_output(dut, fc_exp)
     await read_wake(dut, wake)
 
+# ==============================================================================
+# ACO-based testing
+# ==============================================================================
+def get_io_in_val(vad_i, dfe_data, dfe_valid):
+    vad = (1 << 34)
+    dfe_valid = (dfe_valid << 8)
+    result = vad | dfe_valid | int(dfe_data)
+    return result
+
+PCM_SPACING = 3  # cycles between writing another PCM input
+                 # must be >= 3 so the FFT isn't over utilised
+async def write_pcm_input(dut, x):
+    '''Write a PCM audio stream directly to ACO.'''
+    while (dut.wakey_wakey_inst.wrd_inst.wake_valid.value != 0):  # wait for wake to clear
+        await FallingEdge(dut.wb_clk_i)
+    for i in range(3000):
+        await FallingEdge(dut.wb_clk_i)
+    # dut.vad_i <= 1  # raise VAD to start DUT processing pipeline
+    dut.io_in <= get_io_in_val(1, 0, 0)
+    while (dut.wakey_wakey_inst.ctl_inst.en_o != 1):  # wait until pipeline reactivates
+        await FallingEdge(dut.wb_clk_i)
+    n = len(x)
+    # print_interval = int(n/100)
+    # for i in range(n):
+    for i in tqdm(range(n)):
+        # dut.dfe_data <= int(x[i])
+        # dut.dfe_valid <= 1
+        dut.io_in <= get_io_in_val(1, int(x[i]), 1)
+        await FallingEdge(dut.wb_clk_i)  # wait on PDM clock falling edge
+        # dut.dfe_data <= 0
+        # dut.dfe_valid <= 0
+        dut.io_in <= get_io_in_val(1, 0, 0)
+        for j in range(PCM_SPACING):
+            await FallingEdge(dut.wb_clk_i)
+        # if (i % print_interval == 0):
+            # print('{}/{}'.format(i, n))
+    # dut.vad_i <= 0  # de-assert VAD
+    dut.io_in <= get_io_in_val(0, 0, 0)
+
+N_FRAMES = 50  # frames 
+FFT_LEN = 256
+RFFT_LEN = int(FFT_LEN / 2 + 1)
+async def check_fft(dut, y, test_num):
+    # threshold = 10  # maximum difference between expected and actual
+    threshold = 100  # maximum difference between expected and actual
+    full_sig = np.zeros((N_FRAMES, RFFT_LEN), dtype=np.cdouble)
+    for i in range(N_FRAMES):
+        while (dut.wakey_wakey_inst.aco_inst.fft_valid_o != 1):  # wait until output is valid
+            await FallingEdge(dut.wb_clk_i)
+        sig = np.zeros(RFFT_LEN, dtype=np.cdouble)
+        for j in range(RFFT_LEN):
+            await Timer(1, units='us')
+            binstr = dut.wakey_wakey_inst.aco_inst.fft_data_o.value.get_binstr()
+            split_binstr = [binstr[:21], binstr[21:]]
+            output_arr = [BinaryValue(x).signed_integer for x in split_binstr]
+            sig[j] = output_arr[0] + output_arr[1] * 1j
+            if j == RFFT_LEN - 1:
+                assert dut.wakey_wakey_inst.aco_inst.fft_last_o == 1
+            else:
+                assert dut.wakey_wakey_inst.aco_inst.power_spectrum_last_o == 0
+            await FallingEdge(dut.wb_clk_i)
+        absmax = np.abs(y[i,:] - sig).max()
+        assert absmax <= threshold, ('FFT: deviation of {} exceeds threshold'
+                                        .format(absmax))
+        full_sig[i, :] = sig
+        print('\r{}/50'.format(i+1), end='')
+    percent_err = np.abs(full_sig - y) / np.abs(y).max() * 100
+    print('FFT: max percent error: {:.03f}%'.format(percent_err.max()))
+    print('FFT: received expected output.')
+    plot_features((y, full_sig), test_num, '1FFT')
+    return full_sig
+
+N_MFE = 32
+N_DCT = 13
+async def check_final(dut, y, test_num):
+    y = y.reshape((N_FRAMES, N_DCT))
+    while (dut.wakey_wakey_inst.aco_inst.valid_o != 1):
+        await FallingEdge(dut.wb_clk_i)
+    sig = np.zeros((N_FRAMES, N_DCT))
+    for i in range(N_FRAMES):
+        await Timer(1, units='us')
+        assert dut.wakey_wakey_inst.aco_inst.valid_o == 1
+        binstr = dut.wakey_wakey_inst.aco_inst.data_o.value.get_binstr()
+        for j in range(N_DCT):
+            section = binstr[j*8 : (j+1)*8]
+            sig[i, j] = BinaryValue(section).signed_integer
+            assert sig[i, j] == y[i,j]
+        if i == N_FRAMES - 1:
+            assert dut.wakey_wakey_inst.aco_inst.last_o == 1
+        else:
+            assert dut.wakey_wakey_inst.aco_inst.last_o == 0
+        await FallingEdge(dut.wb_clk_i)
+    print('ACO Final: received expected output.')
+    plot_features((y, sig), test_num, '7Final')
+
+def plot_features(sigs, test_num, name):
+    plotdir = 'plots/test_{}/'.format(test_num)
+    if not os.path.exists(plotdir):
+        os.makedirs(plotdir)
+    titles = ['Expected Features', 'Received Features']
+    plt.figure()
+    max_val_exp = np.abs(sigs[0]).flatten().max()
+    min_val_exp = np.abs(sigs[0]).flatten().min()
+    diff = max_val_exp - min_val_exp
+    for i in range(2):
+        plt.subplot(2,1,i+1)
+        sig = np.abs(sigs[i]).astype(float)
+        size = sig.size
+        plt.imshow(sig.reshape((N_FRAMES, size//N_FRAMES)).T)
+        plt.clim(min_val_exp - diff/10, max_val_exp + diff/10)
+        plt.title(titles[i])
+    plt.savefig(plotdir + '{}.png'.format(name), dpi=400)
+    plt.close()
+
+async def do_pcm_test_fft_correction(dut, pdm_fname, test_num):
+    '''Correct for fft innacuracies.'''
+    print('Starting pcm test with fft correction.')
+    x = np.load(pdm_fname, allow_pickle=True)
+    x = parse_mic_data.pad_pdm(x)  # pad half-second signal to 1 second
+    x = pdm.pdm_to_pcm(x, 2)
+    y = aco.aco(x)
+    cocotb.fork(write_pcm_input(dut, x))  # change on falling edge of pdm clk
+    fft_out = await check_fft(dut, y[2], test_num)
+    wake_bad = await read_wake_no_assert(dut)  # non-deterministic wake
+
+    print('Running through with known fft value.')
+    for i in range(8000):
+        await FallingEdge(dut.wb_clk_i)
+    y = aco.aco(x, fft_override=fft_out)
+    cocotb.fork(write_pcm_input(dut, x))  # change on falling edge of pdm clk
+    # fft_out = await check_fft(dut, y[2], test_num)
+    cocotb.fork(check_final(dut, y[8], test_num))
+    aco_out = y[-1]
+    aco_out = aco_out.reshape((int(aco_out.size / 13), 13))
+    wrd_out = na.get_numpy_pred(aco_out)[0]
+    wake_expected = (wrd_out[0] > wrd_out[1])
+
+    await read_wake(dut, wake_expected)
+    print('Finished test.')
+    return wake_expected  # assert ensured expected is observed
 
 @cocotb.test()
 async def test_wakey_wakey(dut):
@@ -727,3 +888,36 @@ async def test_wakey_wakey(dut):
     #      params = na.get_params()
     #      await write_mem_params(dut, params)
     #      await do_mfcc_test(dut)
+
+    print('Make sure to source setup.bashrc!')
+    print('To limit the number of tests, run with: make PLUSARGS="+n_tests=2"')
+    params = na.get_params()
+    await write_mem_params(dut, params)
+    print('Preparing software model expected output:')
+    fnames, wakes_expected = parse_mic_data.eval_pipeline()  # get input file names and wakes
+    sort_order = np.argsort(fnames)  # sort fnames so they're ordered in an expected way
+    sort_order[::2] = sort_order[::-2]
+    fnames = np.array(fnames)[sort_order]
+    wakes_expected = np.array(wakes_expected)[sort_order]
+    n_correct = 0
+    print('cocotb plusargs: ', cocotb.plusargs)
+    if 'n_tests' in cocotb.plusargs:
+        n_tests = int(cocotb.plusargs['n_tests'])
+        print('Running only {} tests'.format(n_tests))
+    else:
+        n_tests = len(fnames)
+    # test_num = int(cocotb.plusargs['test_num'])
+    for test_num in range(n_tests):
+        print('Running test {}/{} with {}'.format(test_num, n_tests-1, fnames[test_num]))
+        print('=' * 100)
+        print('Beginning end-to-end test {}/{} '.format(test_num, n_tests-1))
+        print('=' * 100)
+        wake = await do_pcm_test_fft_correction(dut, fnames[test_num], test_num)
+        # wake = await do_pcm_test(dut, fnames[test_num])
+        if wake != wakes_expected[test_num]:
+            print('DUT output of {} when expected {}'.format(wake, wakes_expected[test_num]))
+        else:
+            print('DUT output of {} as expected.'.format(wake))
+            n_correct += 1
+    accuracy = n_correct / n_tests * 100
+    print('Results: {}/{} correct, accuracy: {:.03f}'.format(n_correct, n_tests, accuracy))

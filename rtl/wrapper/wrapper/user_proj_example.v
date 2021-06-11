@@ -72,14 +72,22 @@ module user_proj_example (
     // Wakey Wakey External I/O Declarations
     // =========================================================================
     wire wake;
+    `ifndef COCOTB_SIM
     wire pdm_data;
     wire pdm_clk;
+    `endif
     wire vad;
 
     // =========================================================================
     // Wakey Wakey Inputs
     // =========================================================================
+    `ifdef COCOTB_SIM
+    localparam DFE_OUTPUT_BW = 8;
+    wire [DFE_OUTPUT_BW - 1 : 0] dfe_data = io_in[DFE_OUTPUT_BW - 1 : 0];  // 7-0
+    wire dfe_valid                        = io_in[DFE_OUTPUT_BW];  // 8
+    `else
     assign pdm_data = io_in[36];
+    `endif
     assign vad = io_in[34];
 
     // =========================================================================
@@ -101,8 +109,13 @@ module user_proj_example (
         .wbs_dat_o(wbs_dat_o),
 
         // microphone i/o
+        `ifdef COCOTB_SIM
+        .dfe_data(dfe_data),  // bypass DFE for test bench
+        .dfe_valid(dfe_valid),
+        `else
         .pdm_data_i(pdm_data),
         .pdm_clk_o(pdm_clk),
+        `endif
         .vad_i(vad),
 
         // wake output
@@ -110,20 +123,24 @@ module user_proj_example (
     );
 
     // =========================================================================
-    // Pin DIrections (Output Enable)
+    // Pin Directions (Output Enable)
     // =========================================================================
     assign io_oeb[37] = 1'b1;       // wake_o
     assign io_oeb[36] = 1'b0;       // pdm_data_i
     assign io_oeb[35] = 1'b1;       // pdm_clk_o
     assign io_oeb[34] = 1'b0;       // vad_i
-    assign io_oeb[33:0] = 34'b0;    // unused
+    assign io_oeb[33:0] = 34'b0;    // unused, except by test bench
 
     // =========================================================================
     // Wakey Wakey Outputs
     // =========================================================================
     assign io_out[37] = wake;       // wake_o
     assign io_out[36] = 1'b0;       // pdm_data_i
+    `ifdef COCOTB_SIM
+    assign io_out[35] = 1'b0;       // no pdm clock for test bench
+    `else
     assign io_out[35] = pdm_clk;    // pdm_clk_o
+    `endif
     assign io_out[34] = 1'b0;       // vad_i
     assign io_out[33:0] = 34'b0;    // unused
 
