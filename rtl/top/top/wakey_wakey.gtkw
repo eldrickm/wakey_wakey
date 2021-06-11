@@ -1,18 +1,18 @@
 [*]
-[*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
-[*] Fri May 14 06:42:44 2021
+[*] GTKWave Analyzer v3.3.61 (w)1999-2014 BSI
+[*] Fri Jun 11 04:28:34 2021
 [*]
-[dumpfile] "/home/eldrick/wakey_wakey/rtl/top/top/wave.vcd"
-[dumpfile_mtime] "Wed May 12 07:19:23 2021"
-[dumpfile_size] 4102275
-[savefile] "/home/eldrick/wakey_wakey/rtl/top/top/*.gtkw"
+[dumpfile] "/tmp/mjpauly-ee272/wakey_wakey/rtl/top/top/wave.vcd"
+[dumpfile_mtime] "Fri Jun 11 04:28:34 2021"
+[dumpfile_size] 2314711040
+[savefile] "/tmp/mjpauly-ee272/wakey_wakey/rtl/top/top/wakey_wakey.gtkw"
 [timestart] 0
-[size] 2488 1311
-[pos] -51 -51
-*-25.843563 44500000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[size] 1870 1033
+[pos] -1 -1
+*-37.843563 811400000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] wakey_wakey.
-[sst_width] 678
-[signals_width] 150
+[sst_width] 265
+[signals_width] 302
 [sst_expanded] 1
 [sst_vpaned_height] 392
 @200
@@ -32,7 +32,7 @@ wakey_wakey.wbs_we_i
 @22
 wakey_wakey.wbs_dat_i[31:0]
 wakey_wakey.wbs_sel_i[3:0]
-@201
+@200
 -Wishbone Output
 @22
 wakey_wakey.wbs_dat_o[31:0]
@@ -40,8 +40,40 @@ wakey_wakey.wbs_dat_o[31:0]
 wakey_wakey.wbs_ack_o
 @200
 -
+-
+-CTL
+@28
+wakey_wakey.ctl_inst.state[1:0]
+wakey_wakey.ctl_inst.counter[2:0]
+wakey_wakey.ctl_inst.en_o
+@200
+-
+-Input
+@420
+wakey_wakey.dfe_data[7:0]
+@28
+wakey_wakey.dfe_valid
+wakey_wakey.vad_i
+@200
+-
+-ACO
+@22
+wakey_wakey.aco_data[103:0]
+@28
+wakey_wakey.aco_last
+wakey_wakey.aco_valid
+@200
+-
 -Wake Output
 @28
 wakey_wakey.wake_o
+@29
+wakey_wakey.wake_valid
+@200
+-
+-
+-
+-
+-
 [pattern_trace] 1
 [pattern_trace] 0
