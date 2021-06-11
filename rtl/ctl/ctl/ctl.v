@@ -8,7 +8,7 @@
 // =============================================================================
 
 module ctl # (
-    parameter F_SYSTEM_CLK = 1000  // 100 is used for unit test bench
+    parameter F_SYSTEM_CLK = 1000  // used for unit test bench
 ) (
     // clock and reset
     input                                   clk_i,
@@ -35,7 +35,11 @@ module ctl # (
     // Could also use a division by integer if multiplication by decimal does not
     // expand as expected
     // localparam integer COUNT_CYCLES   = F_SYSTEM_CLK / 200;
+    `ifdef COCOTB_SIM
+    localparam integer COUNT_CYCLES  = 0.005 * 1000;
+    `else
     localparam integer COUNT_CYCLES  = 0.005 * F_SYSTEM_CLK;
+    `endif
     localparam COUNTER_BW            = $clog2(COUNT_CYCLES + 1);
 
     // =========================================================================
