@@ -15,6 +15,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include "wrd_params.h"
+
 // This include is relative to $CARAVEL_PATH (see Makefile)
 #include "verilog/dv/caravel/defs.h"
 #include "verilog/dv/caravel/stub.c"
@@ -85,20 +87,76 @@ void cfg_load(int addr, int *data)
 // void cfg_store(int addr, int data_3, int data_2, int data_1, int data_0)
 // void cfg_load(int addr, int *data)
 bool check_output(int *expected, int *observed) {
-    for (int i = 0; i < 4; i++) {
-        if (expected[i] != observed[i]) return false;
+    for (int k = 0; k < 4; k++) {
+        if (expected[k] != observed[k]) return false;
     }
     return true;
 }
 
 /* Returns true if the test passes and false if not. */
 bool run_test() {
-    int writebuf[4] = {1, 3, 4, 2};
+    // return false;
     int readbuf[4] = {0,0,0,0};
+
+    // /*
+    // simple test
+    int writebuf[4] = {1, 3, 4, 2};
     cfg_store(0, writebuf[3], writebuf[2], writebuf[1], writebuf[0]);
+    cfg_store(1, writebuf[3]*2, writebuf[2]*2, writebuf[1]*2, writebuf[0]*2);
     cfg_load(0, readbuf);
-    return check_output(writebuf, readbuf);
-    // return true;
+    if (!check_output(writebuf, readbuf)) return false;
+    // return check_output(writebuf, readbuf);
+    // */
+
+    int expected[4];
+
+    // WRITING
+
+    // Sequential write to conv1 memory banks
+    for (int j = 0; j < 4; j++) {  // banks
+        for (int k = 0; k < 8; k++) {
+            cfg_store(k + j*0x10, k+3, k+2, k+1, k+0);
+        }
+    }
+    int k = 7;
+    cfg_store(0x40, k+3, k+2, k+1, k+0);  // shift
+
+    /*
+    // Sequential write to conv2 memory banks
+    for (int j = 5; j < 9; j++) {  // banks
+        for (int k = 0; k < 8; k++) {
+            cfg_store(k + j*0x10, k+3, k+2, k+1, k+0);
+        }
+    }
+    k = 7;
+    cfg_store(0x90, k+3, k+2, k+1, k+0);  // shift
+
+    // Sequential write to FC memory banks
+    for (int j = 0x100; j < 0x300; j += 0x100) {
+        for (int k = 0; k < 208; k++) {
+            cfg_store(j, k+3, k+2, k+1, k+0);
+        }
+    }
+    k = 207;
+    cfg_store(0x300, k+3, k+2, k+1, k+0);  // bias
+    cfg_store(0x400, k+3, k+2, k+1, k+0);  // bias
+    */
+    
+    // READING
+
+    for (int j = 0; j < 4; j++) {  // banks
+        for (int k = 0; k < 8; k++) {
+            int expected[4] = {k+3, k+2, k+1, k+0};
+            cfg_load(k + j*0x10, readbuf);
+            if (!check_output(expected, readbuf)) return false;
+        }
+    }
+    // int expected[4] = {k+3, k+2, k+1, k+0};
+    // k = 7;
+    // cfg_load(0x40, k+3, k+2, k+1, k+0);  // shift
+
+    return true;  // didn't fail earlier
+    // return false;  // test that returning false actually fails the test bench
 }
 
 int i = 0; 
@@ -157,7 +215,7 @@ void main()
     // Flag start of the test
     reg_mprj_datal = 0xAB600000;
 
-    reg_mprj_datal = 0xAB610000;
+    // reg_mprj_datal = 0xAB610000;  // test success condition
     /*
     reg_mprj_slave = 0x00002710;
     if (reg_mprj_slave == 0x2752) {
@@ -167,5 +225,5 @@ void main()
     }
     */
     if (run_test()) reg_mprj_datal = 0xAB610000;
-    else            reg_mprj_datal = 0xAB600000;
+    else            reg_mprj_datal = 0xAB620000;  // notify verilog tb
 }

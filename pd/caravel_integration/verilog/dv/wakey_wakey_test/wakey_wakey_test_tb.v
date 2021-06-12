@@ -52,7 +52,7 @@ module wakey_wakey_test_tb;
 		$dumpvars(0, wakey_wakey_test_tb);
 
 		// Repeat cycles of 1000 clock edges as needed to complete testbench
-		repeat (30) begin
+		repeat (600) begin
 			repeat (1000) @(posedge clock);
 			$display("+1000 cycles");
 		end
@@ -70,10 +70,23 @@ module wakey_wakey_test_tb;
 	   wait(checkbits == 16'h AB60);
 		$display("Monitor: MPRJ-Logic WB Started");
 		wait(checkbits == 16'h AB61);
+                # 2;
 		`ifdef GL
 	    	$display("Monitor: Mega-Project WB (GL) Passed");
 		`else
 		    $display("Monitor: Mega-Project WB (RTL) Passed");
+		`endif
+	    $finish;
+	end
+	initial begin
+	   wait(checkbits == 16'h AB60);
+		$display("Monitor: MPRJ-Logic WB Started");
+		wait(checkbits == 16'h AB62);
+                # 2;
+		`ifdef GL
+	    	$display("Monitor: Mega-Project WB (GL) Failed");
+		`else
+		    $display("Monitor: Mega-Project WB (RTL) Failed");
 		`endif
 	    $finish;
 	end
@@ -103,7 +116,8 @@ module wakey_wakey_test_tb;
 	end
 
 	always @(mprj_io) begin
-		#1 $display("MPRJ-IO state = %b ", mprj_io[7:0]);
+		// #1 $display("MPRJ-IO state = %b ", mprj_io[7:0]);
+		#1 $display("MPRJ-IO state = %x ", mprj_io);
 	end
 
 	wire flash_csb;
