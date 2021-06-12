@@ -122,7 +122,8 @@ endmodule // log
 module enc
 (
    input wire     [1:0]       d,
-   output logic   [1:0]       q
+   // output logic   [1:0]       q
+   output [1:0]       q
 );
 
     // original source:
@@ -150,7 +151,8 @@ module clzi #
 )
 (
    input wire     [WI-1:0]    d,
-   output logic   [WO-1:0]    q
+   // output logic   [WO-1:0]    q
+   output [WO-1:0]    q
 );
 
     // original source:

@@ -1,3 +1,175 @@
+// SPDX-FileCopyrightText: 2020 Efabless Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
+
+// `default_nettype none
+
+`ifndef MPRJ_IO_PADS
+    `define MPRJ_IO_PADS 38
+`endif
+
+/*
+ *-------------------------------------------------------------
+ *
+ * user_proj_example
+ *
+ * TODO: Write Description
+ *-------------------------------------------------------------
+ */
+
+module user_proj_example (
+`ifdef USE_POWER_PINS
+    // inout vdda1,	// User area 1 3.3V supply
+    // inout vdda2,	// User area 2 3.3V supply
+    // inout vssa1,	// User area 1 analog ground
+    // inout vssa2,	// User area 2 analog ground
+    inout vccd1,	// User area 1 1.8V supply
+    inout vccd2,	// User area 2 1.8v supply
+    inout vssd1,	// User area 1 digital ground
+    inout vssd2,	// User area 2 digital ground
+`endif
+
+    input wire user_clock2,
+
+    // Wishbone Slave ports (WB MI A)
+    input wire wb_clk_i,
+    input wire wb_rst_i,
+    input wire wbs_stb_i,
+    input wire wbs_cyc_i,
+    input wire wbs_we_i,
+    input wire [3:0] wbs_sel_i,
+    input wire [31:0] wbs_dat_i,
+    input wire [31:0] wbs_adr_i,
+    output wire wbs_ack_o,
+    output wire [31:0] wbs_dat_o,
+
+    // Logic Analyzer Signals
+    input  wire [127:0] la_data_in,
+    output wire [127:0] la_data_out,
+    input  wire [127:0] la_oenb,
+
+    // IOs
+    input  wire [`MPRJ_IO_PADS-1:0] io_in,
+    output wire [`MPRJ_IO_PADS-1:0] io_out,
+    output wire [`MPRJ_IO_PADS-1:0] io_oeb,
+
+    // IRQ
+    output wire [2:0] irq
+);
+
+    // =========================================================================
+    // Wakey Wakey External I/O Declarations
+    // =========================================================================
+    wire wake;
+    `ifndef COCOTB_SIM
+    wire pdm_data;
+    wire pdm_clk;
+    `endif
+    wire vad;
+
+    // =========================================================================
+    // Wakey Wakey Inputs
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    localparam DFE_OUTPUT_BW = 8;
+    wire [DFE_OUTPUT_BW - 1 : 0] dfe_data = io_in[DFE_OUTPUT_BW - 1 : 0];  // 7-0
+    wire dfe_valid                        = io_in[DFE_OUTPUT_BW];  // 8
+    `else
+    assign pdm_data = io_in[36];
+    `endif
+    assign vad = io_in[34];
+
+    // =========================================================================
+    // Wakey Wakey Instantiation
+    // =========================================================================
+    wakey_wakey wakey_wakey_inst (
+        // clock and reset
+        .clk_i(wb_clk_i),
+        .rst_n_i(~wb_rst_i),
+
+        // wishbone slave ports (wb mi a)
+        .wbs_stb_i(wbs_stb_i),
+        .wbs_cyc_i(wbs_cyc_i),
+        .wbs_we_i(wbs_we_i),
+        .wbs_sel_i(wbs_sel_i),
+        .wbs_dat_i(wbs_dat_i),
+        .wbs_adr_i(wbs_adr_i),
+        .wbs_ack_o(wbs_ack_o),
+        .wbs_dat_o(wbs_dat_o),
+
+        // microphone i/o
+        `ifdef COCOTB_SIM
+        .dfe_data(dfe_data),  // bypass DFE for test bench
+        .dfe_valid(dfe_valid),
+        `else
+        .pdm_data_i(pdm_data),
+        .pdm_clk_o(pdm_clk),
+        `endif
+        .vad_i(vad),
+
+        // wake output
+        .wake_o(wake)
+    );
+
+    // =========================================================================
+    // Pin Directions (Output Enable)
+    // =========================================================================
+    assign io_oeb[37] = 1'b1;       // wake_o
+    assign io_oeb[36] = 1'b0;       // pdm_data_i
+    assign io_oeb[35] = 1'b1;       // pdm_clk_o
+    assign io_oeb[34] = 1'b0;       // vad_i
+    assign io_oeb[33:0] = 34'b0;    // unused, except by test bench
+
+    // =========================================================================
+    // Wakey Wakey Outputs
+    // =========================================================================
+    assign io_out[37] = wake;       // wake_o
+    assign io_out[36] = 1'b0;       // pdm_data_i
+    `ifdef COCOTB_SIM
+    assign io_out[35] = 1'b0;       // no pdm clock for test bench
+    `else
+    assign io_out[35] = pdm_clk;    // pdm_clk_o
+    `endif
+    assign io_out[34] = 1'b0;       // vad_i
+    assign io_out[33:0] = 34'b0;    // unused
+
+
+    // =========================================================================
+    // IRQ
+    // =========================================================================
+    assign irq = 3'b000;            // unused
+
+    // =========================================================================
+    // Logic Analyzer Outputs
+    // =========================================================================
+    assign la_data_out = 128'b0;    // unused
+
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
+    initial begin
+      $dumpfile ("wave.vcd");
+      $dumpvars (0, user_proj_example);
+      #1;
+    end
+    `endif
+    `endif
+
+endmodule
 // =============================================================================
 // Module:       Wakey Wakey
 // Design:       Eldrick Millares & Matthew Pauly
@@ -21,8 +193,13 @@ module wakey_wakey (
     output [31 : 0] wbs_dat_o,
 
     // microphone i/o
+    `ifdef COCOTB_SIM
+    input [DFE_OUTPUT_BW - 1 : 0] dfe_data,  // bypass DFE for test bench
+    input                         dfe_valid,
+    `else
     input           pdm_data_i,
     output          pdm_clk_o,
+    `endif
     input           vad_i,  // voice activity detection
 
     // wake output
@@ -143,6 +320,7 @@ module wakey_wakey (
     // =========================================================================
     localparam DFE_OUTPUT_BW = 8;
 
+    `ifndef COCOTB_SIM
     wire [DFE_OUTPUT_BW - 1 : 0] dfe_data;
     wire                         dfe_valid;
 
@@ -163,6 +341,7 @@ module wakey_wakey (
         .data_o(dfe_data),
         .valid_o(dfe_valid)
     );
+    `endif
 
     // =========================================================================
     // ACO - Acoustic Featurizer
@@ -238,11 +417,14 @@ module wakey_wakey (
     // Simulation Only Waveform Dump (.vcd export)
     // =========================================================================
     `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
     initial begin
       $dumpfile ("wave.vcd");
       $dumpvars (0, wakey_wakey);
       #1;
     end
+    `endif
     `endif
 
 endmodule
@@ -255,6 +437,7 @@ endmodule
 // TODO: Sensitize to cyc_i?
 // TODO: Adjust wishbone ack for Store and Load on CTRL?
 // TODO: Remove technically unecessary mux to zeros in Data Registers
+// TODO: Check wave timings on ack for new delayed signals
 // =============================================================================
 
 module cfg #(
@@ -280,7 +463,7 @@ module cfg #(
     input         [3  : 0]                  wbs_sel_i,
     input         [31 : 0]                  wbs_dat_i,
     input         [31 : 0]                  wbs_adr_i,
-    output reg                              wbs_ack_o,
+    output                                  wbs_ack_o,
     output reg    [31 : 0]                  wbs_dat_o,
 
     // conv1 memory configuration
@@ -391,41 +574,41 @@ module cfg #(
     // =========================================================================
     // Bank Selection Logic
     // =========================================================================
-    // conv1 address space is laid out so we can use the upper 4 bits in the
-    // LSB to select the bank
-    assign conv1_rd_wr_bank_o = addr[6:4];
+    reg [CONV1_BANK_BW - 1 : 0] conv1_rd_wr_bank;
+    reg [CONV2_BANK_BW - 1 : 0] conv2_rd_wr_bank;
+    reg [FC_BANK_BW - 1 : 0]    fc_rd_wr_bank;
 
-    // conv2 address space is laid out so we can use the upper 4 bits in the
-    // LSB, minus 5, to select the bank
-    assign conv2_rd_wr_bank_o = addr[6:4] - 3'd5;
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            conv1_rd_wr_bank <= 0;
+            conv2_rd_wr_bank <= 0;
+            fc_rd_wr_bank    <= 0;
+        end else begin
+            // conv1 address space is laid out so we can use the upper 4 bits in
+            // the LSB to select the bank
+            conv1_rd_wr_bank <= addr[6:4];
 
-    // fc address space is laid out so we can use the lower 4 bits in the 2nd
-    // byte, minus 1, to select the bank
-    assign fc_rd_wr_bank_o = addr[11:8] - 4'd1;
+            // conv2 address space is laid out so we can use the upper 4 bits in
+            // the LSB, minus 5, to select the bank
+            conv2_rd_wr_bank <= addr[6:4] - 3'd5;
+
+            // fc address space is laid out so we can use the lower 2 bits in
+            // the 2nd byte, minus 1, to select the bank
+            fc_rd_wr_bank    <= addr[9:8] - 2'd1;
+        end
+    end
+
+    assign conv1_rd_wr_bank_o = conv1_rd_wr_bank;
+    assign conv2_rd_wr_bank_o = conv2_rd_wr_bank;
+    assign fc_rd_wr_bank_o    = fc_rd_wr_bank;
 
 
     // =========================================================================
     // Address Assignment
     // =========================================================================
-    reg [CONV1_ADDR_BW - 1 : 0] conv1_addr;
-    reg [CONV2_ADDR_BW - 1 : 0] conv2_addr;
-    reg [FC_ADDR_BW - 1 : 0] fc_addr;
-
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            conv1_addr <= 'b0;
-            conv2_addr <= 'b0;
-            fc_addr    <= 'b0;
-        end else begin
-            conv1_addr <= addr[2:0];
-            conv2_addr <= addr[3:0];
-            fc_addr    <= addr[7:0];
-        end
-    end
-
-    assign conv1_rd_wr_addr_o = conv1_addr;
-    assign conv2_rd_wr_addr_o = conv2_addr;
-    assign fc_rd_wr_addr_o    = fc_addr;
+    assign conv1_rd_wr_addr_o = addr[2:0];
+    assign conv2_rd_wr_addr_o = addr[3:0];
+    assign fc_rd_wr_addr_o    = addr[7:0];
 
     // =========================================================================
     // Data Assignment
@@ -496,42 +679,37 @@ module cfg #(
     // =========================================================================
     // Wishbone Acknowledge
     // =========================================================================
+    reg wbs_ack;
+    reg wbs_ack_q;
+
     always @(posedge clk_i) begin
         if (!rst_n_i) begin
-            wbs_ack_o <= 1'b0;
+            wbs_ack   <= 1'b0;
+            wbs_ack_q <= 1'b0;
         end else begin
-            wbs_ack_o <= wbs_stb_i;
+            wbs_ack   <= wbs_stb_i;
+            wbs_ack_q <= wbs_ack;
         end
     end
+
+    assign wbs_ack_o = wbs_ack_q;
 
 
     // =========================================================================
     // Store
     // =========================================================================
-    reg conv1_store;
-    reg conv2_store;
-    reg fc_store;
-
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            conv1_store <= 1'b0;
-            conv2_store <= 1'b0;
-            fc_store    <= 1'b0;
-        end else begin
-            conv1_store <= (ctrl == 'h1) && (conv1_sel);
-            conv2_store <= (ctrl == 'h1) && (conv2_sel);
-            fc_store    <= (ctrl == 'h1) && (fc_sel);
-        end
-    end
-
-    assign conv1_wr_en_o = conv1_store;
-    assign conv2_wr_en_o = conv2_store;
-    assign fc_wr_en_o    = fc_store;
+    assign conv1_wr_en_o = (ctrl == 'h1) && (conv1_sel);
+    assign conv2_wr_en_o = (ctrl == 'h1) && (conv2_sel);
+    assign fc_wr_en_o    = (ctrl == 'h1) && (fc_sel);
 
 
     // =========================================================================
     // Load
     // =========================================================================
+    assign conv1_rd_en_o = (ctrl == 'h2) && (conv1_sel);
+    assign conv2_rd_en_o = (ctrl == 'h2) && (conv2_sel);
+    assign fc_rd_en_o    = (ctrl == 'h2) && (fc_sel);
+
     reg conv1_rd_en_d;
     reg conv2_rd_en_d;
     reg fc_rd_en_d;
@@ -542,15 +720,11 @@ module cfg #(
             conv2_rd_en_d <= 1'b0;
             fc_rd_en_d    <= 1'b0;
         end else begin
-            conv1_rd_en_d <= (ctrl == 'h2) && (conv1_sel);
-            conv2_rd_en_d <= (ctrl == 'h2) && (conv2_sel);
-            fc_rd_en_d    <= (ctrl == 'h2) && (fc_sel);
+            conv1_rd_en_d <= conv1_rd_en_o;
+            conv2_rd_en_d <= conv2_rd_en_o;
+            fc_rd_en_d    <= fc_rd_en_o;
         end
     end
-
-    assign conv1_rd_en_o = conv1_rd_en_d;
-    assign conv2_rd_en_o = conv2_rd_en_d;
-    assign fc_rd_en_o    = fc_rd_en_d;
 
 
     // =========================================================================
@@ -591,11 +765,14 @@ module cfg #(
     // Simulation Only Waveform Dump (.vcd export)
     // =========================================================================
     `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
     initial begin
       $dumpfile ("wave.vcd");
       $dumpvars (0, cfg);
       #1;
     end
+    `endif
     `endif
 
 endmodule
@@ -609,7 +786,7 @@ endmodule
 // =============================================================================
 
 module ctl # (
-    parameter F_SYSTEM_CLK = 1000  // 100 is used for unit test bench
+    parameter F_SYSTEM_CLK = 1000  // used for unit test bench
 ) (
     // clock and reset
     input                                   clk_i,
@@ -628,8 +805,33 @@ module ctl # (
     // Local Parameters
     // =========================================================================
     // 5ms empirically determined with microphone. See test/pdm_capture_test.
-    localparam COUNT_CYCLES   = $rtoi(0.005 * F_SYSTEM_CLK);
-    localparam COUNTER_BW     = $clog2(COUNT_CYCLES + 1);
+    // Design Compiler does not support rtoi
+    // localparam COUNT_CYCLES   = $rtoi(0.005 * F_SYSTEM_CLK);
+    // integer type needed to keep DC from flaggging COUNT_CYCLES as a non
+    // constant expression
+    // TODO: make sure that this value is as expected after DC Synthesis
+    // Could also use a division by integer if multiplication by decimal does not
+    // expand as expected
+    // localparam integer COUNT_CYCLES   = F_SYSTEM_CLK / 200;
+    `ifdef COCOTB_SIM
+    localparam integer COUNT_CYCLES  = 0.005 * 1000;
+    `else
+    localparam integer COUNT_CYCLES  = 0.005 * F_SYSTEM_CLK;
+    `endif
+    localparam COUNTER_BW            = $clog2(COUNT_CYCLES + 1);
+
+    // =========================================================================
+    // Falling Edge Detection for wake_valid_i
+    // =========================================================================
+    reg wake_valid_q;
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            wake_valid_q <= 'd0;
+        end else begin
+            wake_valid_q <= wake_valid_i;
+        end
+    end
+    wire wake_valid_falling_edge = (wake_valid_q & !wake_valid_i);
 
     // =========================================================================
     // State Machine
@@ -677,19 +879,6 @@ module ctl # (
     end
 
     // =========================================================================
-    // Falling Edge Detection for wake_valid_i
-    // =========================================================================
-    reg wake_valid_q;
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            wake_valid_q <= 'd0;
-        end else begin
-            wake_valid_q <= wake_valid_i;
-        end
-    end
-    wire wake_valid_falling_edge = (wake_valid_q & !wake_valid_i);
-
-    // =========================================================================
     // Output Assignment
     // =========================================================================
     assign en_o = (state == STATE_ON) ? 'd1 : 'd0;
@@ -706,99 +895,6 @@ module ctl # (
         #1;
     end
     `endif
-    `endif
-
-endmodule
-// ============================================================================
-// Module:       Maximum
-// Design:       Eldrick Millares
-// Verification: Matthew Pauly
-// Notes:
-// TODO: Hard coded for 2 elements - can we parameterize the one-hot compare?
-// ============================================================================
-
-module argmax #(
-    parameter I_BW = 24
-) (
-    // clock and reset
-    input                                       clk_i,
-    input                                       rst_n_i,
-
-    // streaming input
-    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data_i,
-    input                                       valid_i,
-    input                                       last_i,
-    output                                      ready_o,
-
-    // streaming output
-    output signed [VECTOR_LEN - 1 : 0]          data_o,
-    output                                      valid_o,
-    output                                      last_o,
-    input                                       ready_i
-);
-
-    genvar i;
-
-    // =========================================================================
-    // Local Parameters
-    // =========================================================================
-    localparam VECTOR_LEN = 2;
-
-    // =========================================================================
-    // Input Unpacking
-    // =========================================================================
-    wire signed [I_BW - 1 : 0] data_arr [VECTOR_LEN - 1 : 0];
-    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: unpack_inputs
-        assign data_arr[i] = data_i[(i + 1) * I_BW - 1 : i * I_BW];
-    end
-
-    // =========================================================================
-    // Max
-    // =========================================================================
-    wire [VECTOR_LEN - 1 : 0] argmax_one_hot;
-    reg  [VECTOR_LEN - 1 : 0] argmax_one_hot_q;
-
-    assign argmax_one_hot = (data_arr[0] > data_arr[1]) ? 'b01 : 'b10;
-
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            argmax_one_hot_q <= 'd0;
-        end else begin
-            argmax_one_hot_q <= argmax_one_hot;
-        end
-    end
-
-    // =========================================================================
-    // Output Assignment
-    // =========================================================================
-    // register all outputs
-    reg valid_q, last_q, ready_q;
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            valid_q <= 'b0;
-            last_q  <= 'b0;
-            ready_q <= 'b0;
-        end else begin
-            valid_q <= valid_i;
-            last_q  <= last_i;
-            ready_q <= ready_i;
-        end
-    end
-
-    assign data_o   = argmax_one_hot_q;
-    assign valid_o  = valid_q;
-    assign last_o   = last_q;
-    assign ready_o  = ready_q;
-
-    // =========================================================================
-    // Simulation Only Waveform Dump (.vcd export)
-    // =========================================================================
-    `ifdef COCOTB_SIM
-    initial begin
-        $dumpfile ("wave.vcd");
-        $dumpvars (0, argmax);
-        #1;
-    end
     `endif
 
 endmodule
@@ -821,7 +917,19 @@ module conv_mem #(
     parameter SHIFT_BW    = $clog2(BIAS_BW),
     parameter FRAME_LEN   = 50,
     parameter VECTOR_LEN  = 13,
-    parameter NUM_FILTERS = 8
+    parameter NUM_FILTERS = 8,
+
+    // =========================================================================
+    // Local Parameters - DO NOT EDIT
+    // =========================================================================
+    // This unit is hard coded for width 3 filters
+    parameter FILTER_LEN = 3,
+
+    // Bitwidth Definitions
+    parameter VECTOR_BW = VECTOR_LEN * BW,
+    parameter ADDR_BW   = $clog2(NUM_FILTERS),
+    // Number of weight banks + bias bank + shift bank
+    parameter BANK_BW   = $clog2(FILTER_LEN + 2)
 ) (
     // clock and reset
     input                             clk_i,
@@ -849,21 +957,13 @@ module conv_mem #(
     input                             ready_i
 );
 
-    genvar i;
-
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    // This unit is hard coded for width 3 filters
-    localparam FILTER_LEN = 3;
-
-    // Bitwidth Definitions
-    localparam VECTOR_BW = VECTOR_LEN * BW;
-    localparam ADDR_BW   = $clog2(NUM_FILTERS);
-    // Number of weight banks + bias bank + shift bank
-    localparam BANK_BW   = $clog2(FILTER_LEN + 2);
     localparam FRAME_COUNTER_BW = $clog2(FRAME_LEN);
     localparam FILTER_COUNTER_BW = $clog2(NUM_FILTERS);
+
+    genvar i;
 
     // ========================================================================
     // Convolution Memory Controller
@@ -1021,11 +1121,14 @@ module conv_mem #(
     // Simulation Only Waveform Dump (.vcd export)
     // ========================================================================
     `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
     initial begin
         $dumpfile ("wave.vcd");
         $dumpvars (0, conv_mem);
         #1;
     end
+    `endif
     `endif
 
 endmodule
@@ -1040,7 +1143,12 @@ endmodule
 module conv_sipo #(
     parameter BW         = 8,
     parameter FRAME_LEN  = 50,
-    parameter VECTOR_LEN = 8
+    parameter VECTOR_LEN = 8,
+
+    // ========================================================================
+    // Local Parameters - Do Not Edit
+    // ========================================================================
+    parameter VECTOR_BW  = VECTOR_LEN * BW
 ) (
     // clock and reset
     input                      clk_i,
@@ -1065,7 +1173,6 @@ module conv_sipo #(
     // Local Parameters
     // ========================================================================
     // Bitwidth Definitions
-    localparam VECTOR_BW  = VECTOR_LEN * BW;
     localparam COUNTER_BW = $clog2(FRAME_LEN);
 
     // =========================================================================
@@ -1076,6 +1183,7 @@ module conv_sipo #(
 
     reg [1:0] state;
     reg [COUNTER_BW - 1 : 0] counter;
+    reg [VECTOR_LEN - 1 : 0] fifo_sel;
 
     always @(posedge clk_i) begin
         if (!rst_n_i) begin
@@ -1101,7 +1209,6 @@ module conv_sipo #(
         end
     end
 
-    reg [VECTOR_LEN - 1 : 0] fifo_sel;
     always @(posedge clk_i) begin
         if (!rst_n_i) begin
             fifo_sel <= {1'b1, {VECTOR_LEN - 1{1'b0}}};
@@ -1167,11 +1274,1036 @@ module conv_sipo #(
     // Simulation Only Waveform Dump (.vcd export)
     // =========================================================================
     `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
     initial begin
         $dumpfile ("wave.vcd");
         $dumpvars (0, conv_sipo);
         #1;
     end
+    `endif
+    `endif
+
+endmodule
+// ============================================================================
+// Max Pool
+// Design: Eldrick Millares
+// Verification: Matthew Pauly
+// Notes:
+// ============================================================================
+
+module max_pool #(
+    parameter BW = 8
+) (
+    // clock and reset
+    input                      clk_i,
+    input                      rst_n_i,
+
+    // streaming input
+    input  signed [BW - 1 : 0] data_i,
+    input                      valid_i,
+    input                      last_i,
+    output                     ready_o,
+
+    // streaming output
+    output signed [BW - 1 : 0] data_o,
+    output                     valid_o,
+    output                     last_o,
+    input                      ready_i
+);
+
+    // =========================================================================
+    // Output Register Declaratons
+    // =========================================================================
+    reg signed [BW - 1 : 0] data_q, data_q2, max;
+    reg valid_q, valid_q2, valid_q3, last_q, last_q2, ready_q;
+
+    // =========================================================================
+    // State Machine
+    // =========================================================================
+    localparam STATE_IDLE   = 2'd0,
+               STATE_LOAD_1 = 2'd1,
+               STATE_LOAD_2 = 2'd2,
+               STATE_VALID  = 2'd3;
+    reg [1:0] state;
+
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            state <= STATE_IDLE;
+        end else begin
+            case(state)
+                STATE_IDLE: begin
+                    state <= (valid_i) ? STATE_LOAD_1 : STATE_IDLE;
+                end
+                STATE_LOAD_1: begin
+                    state <= (valid_i) ? STATE_LOAD_2 : STATE_IDLE;
+                end
+                STATE_LOAD_2: begin
+                    state <= STATE_VALID;
+                end
+                STATE_VALID: begin
+                    state <= (valid_q) ?
+                             ((last_q) ? STATE_VALID : STATE_LOAD_2) :
+                             STATE_IDLE;
+                end
+                default: begin
+                end
+            endcase
+        end
+    end
+
+    // register all outputs
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            valid_q  <= 'b0;
+            valid_q2 <= 'b0;
+            valid_q3 <= 'b0;
+            last_q   <= 'b0;
+            last_q2  <= 'b0;
+            ready_q  <= 'b0;
+            data_q   <= 'b0;
+            data_q2  <= 'b0;
+            max      <= 'b0;
+        end else begin
+            valid_q  <= valid_i;
+            valid_q2 <= valid_q;
+            valid_q3 <= valid_q2;
+            last_q   <= last_i;
+            last_q2  <= last_q;
+            ready_q  <= ready_i;
+            data_q   <= data_i;
+            data_q2  <= data_q;
+            max      <= (state == STATE_VALID) ? 
+                          data_q  // if 2 new data are not ready yet just
+                                  // output the first one
+                          : ((data_q > data_q2) ? data_q : data_q2);
+        end
+    end
+
+
+    assign data_o  = max;
+    assign valid_o = (state == STATE_VALID);
+    assign last_o  = last_q2;
+    assign ready_o = ready_q;
+
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
+    initial begin
+        $dumpfile ("wave.vcd");
+        $dumpvars (0, max_pool);
+        #1;
+    end
+    `endif
+    `endif
+
+endmodule
+// ============================================================================
+// Quantizer
+// Design: Eldrick Millares
+// Verification: Matthew Pauly
+// Notes:
+// TODO: Can we synthesize a variable arithmetic right shift?
+// TODO: Does this need to be signed? Guess is no since it is after ReLU
+// ============================================================================
+
+module quantizer #(
+    parameter I_BW     = 32,
+    parameter O_BW     = 8,
+    parameter SHIFT_BW = $clog2(I_BW)
+) (
+    input                    clk_i,
+    input                    rst_n_i,
+
+    input [SHIFT_BW - 1 : 0] shift_i,
+
+    input [I_BW - 1 : 0]     data_i,
+    input                    valid_i,
+    input                    last_i,
+    output                   ready_o,
+
+    output [O_BW - 1 : 0]    data_o,
+    output                   valid_o,
+    output                   last_o,
+    input                    ready_i
+);
+
+    localparam [O_BW - 1 : 0] saturate_point = {1'b0, {O_BW - 1{1'b1}}};
+
+    reg [I_BW - 1 : 0] shifted;
+
+    always @(posedge clk_i) begin
+        shifted <= (data_i >> shift_i);
+    end
+
+    wire [O_BW - 1 : 0] truncated;
+    assign truncated = shifted[O_BW - 1 : 0];
+
+    // register all outputs
+    reg valid_q, last_q, ready_q;
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            valid_q <= 'b0;
+            last_q  <= 'b0;
+            ready_q <= 'b0;
+        end else begin
+            valid_q <= valid_i;
+            last_q  <= last_i;
+            ready_q <= ready_i;
+        end
+    end
+
+    assign data_o  = (shifted > saturate_point) ? saturate_point :
+                                                  shifted[O_BW - 1 : 0];
+    assign valid_o = valid_q;
+    assign last_o  = last_q;
+    assign ready_o = ready_q;
+
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
+    initial begin
+        $dumpfile ("wave.vcd");
+        $dumpvars (0, quantizer);
+        #1;
+    end
+    `endif
+    `endif
+
+endmodule
+// =============================================================================
+// Module:       Recycler
+// Design:       Eldrick Millares
+// Verification: Matthew Pauly
+// Notes:
+// Constraint: FRAME_LEN > FILTER_LEN
+// Constraint: FILTER_LEN == 3
+// In order to change filter size, you'll have to parameterize the vec_add
+// unit.
+// TODO: Fix initial deque errors
+// TODO: Handle deassertions of valid midstream
+// TODO: Handle Full and Empty
+// =============================================================================
+
+module recycler #(
+    parameter BW          = 8,
+    parameter FRAME_LEN   = 50,
+    parameter VECTOR_LEN  = 13,
+    parameter NUM_FILTERS = 8,
+
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter VECTOR_BW  = VECTOR_LEN * BW
+) (
+    // clock and reset
+    input                             clk_i,
+    input                             rst_n_i,
+
+    // streaming input
+    input  signed [VECTOR_BW - 1 : 0] data_i,
+    input                             valid_i,
+    input                             last_i,
+    output                            ready_o,
+
+    // streaming output
+    output signed [VECTOR_BW - 1 : 0] data0_o,
+    output signed [VECTOR_BW - 1 : 0] data1_o,
+    output signed [VECTOR_BW - 1 : 0] data2_o,
+    output                            valid_o,
+    output                            last_o,
+    input                             ready_i
+);
+
+    genvar i;
+
+    // =========================================================================
+    // Local Parameters
+    // =========================================================================
+    // This unit is hard coded for width 3 filters
+    localparam FILTER_LEN = 3;
+    // Need to account for cycles where the ends of the featuremap wrap
+    // through the shift registers, hence the extra "+ NUM_FILTERS - 1"
+    localparam CYCLE_PERIOD = (FRAME_LEN + FILTER_LEN - 1);
+    localparam MAX_CYCLES = NUM_FILTERS * CYCLE_PERIOD;
+    // Number of cycles where we want to requeue data into the FIFO. For last
+    // filter want to drop all the data and leave the FIFO empty.
+    localparam MAX_CYCLES_REQUEUE = (NUM_FILTERS - 1) * CYCLE_PERIOD;
+
+    // bitwidth definitions
+    localparam COUNTER_BW = $clog2(MAX_CYCLES);
+    localparam FRAME_COUNTER_BW = $clog2(FRAME_LEN + FILTER_LEN - 1);
+
+    // ========================================================================
+    // Recycler Controller
+    // ========================================================================
+    // Define States
+    localparam STATE_IDLE    = 2'd0,
+               STATE_PRELOAD = 2'd1,
+               STATE_LOAD    = 2'd2,
+               STATE_CYCLE   = 2'd3;
+
+    reg [1:0] state;
+    reg [COUNTER_BW - 1 : 0] counter;
+    // frame_counter is used to determine when the output is invalid due to
+    // having the ends of the featuremap both in the shift registers
+    reg [FRAME_COUNTER_BW - 1 : 0] frame_counter;
+
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            counter <= 'd0;
+            state <= STATE_IDLE;
+        end else begin
+            case (state)
+                STATE_IDLE: begin
+                    // FIFO State only transitions to PRELOAD on valid input
+                    counter <= 'd0;
+                    frame_counter <= 'd0;
+                    state   <= (valid_i) ? STATE_PRELOAD : STATE_IDLE;
+                end
+                STATE_PRELOAD: begin
+                    // In PRELOAD, we're shifting the first FILTER_LEN - 1
+                    // elements into our shift register, then transition
+                    // to regular LOAD where the shift register is not active
+                    counter <= counter + 'd1;
+                    frame_counter <= 'd0;
+                    state   <= (counter == FILTER_LEN) ? STATE_LOAD :
+                                                         STATE_PRELOAD;
+                end
+                STATE_LOAD: begin
+                    // In LOAD we're just shifting enough elements until
+                    // last_i is asserted
+                    counter <= 'd0;
+                    frame_counter <= 'd0;
+                    state   <= (last_i) ? STATE_CYCLE: STATE_LOAD;
+                end
+                STATE_CYCLE: begin
+                    // In CYCLE, we begin cycling MAX_CYCLE times.
+                    // If valid_i is high, we transition straight into
+                    // PRELOAD again since a new frame is immediately
+                    // available.
+                    // If valid_i is deasserted, we transition into IDLE
+                    // and wait on the next input blocks to come in
+                    counter <= counter + 'd1;
+                    frame_counter <= (frame_counter < FRAME_LEN + FILTER_LEN - 1)
+                                        ? frame_counter + 'd1
+                                        : 'd1;
+                    state   <= (counter < MAX_CYCLES - 1) ? STATE_CYCLE :
+                               ((valid_i) ? STATE_PRELOAD : STATE_IDLE);
+                end
+                default: begin
+                    counter <= 'd0;
+                    frame_counter <= 'd0;
+                    state   <= STATE_IDLE;
+                end
+            endcase
+        end
+    end
+
+    // ========================================================================
+    // Recycling FIFO
+    // ========================================================================
+    // Needed to ensure we do not drop data_i the first cycle "valid"
+    // is asserted
+    reg [VECTOR_BW - 1: 0] data_i_q;
+    always @(posedge clk_i) begin
+        data_i_q <= data_i;
+    end
+
+    // Delayed by 1 cycle since data_i_q is delayed by one cycle
+    reg fifo_recycle;
+    always @(posedge clk_i) begin
+        fifo_recycle <= (state == STATE_CYCLE);
+    end
+
+    // FIFO Output Shift Register
+    reg [VECTOR_BW - 1 : 0] fifo_out_sr [FILTER_LEN - 1 : 0];
+
+    // Assign din to input if loading, otherwise feedback output to recycle
+    wire [VECTOR_BW - 1 : 0] fifo_din;
+    assign fifo_din = fifo_recycle ? fifo_out_sr[FILTER_LEN - 1] : data_i_q;
+
+    // Always enqueue if FIFO is not idle
+    wire fifo_enq;
+    assign fifo_enq = (!(state == STATE_IDLE) & (counter <= MAX_CYCLES_REQUEUE));
+
+    // Dequeue the FIFO when we begin recycling
+    // or dequeue the FIFO exactly FILTER_LEN - 1 times when Preloading
+    wire fifo_deq;
+    assign fifo_deq = ((state == STATE_CYCLE) |
+                       ((state == STATE_PRELOAD) &
+                        (counter < FILTER_LEN - 1)));
+
+    wire [VECTOR_BW - 1 : 0] fifo_dout;
+
+    fifo #(
+        .DATA_WIDTH(VECTOR_BW),
+        .FIFO_DEPTH(FRAME_LEN)
+    ) fifo_inst (
+        .clk_i(clk_i),
+        .rst_n_i(rst_n_i),
+
+        .enq_i(fifo_enq),
+        .deq_i(fifo_deq),
+
+        .din_i(fifo_din),
+        .dout_o(fifo_dout),
+
+        .full_o_n(),
+        .empty_o_n()
+    );
+
+    // FIFO Output Shift Register Enable
+    wire sr_en;
+    assign sr_en = (fifo_recycle | (state == STATE_PRELOAD));
+
+    // FIFO Output Shift Register
+    always @(posedge clk_i) begin
+        if (sr_en) begin
+            fifo_out_sr[0] <= fifo_dout;
+        end
+    end
+    for (i = 1; i < FILTER_LEN; i = i + 1) begin: create_fifo_out_sr
+        always @(posedge clk_i) begin
+            if (sr_en) begin
+                fifo_out_sr[i] <= fifo_out_sr[i-1];
+            end
+        end
+    end
+
+    // FIFO Output Valid Shift Register
+    reg fifo_out_valid;
+    always @(posedge clk_i) begin
+        fifo_out_valid <= (state == STATE_CYCLE);
+    end
+
+    // ========================================================================
+    // Output Assignment
+    // ========================================================================
+    assign data0_o = fifo_out_sr[0];
+    assign data1_o = fifo_out_sr[1];
+    assign data2_o = fifo_out_sr[2];
+    // Output is not valid when both ends of the featuremap are in the shift
+    // register
+    assign valid_o = fifo_out_valid & (frame_counter <= FRAME_LEN);
+    assign ready_o = ready_i;
+    assign last_o  = last_i;
+
+    // ========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // ========================================================================
+    `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
+    initial begin
+        $dumpfile ("wave.vcd");
+        $dumpvars (0, recycler);
+        #1;
+    end
+    `endif
+    `endif
+
+endmodule
+// ============================================================================
+// Module:       Reduction Addition
+// Design:       Eldrick Millares
+// Verification: Matthew Pauly
+// Notes:
+// TODO: Can we make elements in sum minimum length?
+// ============================================================================
+
+module red_add #(
+    parameter I_BW = 18,
+    parameter O_BW = 32,
+    parameter VECTOR_LEN = 2
+) (
+    // clock and reset
+    input                                       clk_i,
+    input                                       rst_n_i,
+
+    // streaming input
+    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data_i,
+    input                                       valid_i,
+    input                                       last_i,
+    output                                      ready_o,
+
+    // streaming output
+    output signed [O_BW - 1 : 0]                data_o,
+    output                                      valid_o,
+    output                                      last_o,
+    input                                       ready_i
+);
+
+    genvar i;
+
+    // =========================================================================
+    // Input Unpacking
+    // =========================================================================
+    // unpacked arrays
+    wire signed [I_BW - 1 : 0] data_arr [VECTOR_LEN - 1 : 0];
+    wire signed [O_BW - 1 : 0] sum      [VECTOR_LEN - 1 : 0];
+    reg  signed [O_BW - 1 : 0] final_sum_q;
+
+    // unpack data input
+    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: unpack_inputs
+        assign data_arr[i] = data_i[(i + 1) * I_BW - 1 : i * I_BW];
+    end
+
+    // =========================================================================
+    // Reduction Addition
+    // =========================================================================
+    for (i = 1; i < VECTOR_LEN; i = i + 1) begin: reduction_sum
+         if (i == 1) begin
+             assign sum[i] = data_arr[i] + data_arr[i-1];
+         end else begin
+             assign sum[i] = sum[i-1] + data_arr[i];
+         end
+    end
+
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            final_sum_q <= 'd0;
+        end else begin
+            final_sum_q <= sum[VECTOR_LEN - 1];
+        end
+    end
+
+    // =========================================================================
+    // Output Assignment
+    // =========================================================================
+    // register all outputs
+    reg valid_q, last_q, ready_q;
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            valid_q <= 'b0;
+            last_q  <= 'b0;
+            ready_q <= 'b0;
+        end else begin
+            valid_q <= valid_i;
+            last_q  <= last_i;
+            ready_q <= ready_i;
+        end
+    end
+
+    assign data_o   = final_sum_q;
+    assign valid_o  = valid_q;
+    assign last_o   = last_q;
+    assign ready_o = ready_q;
+
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
+    initial begin
+        $dumpfile ("wave.vcd");
+        $dumpvars (0, red_add);
+        #1;
+    end
+    `endif
+    `endif
+
+endmodule
+// =============================================================================
+// Module:       ReLU (Rectified Linear Unit)
+// Design:       Eldrick Millares
+// Verification: Matthew Pauly
+// Notes:
+// =============================================================================
+
+module relu #(
+    parameter BW = 32
+) (
+    input                      clk_i,
+    input                      rst_n_i,
+
+    input  signed [BW - 1 : 0] data_i,
+    input                      valid_i,
+    input                      last_i,
+    output                     ready_o,
+
+    output signed [BW - 1 : 0] data_o,
+    output                     valid_o,
+    output                     last_o,
+    input                      ready_i
+);
+
+    // =========================================================================
+    // Rectification
+    // =========================================================================
+    reg [BW - 1 : 0] rectified;
+    always @(posedge clk_i) begin
+        rectified <= (data_i > 0) ? data_i : 0;
+    end
+
+    // =========================================================================
+    // Output Assignment
+    // =========================================================================
+    // register all outputs
+    reg valid_q, last_q, ready_q;
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            valid_q <= 'b0;
+            last_q  <= 'b0;
+            ready_q <= 'b0;
+        end else begin
+            valid_q <= valid_i;
+            last_q  <= last_i;
+            ready_q <= ready_i;
+        end
+    end
+
+    assign data_o  = rectified;
+    assign valid_o = valid_q;
+    assign last_o  = last_q;
+    assign ready_o = ready_q;
+
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
+    initial begin
+        $dumpfile ("wave.vcd");
+        $dumpvars (0, relu);
+        #1;
+    end
+    `endif
+    `endif
+
+endmodule
+// =============================================================================
+// Module:       Vector Adder
+// Design:       Eldrick Millares
+// Verification: Matthew Pauly
+// Notes:
+// =============================================================================
+
+module vec_add #(
+    parameter I_BW = 16,
+    parameter O_BW = 18,
+    parameter VECTOR_LEN = 13
+) (
+    // clock and reset
+    input                                       clk_i,
+    input                                       rst_n_i,
+
+    // streaming input
+    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data0_i,
+    input                                       valid0_i,
+    input                                       last0_i,
+    output                                      ready0_o,
+
+    // streaming input
+    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data1_i,
+    input                                       valid1_i,
+    input                                       last1_i,
+    output                                      ready1_o,
+
+    // streaming input
+    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data2_i,
+    input                                       valid2_i,
+    input                                       last2_i,
+    output                                      ready2_o,
+
+    // streaming output
+    output signed [(VECTOR_LEN * O_BW) - 1 : 0] data_o,
+    output                                      valid_o,
+    output                                      last_o,
+    input                                       ready_i
+);
+
+    genvar i;
+
+    // =========================================================================
+    // Input Unpacking
+    // =========================================================================
+    // unpacked arrays
+    wire signed [I_BW - 1 : 0] data0_arr [VECTOR_LEN - 1 : 0];
+    wire signed [I_BW - 1 : 0] data1_arr [VECTOR_LEN - 1 : 0];
+    wire signed [I_BW - 1 : 0] data2_arr [VECTOR_LEN - 1 : 0];
+    reg  signed [O_BW - 1 : 0] out_arr   [VECTOR_LEN - 1 : 0];
+
+    // unpack data input
+    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: unpack_inputs
+        assign data0_arr[i] = data0_i[(i + 1) * I_BW - 1 : i * I_BW];
+        assign data1_arr[i] = data1_i[(i + 1) * I_BW - 1 : i * I_BW];
+        assign data2_arr[i] = data2_i[(i + 1) * I_BW - 1 : i * I_BW];
+    end
+
+    // =========================================================================
+    // Vector Addition
+    // =========================================================================
+    // registered addition of data elements
+    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: vector_addition
+        always @(posedge clk_i) begin
+            if (!rst_n_i) begin
+                out_arr[i] <= 'd0;
+            end else begin
+                out_arr[i] <= data0_arr[i] + data1_arr[i] + data2_arr[i];
+            end
+        end
+    end
+
+    // =========================================================================
+    // Output Packing
+    // =========================================================================
+    // pack addition results
+    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: pack_output
+        assign data_o[(i + 1) * O_BW - 1 : i * O_BW] = out_arr[i];
+    end
+
+    // =========================================================================
+    // Output Assignment
+    // =========================================================================
+    // register all outputs
+    reg valid_q, last_q, ready_q;
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            valid_q <= 'b0;
+            last_q  <= 'b0;
+            ready_q <= 'b0;
+        end else begin
+            valid_q <= valid0_i & valid1_i & valid2_i;
+            last_q  <= last0_i | last1_i | last2_i;
+            ready_q <= ready_i;
+        end
+    end
+
+    assign valid_o  = valid_q;
+    assign last_o   = last_q;
+    assign ready0_o = ready_q;
+    assign ready1_o = ready_q;
+    assign ready2_o = ready_q;
+
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
+    initial begin
+        $dumpfile ("wave.vcd");
+        $dumpvars (0, vec_add);
+        #1;
+    end
+    `endif
+    `endif
+
+endmodule
+// =============================================================================
+// Module:       Vector Multiplier
+// Design:       Eldrick Millares
+// Verification: Matthew Pauly
+// Notes:
+// =============================================================================
+
+module vec_mul #(
+    parameter I_BW = 8,
+    parameter O_BW = 16,
+    parameter VECTOR_LEN = 13
+) (
+    // clock and reset
+    input                                       clk_i,
+    input                                       rst_n_i,
+
+    // streaming input
+    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data0_i,
+    input                                       valid0_i,
+    input                                       last0_i,
+    output                                      ready0_o,
+
+    // streaming input
+    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data1_i,
+    input                                       valid1_i,
+    input                                       last1_i,
+    output                                      ready1_o,
+
+    // streaming output
+    output signed [(VECTOR_LEN * O_BW) - 1 : 0] data_o,
+    output                                      valid_o,
+    output                                      last_o,
+    input                                       ready_i
+);
+
+    genvar i;
+
+    // =========================================================================
+    // Input Unpacking
+    // =========================================================================
+    // unpacked arrays
+    wire signed [I_BW - 1 : 0] data0_arr [VECTOR_LEN - 1 : 0];
+    wire signed [I_BW - 1 : 0] data1_arr [VECTOR_LEN - 1 : 0];
+    reg  signed [O_BW - 1 : 0] out_arr   [VECTOR_LEN - 1 : 0];
+
+    // unpack data input
+    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: unpack_inputs
+        assign data0_arr[i] = data0_i[(i + 1) * I_BW - 1 : i * I_BW];
+        assign data1_arr[i] = data1_i[(i + 1) * I_BW - 1 : i * I_BW];
+    end
+
+    // =========================================================================
+    // Vector Multiplication
+    // =========================================================================
+    // registered multiplication of data elements
+    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: vector_multiply
+        always @(posedge clk_i) begin
+            if (!rst_n_i) begin
+                out_arr[i] <= 'd0;
+            end else begin
+                out_arr[i] <= data0_arr[i] * data1_arr[i];
+            end
+        end
+    end
+
+    // =========================================================================
+    // Output Packing
+    // =========================================================================
+    // pack multiplication results
+    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: pack_output
+        assign data_o[(i + 1) * O_BW - 1 : i * O_BW] = out_arr[i];
+    end
+
+    // =========================================================================
+    // Output Assignment
+    // =========================================================================
+    // register all outputs
+    reg valid_q, last_q, ready_q;
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            valid_q <= 'b0;
+            last_q  <= 'b0;
+            ready_q <= 'b0;
+        end else begin
+            valid_q <= valid0_i & valid1_i;
+            last_q  <= last0_i | last1_i;
+            ready_q <= ready_i;
+        end
+    end
+
+    assign valid_o  = valid_q;
+    assign last_o   = last_q;
+    assign ready0_o = ready_q;
+    assign ready1_o = ready_q;
+
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
+    initial begin
+        $dumpfile ("wave.vcd");
+        $dumpvars (0, vec_mul);
+        #1;
+    end
+    `endif
+    `endif
+
+endmodule
+// =============================================================================
+// Module:       Zero Pad
+// Design:       Eldrick Millares
+// Verification: Matthew Pauly
+// Notes:
+// Adds 1 leading and 1 trailing zero to stream
+//
+// Minimum dead time between frames is 2 clock cycles.
+// This increased dead-time is needed because we reduce latency in this
+// module to just 1 cycle.
+//
+// TODO: Gate registers with valid
+// =============================================================================
+
+module zero_pad #(
+    parameter BW         = 8,
+    parameter VECTOR_LEN = 13,
+
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter VECTOR_BW = VECTOR_LEN * BW
+) (
+    // clock and reset
+    input                             clk_i,
+    input                             rst_n_i,
+
+    // streaming input
+    input  signed [VECTOR_BW - 1 : 0] data_i,
+    input                             valid_i,
+    input                             last_i,
+    output                            ready_o,
+
+    // streaming output
+    output signed [VECTOR_BW - 1 : 0] data_o,
+    output                            valid_o,
+    output                            last_o,
+    input                             ready_i
+);
+
+    // =========================================================================
+    // Delay Lines
+    // =========================================================================
+    reg signed [VECTOR_BW - 1 : 0] data_q, data_q2;
+    reg valid_q, valid_q2, valid_q3, last_q, last_q2, last_q3, ready_q;
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            valid_q  <= 'b0;
+            valid_q2 <= 'b0;
+            valid_q3 <= 'b0;
+            last_q   <= 'b0;
+            last_q2  <= 'b0;
+            last_q3  <= 'b0;
+            ready_q  <= 'b0;
+            data_q   <= 'b0;
+            data_q2  <= 'b0;
+        end else begin
+            valid_q  <= valid_i;
+            valid_q2 <= valid_q;
+            valid_q3 <= valid_q2;
+            last_q   <= last_i;
+            last_q2  <= last_q;
+            last_q3  <= last_q2;
+            ready_q  <= ready_i;
+            data_q   <= (valid_i) ? data_i : 0;
+            data_q2  <= (valid_q) ? data_q : 0;
+        end
+    end
+
+    // =========================================================================
+    // Edge Detectors
+    // =========================================================================
+    // positive edge detector to emit initial 0
+    wire valid_i_pos_edge  = valid_i  & (!valid_q);
+
+    // negative edge detectors to extend valid_o, emit last 0
+    wire valid_q_neg_edge  = valid_q2 & (!valid_q);
+    wire valid_q2_neg_edge = valid_q3 & (!valid_q2);
+
+    // =========================================================================
+    // Output Assignment
+    // =========================================================================
+    assign data_o  = (valid_q2_neg_edge | valid_i_pos_edge) ? 0 : data_q2;
+    assign valid_o = valid_q | valid_q_neg_edge | valid_q2_neg_edge;
+    assign last_o  = last_q3;
+    assign ready_o = ready_q;
+
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
+    initial begin
+        $dumpfile ("wave.vcd");
+        $dumpvars (0, zero_pad);
+        #1;
+    end
+    `endif
+    `endif
+
+endmodule
+// ============================================================================
+// Module:       Maximum
+// Design:       Eldrick Millares
+// Verification: Matthew Pauly
+// Notes:
+// TODO: Hard coded for 2 elements - can we parameterize the one-hot compare?
+// ============================================================================
+
+module argmax #(
+    parameter I_BW = 24,
+
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter VECTOR_LEN = 2
+) (
+    // clock and reset
+    input                                       clk_i,
+    input                                       rst_n_i,
+
+    // streaming input
+    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data_i,
+    input                                       valid_i,
+    input                                       last_i,
+    output                                      ready_o,
+
+    // streaming output
+    output signed [VECTOR_LEN - 1 : 0]          data_o,
+    output                                      valid_o,
+    output                                      last_o,
+    input                                       ready_i
+);
+
+    genvar i;
+
+    // =========================================================================
+    // Input Unpacking
+    // =========================================================================
+    wire signed [I_BW - 1 : 0] data_arr [VECTOR_LEN - 1 : 0];
+    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: unpack_inputs
+        assign data_arr[i] = data_i[(i + 1) * I_BW - 1 : i * I_BW];
+    end
+
+    // =========================================================================
+    // Max
+    // =========================================================================
+    wire [VECTOR_LEN - 1 : 0] argmax_one_hot;
+    reg  [VECTOR_LEN - 1 : 0] argmax_one_hot_q;
+
+    assign argmax_one_hot = (data_arr[0] > data_arr[1]) ? 'b01 : 'b10;
+
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            argmax_one_hot_q <= 'd0;
+        end else begin
+            argmax_one_hot_q <= argmax_one_hot;
+        end
+    end
+
+    // =========================================================================
+    // Output Assignment
+    // =========================================================================
+    // register all outputs
+    reg valid_q, last_q, ready_q;
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            valid_q <= 'b0;
+            last_q  <= 'b0;
+            ready_q <= 'b0;
+        end else begin
+            valid_q <= valid_i;
+            last_q  <= last_i;
+            ready_q <= ready_i;
+        end
+    end
+
+    assign data_o   = argmax_one_hot_q;
+    assign valid_o  = valid_q;
+    assign last_o   = last_q;
+    assign ready_o  = ready_q;
+
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
+    initial begin
+        $dumpfile ("wave.vcd");
+        $dumpvars (0, argmax);
+        #1;
+    end
+    `endif
     `endif
 
 endmodule
@@ -1188,7 +2320,16 @@ endmodule
 module conv_top #(
     parameter FRAME_LEN   = 50,  // output frame length
     parameter VECTOR_LEN  = 13,
-    parameter NUM_FILTERS = 8
+    parameter NUM_FILTERS = 8,
+
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter FILTER_LEN = 3,
+    parameter BW                = 8,
+    parameter VECTOR_BW         = VECTOR_LEN * BW,
+    parameter BANK_BW           = $clog2(FILTER_LEN + 2),
+    parameter ADDR_BW           = $clog2(NUM_FILTERS)
 ) (
     // clock and reset
     input                             clk_i,
@@ -1220,22 +2361,28 @@ module conv_top #(
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam FILTER_LEN = 3;
     localparam MAX_CYCLES = NUM_FILTERS * FRAME_LEN;
 
     // bitwidth definitions
-    localparam BW                = 8;
     localparam MUL_BW            = 16;
     localparam ADD_BW            = 18;
     localparam BIAS_BW           = 32;
-    localparam VECTOR_BW         = VECTOR_LEN * BW;
     localparam MUL_VECTOR_BW     = VECTOR_LEN * MUL_BW;
     localparam ADD_VECTOR_BW     = VECTOR_LEN * ADD_BW;
-    localparam ADDR_BW           = $clog2(NUM_FILTERS);
-    localparam BANK_BW           = $clog2(FILTER_LEN + 2);
     localparam FRAME_COUNTER_BW  = $clog2(FRAME_LEN);
     localparam FILTER_COUNTER_BW = $clog2(NUM_FILTERS);
     localparam SHIFT_BW          = $clog2(BIAS_BW);
+
+    // =========================================================================
+    // Ready Signals - Declare-before-use needed for Design Compiler
+    // =========================================================================
+    wire vec_mul_ready0 [FILTER_LEN - 1 : 0];
+    wire vec_mul_ready1 [FILTER_LEN - 1 : 0];
+    wire vec_add_ready  [FILTER_LEN - 1 : 0];
+    wire [0:0] red_add_ready; // [0:0] needed to avoid undecl. error
+    wire bias_add_ready [FILTER_LEN - 1 : 0];
+    wire [0:0] relu_ready;
+    wire [0:0] quantizer_ready;
 
     // =========================================================================
     // Recycler
@@ -1353,8 +2500,6 @@ module conv_top #(
     wire [MUL_VECTOR_BW - 1 : 0] vec_mul_data   [FILTER_LEN - 1 : 0];
     wire                         vec_mul_valid  [FILTER_LEN - 1 : 0];
     wire                         vec_mul_last   [FILTER_LEN - 1 : 0];
-    wire                         vec_mul_ready0 [FILTER_LEN - 1 : 0];
-    wire                         vec_mul_ready1 [FILTER_LEN - 1 : 0];
 
     for (i = 0; i < FILTER_LEN; i = i + 1) begin: vector_multiply
         vec_mul #(
@@ -1388,7 +2533,6 @@ module conv_top #(
     wire [ADD_VECTOR_BW - 1 : 0] vec_add_data;
     wire                         vec_add_valid;
     wire                         vec_add_last;
-    wire                         vec_add_ready [FILTER_LEN - 1 : 0];
 
     vec_add #(
         .I_BW(MUL_BW),
@@ -1425,7 +2569,6 @@ module conv_top #(
     wire [BIAS_BW - 1 : 0] red_add_data;
     wire                   red_add_valid;
     wire                   red_add_last;
-    wire [0:0]             red_add_ready; // [0:0] needed to avoid undecl. error
 
     red_add #(
         .I_BW(ADD_BW),
@@ -1452,7 +2595,6 @@ module conv_top #(
     wire [BIAS_BW - 1 : 0] bias_add_data;
     wire                   bias_add_valid;
     wire                   bias_add_last;
-    wire                   bias_add_ready [FILTER_LEN - 1 : 0];
 
     vec_add #(
         .I_BW(BIAS_BW),
@@ -1492,7 +2634,6 @@ module conv_top #(
     wire [BIAS_BW - 1 : 0] relu_data;
     wire                   relu_valid;
     wire                   relu_last;
-    wire [0:0]             relu_ready;
 
     relu #(
         .BW(BIAS_BW)
@@ -1517,7 +2658,6 @@ module conv_top #(
     wire [BW - 1 : 0] quantizer_data;
     wire              quantizer_valid;
     wire              quantizer_last;
-    wire [0:0]        quantizer_ready;
 
     quantizer #(
         .I_BW(BIAS_BW),
@@ -1552,11 +2692,14 @@ module conv_top #(
     // Simulation Only Waveform Dump (.vcd export)
     // =========================================================================
     `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
     initial begin
       $dumpfile ("wave.vcd");
       $dumpvars (0, conv_top);
       #1;
     end
+    `endif
     `endif
 
 endmodule
@@ -1573,7 +2716,15 @@ module fc_mem #(
     parameter BW          = 8,
     parameter BIAS_BW     = 16,
     parameter FRAME_LEN   = 208,
-    parameter NUM_CLASSES = 2
+    parameter NUM_CLASSES = 2,
+
+    // ========================================================================
+    // Local Parameters - Do Not Edit
+    // ========================================================================
+    // Bitwidth Definitions
+    parameter ADDR_BW = $clog2(FRAME_LEN),
+    // Number of weight banks + bias bank per class
+    parameter BANK_BW = $clog2(NUM_CLASSES * 2)
 ) (
     // clock and reset
     input                                           clk_i,
@@ -1603,10 +2754,6 @@ module fc_mem #(
     // ========================================================================
     // Local Parameters
     // ========================================================================
-    // Bitwidth Definitions
-    localparam ADDR_BW   = $clog2(FRAME_LEN);
-    // Number of weight banks + bias bank per class
-    localparam BANK_BW          = $clog2(NUM_CLASSES * 2);
     localparam FRAME_COUNTER_BW = $clog2(FRAME_LEN);
 
     // ========================================================================
@@ -1741,11 +2888,14 @@ module fc_mem #(
     // Simulation Only Waveform Dump (.vcd export)
     // ========================================================================
     `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
     initial begin
         $dumpfile ("wave.vcd");
         $dumpvars (0, fc_mem);
         #1;
     end
+    `endif
     `endif
 
 endmodule
@@ -1764,7 +2914,14 @@ module fc_top #(
     parameter BIAS_BW     = 16,
     parameter O_BW        = 24,
     parameter FRAME_LEN   = 208,
-    parameter NUM_CLASSES = 3
+    parameter NUM_CLASSES = 3,
+
+    // ========================================================================
+    // Local Parameters - Do Not Edit
+    // ========================================================================
+    parameter VECTOR_O_BW = O_BW * NUM_CLASSES,
+    parameter ADDR_BW     = $clog2(FRAME_LEN),
+    parameter BANK_BW     = $clog2(NUM_CLASSES * 2)
 ) (
     // clock and reset
     input                               clk_i,
@@ -1797,13 +2954,10 @@ module fc_top #(
     // Local Parameters
     // ========================================================================
     // Bitwidth Definitions
-    localparam ADDR_BW   = $clog2(FRAME_LEN);
     localparam VECTOR_I_BW = I_BW * NUM_CLASSES;
     localparam VECTOR_BIAS_BW = BIAS_BW * NUM_CLASSES;
-    localparam VECTOR_O_BW = O_BW * NUM_CLASSES;
 
     // Number of weight banks + bias bank per class
-    localparam BANK_BW          = $clog2(NUM_CLASSES * 2);
     localparam FRAME_COUNTER_BW = $clog2(FRAME_LEN);
     // ========================================================================
 
@@ -1844,6 +2998,8 @@ module fc_top #(
     // ========================================================================
     // MAC Array
     // ========================================================================
+    wire mac_ready0;
+
     // register stream input array to give fc_mem 1 cycle to ready outputs
     reg signed [I_BW - 1 : 0]        data_i_q;
     reg                              valid_i_q;
@@ -1863,8 +3019,6 @@ module fc_top #(
             last_i_q  <= last_i;
         end
     end
-
-    wire mac_ready0;
 
     mac #(
         .I_BW(I_BW),
@@ -1896,11 +3050,14 @@ module fc_top #(
     // Simulation Only Waveform Dump (.vcd export)
     // ========================================================================
     `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
     initial begin
         $dumpfile ("wave.vcd");
         $dumpvars (0, fc_top);
         #1;
     end
+    `endif
     `endif
 
 endmodule
@@ -1946,10 +3103,21 @@ module mac #(
     input                                           ready_i
 );
 
+
+    genvar i;
+
+    // =========================================================================
+    // Local Parameters
+    // =========================================================================
     localparam VALID_TIMEOUT_CYCLES         = 8;  // num cycles to reset after
     localparam VALID_TIMEOUT_BW             = $clog2(VALID_TIMEOUT_CYCLES + 1);
 
-    genvar i;
+    // =========================================================================
+    // Output Register Declaratons
+    // =========================================================================
+    reg valid_q, valid_q2, valid_q3;
+    reg last_q, last_q2, last_q3;
+    reg ready_q;
 
     // =========================================================================
     // Delay Lines
@@ -2059,9 +3227,6 @@ module mac #(
     end
 
     // register all outputs
-    reg valid_q, valid_q2, valid_q3;
-    reg last_q, last_q2, last_q3;
-    reg ready_q;
     always @(posedge clk_i) begin
         if (!rst_n_i) begin
             valid_q  <= 'b0;
@@ -2093,6 +3258,8 @@ module mac #(
     // Simulation Only Waveform Dump (.vcd export)
     // =========================================================================
     `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
     initial begin
         $dumpfile ("wave.vcd");
         $dumpvars (0, mac);
@@ -2106,800 +3273,6 @@ module mac #(
         #1;
     end
     `endif
-
-endmodule
-// ============================================================================
-// Max Pool
-// Design: Eldrick Millares
-// Verification: Matthew Pauly
-// Notes:
-// ============================================================================
-
-module max_pool #(
-    parameter BW = 8
-) (
-    // clock and reset
-    input                      clk_i,
-    input                      rst_n_i,
-
-    // streaming input
-    input  signed [BW - 1 : 0] data_i,
-    input                      valid_i,
-    input                      last_i,
-    output                     ready_o,
-
-    // streaming output
-    output signed [BW - 1 : 0] data_o,
-    output                     valid_o,
-    output                     last_o,
-    input                      ready_i
-);
-
-    localparam STATE_IDLE   = 2'd0,
-               STATE_LOAD_1 = 2'd1,
-               STATE_LOAD_2 = 2'd2,
-               STATE_VALID  = 2'd3;
-    reg [1:0] state;
-
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            state <= STATE_IDLE;
-        end else begin
-            case(state)
-                STATE_IDLE: begin
-                    state <= (valid_i) ? STATE_LOAD_1 : STATE_IDLE;
-                end
-                STATE_LOAD_1: begin
-                    state <= (valid_i) ? STATE_LOAD_2 : STATE_IDLE;
-                end
-                STATE_LOAD_2: begin
-                    state <= STATE_VALID;
-                end
-                STATE_VALID: begin
-                    state <= (valid_q) ?
-                             ((last_q) ? STATE_VALID : STATE_LOAD_2) :
-                             STATE_IDLE;
-                end
-                default: begin
-                end
-            endcase
-        end
-    end
-
-
-    // register all outputs
-    reg signed [BW - 1 : 0] data_q, data_q2, max;
-
-    reg valid_q, valid_q2, valid_q3, last_q, last_q2, last_q3, ready_q;
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            valid_q  <= 'b0;
-            valid_q2 <= 'b0;
-            valid_q3 <= 'b0;
-            last_q   <= 'b0;
-            last_q2  <= 'b0;
-            last_q3  <= 'b0;
-            ready_q  <= 'b0;
-            data_q   <= 'b0;
-            data_q2  <= 'b0;
-            max      <= 'b0;
-        end else begin
-            valid_q  <= valid_i;
-            valid_q2 <= valid_q;
-            valid_q3 <= valid_q2;
-            last_q   <= last_i;
-            last_q2  <= last_q;
-            last_q3  <= last_q2;
-            ready_q  <= ready_i;
-            data_q   <= data_i;
-            data_q2  <= data_q;
-            max      <= (state == STATE_VALID) ? 
-                          data_q  // if 2 new data are not ready yet just
-                                  // output the first one
-                          : ((data_q > data_q2) ? data_q : data_q2);
-        end
-    end
-
-    // positive edge detector to emit initial 0
-    wire valid_i_pos_edge  = valid_i  & (!valid_q);
-
-    // negative edge detectors to extend valid_o, emit last 0
-    wire valid_q_neg_edge  = valid_q2 & (!valid_q);
-    wire valid_q2_neg_edge = valid_q3 & (!valid_q2);
-
-    assign data_o  = max;
-    // assign valid_o = valid_q | valid_q_neg_edge | valid_q2_neg_edge;
-    assign valid_o = (state == STATE_VALID);
-    assign last_o  = last_q2;
-    assign ready_o = ready_q;
-
-    `ifdef COCOTB_SIM
-    initial begin
-        $dumpfile ("wave.vcd");
-        $dumpvars (0, max_pool);
-        #1;
-    end
-    `endif
-
-endmodule
-// ============================================================================
-// Quantizer
-// Design: Eldrick Millares
-// Verification: Matthew Pauly
-// Notes:
-// TODO: Can we synthesize a variable arithmetic right shift?
-// TODO: Does this need to be signed? Guess is no since it is after ReLU
-// ============================================================================
-
-module quantizer #(
-    parameter I_BW     = 32,
-    parameter O_BW     = 8,
-    parameter SHIFT_BW = $clog2(I_BW)
-) (
-    input                    clk_i,
-    input                    rst_n_i,
-
-    input [SHIFT_BW - 1 : 0] shift_i,
-
-    input [I_BW - 1 : 0]     data_i,
-    input                    valid_i,
-    input                    last_i,
-    output                   ready_o,
-
-    output [O_BW - 1 : 0]    data_o,
-    output                   valid_o,
-    output                   last_o,
-    input                    ready_i
-);
-
-    localparam [O_BW - 1 : 0] saturate_point = {1'b0, {O_BW - 1{1'b1}}};
-
-    reg [I_BW - 1 : 0] shifted;
-
-    always @(posedge clk_i) begin
-        shifted <= (data_i >> shift_i);
-    end
-
-    wire [O_BW - 1 : 0] truncated;
-    assign truncated = shifted[O_BW - 1 : 0];
-
-    // register all outputs
-    reg valid_q, last_q, ready_q;
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            valid_q <= 'b0;
-            last_q  <= 'b0;
-            ready_q <= 'b0;
-        end else begin
-            valid_q <= valid_i;
-            last_q  <= last_i;
-            ready_q <= ready_i;
-        end
-    end
-
-    assign data_o  = (shifted > saturate_point) ? saturate_point :
-                                                  shifted[O_BW - 1 : 0];
-    assign valid_o = valid_q;
-    assign last_o  = last_q;
-    assign ready_o = ready_q;
-
-    `ifdef COCOTB_SIM
-    initial begin
-        $dumpfile ("wave.vcd");
-        $dumpvars (0, quantizer);
-        #1;
-    end
-    `endif
-
-endmodule
-// =============================================================================
-// Module:       Recycler
-// Design:       Eldrick Millares
-// Verification: Matthew Pauly
-// Notes:
-// Constraint: FRAME_LEN > FILTER_LEN
-// Constraint: FILTER_LEN == 3
-// In order to change filter size, you'll have to parameterize the vec_add
-// unit.
-// TODO: Fix initial deque errors
-// TODO: Handle deassertions of valid midstream
-// TODO: Handle Full and Empty
-// =============================================================================
-
-module recycler #(
-    parameter BW          = 8,
-    parameter FRAME_LEN   = 50,
-    parameter VECTOR_LEN  = 13,
-    parameter NUM_FILTERS = 8
-) (
-    // clock and reset
-    input                             clk_i,
-    input                             rst_n_i,
-
-    // streaming input
-    input  signed [VECTOR_BW - 1 : 0] data_i,
-    input                             valid_i,
-    input                             last_i,
-    output                            ready_o,
-
-    // streaming output
-    output signed [VECTOR_BW - 1 : 0] data0_o,
-    output signed [VECTOR_BW - 1 : 0] data1_o,
-    output signed [VECTOR_BW - 1 : 0] data2_o,
-    output                            valid_o,
-    output                            last_o,
-    input                             ready_i
-);
-
-    genvar i;
-
-    // =========================================================================
-    // Local Parameters
-    // =========================================================================
-    // This unit is hard coded for width 3 filters
-    localparam FILTER_LEN = 3;
-    // Need to account for cycles where the ends of the featuremap wrap
-    // through the shift registers, hence the extra "+ NUM_FILTERS - 1"
-    localparam CYCLE_PERIOD = (FRAME_LEN + FILTER_LEN - 1);
-    localparam MAX_CYCLES = NUM_FILTERS * CYCLE_PERIOD;
-    // Number of cycles where we want to requeue data into the FIFO. For last
-    // filter want to drop all the data and leave the FIFO empty.
-    localparam MAX_CYCLES_REQUEUE = (NUM_FILTERS - 1) * CYCLE_PERIOD;
-
-    // bitwidth definitions
-    localparam VECTOR_BW  = VECTOR_LEN * BW;
-    localparam COUNTER_BW = $clog2(MAX_CYCLES);
-    localparam FRAME_COUNTER_BW = $clog2(FRAME_LEN + FILTER_LEN - 1);
-
-    // ========================================================================
-    // Recycler Controller
-    // ========================================================================
-    // Define States
-    localparam STATE_IDLE    = 2'd0,
-               STATE_PRELOAD = 2'd1,
-               STATE_LOAD    = 2'd2,
-               STATE_CYCLE   = 2'd3;
-
-    reg [1:0] state;
-    reg [COUNTER_BW - 1 : 0] counter;
-    // frame_counter is used to determine when the output is invalid due to
-    // having the ends of the featuremap both in the shift registers
-    reg [FRAME_COUNTER_BW - 1 : 0] frame_counter;
-
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            counter <= 'd0;
-            state <= STATE_IDLE;
-        end else begin
-            case (state)
-                STATE_IDLE: begin
-                    // FIFO State only transitions to PRELOAD on valid input
-                    counter <= 'd0;
-                    frame_counter <= 'd0;
-                    state   <= (valid_i) ? STATE_PRELOAD : STATE_IDLE;
-                end
-                STATE_PRELOAD: begin
-                    // In PRELOAD, we're shifting the first FILTER_LEN - 1
-                    // elements into our shift register, then transition
-                    // to regular LOAD where the shift register is not active
-                    counter <= counter + 'd1;
-                    frame_counter <= 'd0;
-                    state   <= (counter == FILTER_LEN) ? STATE_LOAD :
-                                                         STATE_PRELOAD;
-                end
-                STATE_LOAD: begin
-                    // In LOAD we're just shifting enough elements until
-                    // last_i is asserted
-                    counter <= 'd0;
-                    frame_counter <= 'd0;
-                    state   <= (last_i) ? STATE_CYCLE: STATE_LOAD;
-                end
-                STATE_CYCLE: begin
-                    // In CYCLE, we begin cycling MAX_CYCLE times.
-                    // If valid_i is high, we transition straight into
-                    // PRELOAD again since a new frame is immediately
-                    // available.
-                    // If valid_i is deasserted, we transition into IDLE
-                    // and wait on the next input blocks to come in
-                    counter <= counter + 'd1;
-                    frame_counter <= (frame_counter < FRAME_LEN + FILTER_LEN - 1)
-                                        ? frame_counter + 'd1
-                                        : 'd1;
-                    state   <= (counter < MAX_CYCLES - 1) ? STATE_CYCLE :
-                               ((valid_i) ? STATE_PRELOAD : STATE_IDLE);
-                end
-                default: begin
-                    counter <= 'd0;
-                    frame_counter <= 'd0;
-                    state   <= STATE_IDLE;
-                end
-            endcase
-        end
-    end
-
-    // ========================================================================
-    // Recycling FIFO
-    // ========================================================================
-    // Needed to ensure we do not drop data_i the first cycle "valid"
-    // is asserted
-    reg [VECTOR_BW - 1: 0] data_i_q;
-    always @(posedge clk_i) begin
-        data_i_q <= data_i;
-    end
-
-    // Delayed by 1 cycle since data_i_q is delayed by one cycle
-    reg fifo_recycle;
-    always @(posedge clk_i) begin
-        fifo_recycle <= (state == STATE_CYCLE);
-    end
-
-    // Assign din to input if loading, otherwise feedback output to recycle
-    wire [VECTOR_BW - 1 : 0] fifo_din;
-    assign fifo_din = fifo_recycle ? fifo_out_sr[FILTER_LEN - 1] : data_i_q;
-
-    // Always enqueue if FIFO is not idle
-    wire fifo_enq;
-    assign fifo_enq = (!(state == STATE_IDLE) & (counter <= MAX_CYCLES_REQUEUE));
-
-    // Dequeue the FIFO when we begin recycling
-    // or dequeue the FIFO exactly FILTER_LEN - 1 times when Preloading
-    wire fifo_deq;
-    assign fifo_deq = ((state == STATE_CYCLE) |
-                       ((state == STATE_PRELOAD) &
-                        (counter < FILTER_LEN - 1)));
-
-    wire [VECTOR_BW - 1 : 0] fifo_dout;
-
-    fifo #(
-        .DATA_WIDTH(VECTOR_BW),
-        .FIFO_DEPTH(FRAME_LEN)
-    ) fifo_inst (
-        .clk_i(clk_i),
-        .rst_n_i(rst_n_i),
-
-        .enq_i(fifo_enq),
-        .deq_i(fifo_deq),
-
-        .din_i(fifo_din),
-        .dout_o(fifo_dout),
-
-        .full_o_n(),
-        .empty_o_n()
-    );
-
-    // FIFO Output Shift Register Enable
-    wire sr_en;
-    assign sr_en = (fifo_recycle | (state == STATE_PRELOAD));
-
-    // FIFO Output Shift Register
-    reg [VECTOR_BW - 1 : 0] fifo_out_sr [FILTER_LEN - 1 : 0];
-    always @(posedge clk_i) begin
-        if (sr_en) begin
-            fifo_out_sr[0] <= fifo_dout;
-        end
-    end
-    for (i = 1; i < FILTER_LEN; i = i + 1) begin: create_fifo_out_sr
-        always @(posedge clk_i) begin
-            if (sr_en) begin
-                fifo_out_sr[i] <= fifo_out_sr[i-1];
-            end
-        end
-    end
-
-    // FIFO Output Valid Shift Register
-    reg fifo_out_valid;
-    always @(posedge clk_i) begin
-        fifo_out_valid <= (state == STATE_CYCLE);
-    end
-
-    // ========================================================================
-    // Output Assignment
-    // ========================================================================
-    assign data0_o = fifo_out_sr[0];
-    assign data1_o = fifo_out_sr[1];
-    assign data2_o = fifo_out_sr[2];
-    // Output is not valid when both ends of the featuremap are in the shift
-    // register
-    assign valid_o = fifo_out_valid & (frame_counter <= FRAME_LEN);
-    assign ready_o = ready_i;
-    assign last_o  = last_i;
-
-    // ========================================================================
-    // Simulation Only Waveform Dump (.vcd export)
-    // ========================================================================
-    `ifdef COCOTB_SIM
-    initial begin
-        $dumpfile ("wave.vcd");
-        $dumpvars (0, recycler);
-        #1;
-    end
-    `endif
-
-endmodule
-// ============================================================================
-// Module:       Reduction Addition
-// Design:       Eldrick Millares
-// Verification: Matthew Pauly
-// Notes:
-// TODO: Can we make elements in sum minimum length?
-// ============================================================================
-
-module red_add #(
-    parameter I_BW = 18,
-    parameter O_BW = 32,
-    parameter VECTOR_LEN = 2
-) (
-    // clock and reset
-    input                                       clk_i,
-    input                                       rst_n_i,
-
-    // streaming input
-    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data_i,
-    input                                       valid_i,
-    input                                       last_i,
-    output                                      ready_o,
-
-    // streaming output
-    output signed [O_BW - 1 : 0]                data_o,
-    output                                      valid_o,
-    output                                      last_o,
-    input                                       ready_i
-);
-
-    genvar i;
-
-    // =========================================================================
-    // Input Unpacking
-    // =========================================================================
-    // unpacked arrays
-    wire signed [I_BW - 1 : 0] data_arr [VECTOR_LEN - 1 : 0];
-    wire signed [O_BW - 1 : 0] sum      [VECTOR_LEN - 1 : 0];
-    reg  signed [O_BW - 1 : 0] final_sum_q;
-
-    // unpack data input
-    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: unpack_inputs
-        assign data_arr[i] = data_i[(i + 1) * I_BW - 1 : i * I_BW];
-    end
-
-    // =========================================================================
-    // Reduction Addition
-    // =========================================================================
-    for (i = 1; i < VECTOR_LEN; i = i + 1) begin: reduction_sum
-         if (i == 1) begin
-             assign sum[i] = data_arr[i] + data_arr[i-1];
-         end else begin
-             assign sum[i] = sum[i-1] + data_arr[i];
-         end
-    end
-
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            final_sum_q <= 'd0;
-        end else begin
-            final_sum_q <= sum[VECTOR_LEN - 1];
-        end
-    end
-
-    // =========================================================================
-    // Output Assignment
-    // =========================================================================
-    // register all outputs
-    reg valid_q, last_q, ready_q;
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            valid_q <= 'b0;
-            last_q  <= 'b0;
-            ready_q <= 'b0;
-        end else begin
-            valid_q <= valid_i;
-            last_q  <= last_i;
-            ready_q <= ready_i;
-        end
-    end
-
-    assign data_o   = final_sum_q;
-    assign valid_o  = valid_q;
-    assign last_o   = last_q;
-    assign ready_o = ready_q;
-
-    // =========================================================================
-    // Simulation Only Waveform Dump (.vcd export)
-    // =========================================================================
-    `ifdef COCOTB_SIM
-    initial begin
-        $dumpfile ("wave.vcd");
-        $dumpvars (0, red_add);
-        #1;
-    end
-    `endif
-
-endmodule
-// =============================================================================
-// Module:       ReLU (Rectified Linear Unit)
-// Design:       Eldrick Millares
-// Verification: Matthew Pauly
-// Notes:
-// =============================================================================
-
-module relu #(
-    parameter BW = 32
-) (
-    input                      clk_i,
-    input                      rst_n_i,
-
-    input  signed [BW - 1 : 0] data_i,
-    input                      valid_i,
-    input                      last_i,
-    output                     ready_o,
-
-    output signed [BW - 1 : 0] data_o,
-    output                     valid_o,
-    output                     last_o,
-    input                      ready_i
-);
-
-    // =========================================================================
-    // Rectification
-    // =========================================================================
-    reg [BW - 1 : 0] rectified;
-    always @(posedge clk_i) begin
-        rectified <= (data_i > 0) ? data_i : 0;
-    end
-
-    // =========================================================================
-    // Output Assignment
-    // =========================================================================
-    // register all outputs
-    reg valid_q, last_q, ready_q;
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            valid_q <= 'b0;
-            last_q  <= 'b0;
-            ready_q <= 'b0;
-        end else begin
-            valid_q <= valid_i;
-            last_q  <= last_i;
-            ready_q <= ready_i;
-        end
-    end
-
-    assign data_o  = rectified;
-    assign valid_o = valid_q;
-    assign last_o  = last_q;
-    assign ready_o = ready_q;
-
-    // =========================================================================
-    // Simulation Only Waveform Dump (.vcd export)
-    // =========================================================================
-    `ifdef COCOTB_SIM
-    initial begin
-        $dumpfile ("wave.vcd");
-        $dumpvars (0, relu);
-        #1;
-    end
-    `endif
-
-endmodule
-// =============================================================================
-// Module:       Vector Adder
-// Design:       Eldrick Millares
-// Verification: Matthew Pauly
-// Notes:
-// =============================================================================
-
-module vec_add #(
-    parameter I_BW = 16,
-    parameter O_BW = 18,
-    parameter VECTOR_LEN = 13
-) (
-    // clock and reset
-    input                                       clk_i,
-    input                                       rst_n_i,
-
-    // streaming input
-    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data0_i,
-    input                                       valid0_i,
-    input                                       last0_i,
-    output                                      ready0_o,
-
-    // streaming input
-    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data1_i,
-    input                                       valid1_i,
-    input                                       last1_i,
-    output                                      ready1_o,
-
-    // streaming input
-    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data2_i,
-    input                                       valid2_i,
-    input                                       last2_i,
-    output                                      ready2_o,
-
-    // streaming output
-    output signed [(VECTOR_LEN * O_BW) - 1 : 0] data_o,
-    output                                      valid_o,
-    output                                      last_o,
-    input                                       ready_i
-);
-
-    genvar i;
-
-    // =========================================================================
-    // Input Unpacking
-    // =========================================================================
-    // unpacked arrays
-    wire signed [I_BW - 1 : 0] data0_arr [VECTOR_LEN - 1 : 0];
-    wire signed [I_BW - 1 : 0] data1_arr [VECTOR_LEN - 1 : 0];
-    wire signed [I_BW - 1 : 0] data2_arr [VECTOR_LEN - 1 : 0];
-    reg  signed [O_BW - 1 : 0] out_arr   [VECTOR_LEN - 1 : 0];
-
-    // unpack data input
-    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: unpack_inputs
-        assign data0_arr[i] = data0_i[(i + 1) * I_BW - 1 : i * I_BW];
-        assign data1_arr[i] = data1_i[(i + 1) * I_BW - 1 : i * I_BW];
-        assign data2_arr[i] = data2_i[(i + 1) * I_BW - 1 : i * I_BW];
-    end
-
-    // =========================================================================
-    // Vector Addition
-    // =========================================================================
-    // registered addition of data elements
-    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: vector_addition
-        always @(posedge clk_i) begin
-            if (!rst_n_i) begin
-                out_arr[i] <= 'd0;
-            end else begin
-                out_arr[i] <= data0_arr[i] + data1_arr[i] + data2_arr[i];
-            end
-        end
-    end
-
-    // =========================================================================
-    // Output Packing
-    // =========================================================================
-    // pack addition results
-    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: pack_output
-        assign data_o[(i + 1) * O_BW - 1 : i * O_BW] = out_arr[i];
-    end
-
-    // =========================================================================
-    // Output Assignment
-    // =========================================================================
-    // register all outputs
-    reg valid_q, last_q, ready_q;
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            valid_q <= 'b0;
-            last_q  <= 'b0;
-            ready_q <= 'b0;
-        end else begin
-            valid_q <= valid0_i & valid1_i & valid2_i;
-            last_q  <= last0_i | last1_i | last2_i;
-            ready_q <= ready_i;
-        end
-    end
-
-    assign valid_o  = valid_q;
-    assign last_o   = last_q;
-    assign ready0_o = ready_q;
-    assign ready1_o = ready_q;
-    assign ready2_o = ready_q;
-
-    // =========================================================================
-    // Simulation Only Waveform Dump (.vcd export)
-    // =========================================================================
-    `ifdef COCOTB_SIM
-    initial begin
-        $dumpfile ("wave.vcd");
-        $dumpvars (0, vec_add);
-        #1;
-    end
-    `endif
-
-endmodule
-// =============================================================================
-// Module:       Vector Multiplier
-// Design:       Eldrick Millares
-// Verification: Matthew Pauly
-// Notes:
-// =============================================================================
-
-module vec_mul #(
-    parameter I_BW = 8,
-    parameter O_BW = 16,
-    parameter VECTOR_LEN = 13
-) (
-    // clock and reset
-    input                                       clk_i,
-    input                                       rst_n_i,
-
-    // streaming input
-    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data0_i,
-    input                                       valid0_i,
-    input                                       last0_i,
-    output                                      ready0_o,
-
-    // streaming input
-    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data1_i,
-    input                                       valid1_i,
-    input                                       last1_i,
-    output                                      ready1_o,
-
-    // streaming output
-    output signed [(VECTOR_LEN * O_BW) - 1 : 0] data_o,
-    output                                      valid_o,
-    output                                      last_o,
-    input                                       ready_i
-);
-
-    genvar i;
-
-    // =========================================================================
-    // Input Unpacking
-    // =========================================================================
-    // unpacked arrays
-    wire signed [I_BW - 1 : 0] data0_arr [VECTOR_LEN - 1 : 0];
-    wire signed [I_BW - 1 : 0] data1_arr [VECTOR_LEN - 1 : 0];
-    reg  signed [O_BW - 1 : 0] out_arr   [VECTOR_LEN - 1 : 0];
-
-    // unpack data input
-    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: unpack_inputs
-        assign data0_arr[i] = data0_i[(i + 1) * I_BW - 1 : i * I_BW];
-        assign data1_arr[i] = data1_i[(i + 1) * I_BW - 1 : i * I_BW];
-    end
-
-    // =========================================================================
-    // Vector Multiplication
-    // =========================================================================
-    // registered multiplication of data elements
-    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: vector_multiply
-        always @(posedge clk_i) begin
-            if (!rst_n_i) begin
-                out_arr[i] <= 'd0;
-            end else begin
-                out_arr[i] <= data0_arr[i] * data1_arr[i];
-            end
-        end
-    end
-
-    // =========================================================================
-    // Output Packing
-    // =========================================================================
-    // pack multiplication results
-    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: pack_output
-        assign data_o[(i + 1) * O_BW - 1 : i * O_BW] = out_arr[i];
-    end
-
-    // =========================================================================
-    // Output Assignment
-    // =========================================================================
-    // register all outputs
-    reg valid_q, last_q, ready_q;
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            valid_q <= 'b0;
-            last_q  <= 'b0;
-            ready_q <= 'b0;
-        end else begin
-            valid_q <= valid0_i & valid1_i;
-            last_q  <= last0_i | last1_i;
-            ready_q <= ready_i;
-        end
-    end
-
-    assign valid_o  = valid_q;
-    assign last_o   = last_q;
-    assign ready0_o = ready_q;
-    assign ready1_o = ready_q;
-
-    // =========================================================================
-    // Simulation Only Waveform Dump (.vcd export)
-    // =========================================================================
-    `ifdef COCOTB_SIM
-    initial begin
-        $dumpfile ("wave.vcd");
-        $dumpvars (0, vec_mul);
-        #1;
-    end
     `endif
 
 endmodule
@@ -2933,7 +3306,11 @@ module wake #(
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam SUSTAIN_LEN = 8000000;  // half second
+    `ifdef COCOTB_SIM
+        localparam SUSTAIN_LEN = 1024;  // short sustain for simulation
+    `else
+        localparam SUSTAIN_LEN = 8000000;  // half second
+    `endif
     localparam COUNTER_BW = $clog2(SUSTAIN_LEN);
 
     // =========================================================================
@@ -2978,11 +3355,14 @@ module wake #(
     // Simulation Only Waveform Dump (.vcd export)
     // =========================================================================
     `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
     initial begin
         $dumpfile ("wave.vcd");
         $dumpvars (0, wake);
         #1;
     end
+    `endif
     `endif
 
 endmodule
@@ -2993,7 +3373,92 @@ endmodule
 // Notes:
 // =============================================================================
 
-module wrd (
+module wrd #(
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    // input parameters
+    parameter I_BW         = 8,
+    parameter I_FRAME_LEN  = 50,
+    parameter I_VECTOR_LEN = 13,
+
+    // zero_pad1 module parameters
+    parameter ZERO_PAD1_BW         = I_BW,         // 8
+    parameter ZERO_PAD1_VECTOR_LEN = I_VECTOR_LEN, // 13
+    // zero_pad1 helper parameters
+    parameter ZERO_PAD1_VECTOR_BW = ZERO_PAD1_BW * ZERO_PAD1_VECTOR_LEN, // 104
+
+    // conv1 module parameters
+    parameter CONV1_FRAME_LEN   = I_FRAME_LEN,  // 50
+    parameter CONV1_VECTOR_LEN  = I_VECTOR_LEN, // 13
+    parameter CONV1_NUM_FILTERS = 8,
+    // conv1 helper parameters
+    parameter CONV1_BW         = ZERO_PAD1_BW, // 8
+    parameter CONV1_FILTER_LEN = 3,
+    parameter CONV1_VECTOR_BW  = CONV1_BW * CONV1_VECTOR_LEN, // 104
+    // conv1 memory configuration parameters
+    parameter CONV1_BANK_BW = $clog2(CONV1_FILTER_LEN + 2), // 3
+    parameter CONV1_ADDR_BW = $clog2(CONV1_NUM_FILTERS),    // 3
+
+    // max_pool1 module parameters
+    parameter MAX_POOL1_BW = CONV1_BW, // 8
+
+    // conv_sipo module parameters
+    parameter CONV_SIPO_BW         = MAX_POOL1_BW,                    // 8
+    // TODO: $rtoi and $ceil are not supported in Design Compiler
+    // parameter CONV_SIPO_FRAME_LEN  = $rtoi($ceil(I_FRAME_LEN / 2.0)), // 25
+    parameter CONV_SIPO_FRAME_LEN  = I_FRAME_LEN / 2, // 25
+    parameter CONV_SIPO_VECTOR_LEN = CONV1_NUM_FILTERS,               // 8
+    // conv_sipo helper parameters
+    parameter CONV_SIPO_VECTOR_BW = CONV_SIPO_BW * CONV_SIPO_VECTOR_LEN, // 64
+
+    // zero_pad2 module parameters
+    parameter ZERO_PAD2_BW         = I_BW,              // 8
+    parameter ZERO_PAD2_VECTOR_LEN = CONV1_NUM_FILTERS, // 8
+    // zero_pad2 helper parameters
+    parameter ZERO_PAD2_VECTOR_BW = ZERO_PAD2_BW * ZERO_PAD2_VECTOR_LEN, // 128
+
+    // conv2 module parameters
+    parameter CONV2_FRAME_LEN   = CONV_SIPO_FRAME_LEN, // 25
+    parameter CONV2_VECTOR_LEN  = CONV1_NUM_FILTERS,   // 8
+    parameter CONV2_NUM_FILTERS = 16,
+    // conv2 helper parameters
+    parameter CONV2_BW         = CONV_SIPO_BW,                // 8
+    parameter CONV2_FILTER_LEN = 3,
+    parameter CONV2_VECTOR_BW  = CONV2_BW * CONV2_VECTOR_LEN, // 64
+    // conv2 memory configuration parameters
+    parameter CONV2_BANK_BW = $clog2(CONV2_FILTER_LEN + 2), // 3
+    parameter CONV2_ADDR_BW = $clog2(CONV2_NUM_FILTERS),    // 4
+
+    // max_pool2 module parameters
+    parameter MAX_POOL2_BW        = CONV_SIPO_BW, // 8
+    // TODO: $rtoi and $ceil are not supported in Design Compiler
+    // parameter MAX_POOL2_FRAME_LEN = $rtoi($ceil(CONV_SIPO_FRAME_LEN / 2.0)), //13
+    parameter MAX_POOL2_FRAME_LEN = CONV_SIPO_FRAME_LEN / 2 + 1, //13
+
+    // fc module parameters
+    parameter FC_I_BW        = I_BW, // 8
+    parameter FC_BIAS_BW     = 32,
+    parameter FC_O_BW        = 32,
+    parameter FC_FRAME_LEN   = MAX_POOL2_FRAME_LEN * CONV2_NUM_FILTERS, // 208
+    parameter FC_NUM_CLASSES = 2,
+    // fc helper parameters
+    parameter FC_VECTOR_O_BW = FC_O_BW * FC_NUM_CLASSES, // 64
+    // fc memory configuration parameters
+    parameter FC_BANK_BW = $clog2(FC_NUM_CLASSES * 2),
+    // TODO: Yosys will not resolve FC_FRAME_LEN, need to hard code
+    // parameter FC_ADDR_BW = $clog2(FC_FRAME_LEN),
+    parameter FC_ADDR_BW = $clog2(208),
+
+    // argmax module parameters
+    parameter ARGMAX_I_BW = FC_O_BW, // 24
+    // argmax helper parameters
+    parameter ARGMAX_O_BW = FC_NUM_CLASSES,
+
+    // wake module parameters
+    parameter WAKE_NUM_CLASSES = FC_NUM_CLASSES // 2
+
+) (
     // clock and reset
     input                                   clk_i,
     input                                   rst_n_i,
@@ -3032,85 +3497,19 @@ module wrd (
     input  signed [FC_BIAS_BW - 1 : 0]      fc_wr_data_i,
     output signed [FC_BIAS_BW - 1 : 0]      fc_rd_data_o
 );
+
     // =========================================================================
-    // Local Parameters
+    // Ready Signals - Declare-before-use needed for Design Compiler
     // =========================================================================
-    // input parameters
-    localparam I_BW         = 8;
-    localparam I_FRAME_LEN  = 50;
-    localparam I_VECTOR_LEN = 13;
-
-    // zero_pad1 module parameters
-    localparam ZERO_PAD1_BW         = I_BW;         // 8
-    localparam ZERO_PAD1_VECTOR_LEN = I_VECTOR_LEN; // 13
-    // zero_pad1 helper parameters
-    localparam ZERO_PAD1_VECTOR_BW = ZERO_PAD1_BW * ZERO_PAD1_VECTOR_LEN; // 104
-
-    // conv1 module parameters
-    localparam CONV1_FRAME_LEN   = I_FRAME_LEN;  // 50
-    localparam CONV1_VECTOR_LEN  = I_VECTOR_LEN; // 13
-    localparam CONV1_NUM_FILTERS = 8;
-    // conv1 helper parameters
-    localparam CONV1_BW         = ZERO_PAD1_BW; // 8
-    localparam CONV1_FILTER_LEN = 3;
-    localparam CONV1_VECTOR_BW  = CONV1_BW * CONV1_VECTOR_LEN; // 104
-    // conv1 memory configuration parameters
-    localparam CONV1_BANK_BW = $clog2(CONV1_FILTER_LEN + 2); // 3
-    localparam CONV1_ADDR_BW = $clog2(CONV1_NUM_FILTERS);    // 3
-
-    // max_pool1 module parameters
-    localparam MAX_POOL1_BW = CONV1_BW; // 8
-
-    // conv_sipo module parameters
-    localparam CONV_SIPO_BW         = MAX_POOL1_BW;                    // 8
-    localparam CONV_SIPO_FRAME_LEN  = $rtoi($ceil(I_FRAME_LEN / 2.0)); // 25
-    localparam CONV_SIPO_VECTOR_LEN = CONV1_NUM_FILTERS;               // 8
-    // conv_sipo helper parameters
-    localparam CONV_SIPO_VECTOR_BW = CONV_SIPO_BW * CONV_SIPO_VECTOR_LEN; // 64
-
-    // zero_pad2 module parameters
-    localparam ZERO_PAD2_BW         = I_BW;              // 8
-    localparam ZERO_PAD2_VECTOR_LEN = CONV1_NUM_FILTERS; // 8
-    // zero_pad2 helper parameters
-    localparam ZERO_PAD2_VECTOR_BW = ZERO_PAD2_BW * ZERO_PAD2_VECTOR_LEN; // 128
-
-    // conv2 module parameters
-    localparam CONV2_FRAME_LEN   = CONV_SIPO_FRAME_LEN; // 25
-    localparam CONV2_VECTOR_LEN  = CONV1_NUM_FILTERS;   // 8
-    localparam CONV2_NUM_FILTERS = 16;
-    // conv2 helper parameters
-    localparam CONV2_BW         = CONV_SIPO_BW;                // 8
-    localparam CONV2_FILTER_LEN = 3;
-    localparam CONV2_VECTOR_BW  = CONV2_BW * CONV2_VECTOR_LEN; // 64
-    // conv2 memory configuration parameters
-    localparam CONV2_BANK_BW = $clog2(CONV2_FILTER_LEN + 2); // 3
-    localparam CONV2_ADDR_BW = $clog2(CONV2_NUM_FILTERS);    // 4
-
-    // max_pool2 module parameters
-    localparam MAX_POOL2_BW        = CONV_SIPO_BW; // 8
-    localparam MAX_POOL2_FRAME_LEN = $rtoi($ceil(CONV_SIPO_FRAME_LEN / 2.0)); //13
-
-    // fc module parameters
-    localparam FC_I_BW        = I_BW; // 8
-    localparam FC_BIAS_BW     = 32;
-    localparam FC_O_BW        = 32;
-    localparam FC_FRAME_LEN   = MAX_POOL2_FRAME_LEN * CONV2_NUM_FILTERS; // 208
-    localparam FC_NUM_CLASSES = 2;
-    // fc helper parameters
-    localparam FC_VECTOR_O_BW = FC_O_BW * FC_NUM_CLASSES; // 64
-    // fc memory configuration parameters
-    localparam FC_BANK_BW = $clog2(FC_NUM_CLASSES * 2);
-    // TODO: Yosys will not resolve FC_FRAME_LEN, need to hard code
-    // localparam FC_ADDR_BW = $clog2(FC_FRAME_LEN);
-    localparam FC_ADDR_BW = $clog2(208);
-
-    // argmax module parameters
-    localparam ARGMAX_I_BW = FC_O_BW; // 24
-    // argmax helper parameters
-    localparam ARGMAX_O_BW = FC_NUM_CLASSES;
-
-    // wake module parameters
-    localparam WAKE_NUM_CLASSES = FC_NUM_CLASSES; // 2
+    wire [0:0] conv1_ready;
+    wire [0:0] max_pool1_ready;
+    wire [0:0] conv_sipo_ready;
+    wire [0:0] zero_pad2_ready;
+    wire [0:0] conv2_ready;
+    wire [0:0] max_pool2_ready;
+    wire [0:0] fc_ready;
+    wire [0:0] argmax_ready;
+    wire [0:0] wake_ready;
 
     // =========================================================================
     // zero_pad1
@@ -3146,7 +3545,6 @@ module wrd (
     wire [CONV1_BW - 1 : 0] conv1_data;
     wire                    conv1_valid;
     wire                    conv1_last;
-    wire [0:0]              conv1_ready;
 
     conv_top #(
         .FRAME_LEN(CONV1_FRAME_LEN),
@@ -3184,7 +3582,6 @@ module wrd (
     wire [MAX_POOL1_BW - 1 : 0] max_pool1_data;
     wire                        max_pool1_valid;
     wire                        max_pool1_last;
-    wire [0:0]                  max_pool1_ready;
 
     max_pool #(
         .BW(MAX_POOL1_BW)
@@ -3212,7 +3609,6 @@ module wrd (
     wire [CONV_SIPO_VECTOR_BW - 1 : 0] conv_sipo_data;
     wire                               conv_sipo_valid;
     wire                               conv_sipo_last;
-    wire [0:0]                         conv_sipo_ready;
 
     conv_sipo #(
         .BW(CONV_SIPO_BW),
@@ -3242,7 +3638,6 @@ module wrd (
     wire [ZERO_PAD2_VECTOR_BW - 1 : 0] zero_pad2_data;
     wire                               zero_pad2_valid;
     wire                               zero_pad2_last;
-    wire [0:0]                         zero_pad2_ready;
 
     zero_pad #(
         .BW(ZERO_PAD2_BW),
@@ -3271,7 +3666,6 @@ module wrd (
     wire [CONV2_BW - 1 : 0] conv2_data;
     wire                    conv2_valid;
     wire                    conv2_last;
-    wire [0:0]              conv2_ready;
 
     conv_top #(
         .FRAME_LEN(CONV2_FRAME_LEN),
@@ -3309,7 +3703,6 @@ module wrd (
     wire [MAX_POOL2_BW - 1 : 0] max_pool2_data;
     wire                        max_pool2_valid;
     wire                        max_pool2_last;
-    wire [0:0]                  max_pool2_ready;
 
     max_pool #(
         .BW(MAX_POOL2_BW)
@@ -3337,7 +3730,6 @@ module wrd (
     wire [FC_VECTOR_O_BW - 1 : 0] fc_data;
     wire                          fc_valid;
     wire                          fc_last;
-    wire [0:0]                    fc_ready;
 
     fc_top #(
         .I_BW(FC_I_BW),
@@ -3377,7 +3769,6 @@ module wrd (
     wire [ARGMAX_O_BW - 1 : 0] argmax_data;
     wire                       argmax_valid;
     wire                       argmax_last;
-    wire [0:0]                 argmax_ready;
 
     argmax #(
         .I_BW(ARGMAX_I_BW)
@@ -3402,7 +3793,6 @@ module wrd (
     // =========================================================================
     // wake
     // =========================================================================
-    wire [0:0] wake_ready;
 
     wake #(
         .NUM_CLASSES(WAKE_NUM_CLASSES)
@@ -3426,110 +3816,14 @@ module wrd (
     // Simulation Only Waveform Dump (.vcd export)
     // =========================================================================
     `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
     initial begin
       $dumpfile ("wave.vcd");
       $dumpvars (0, wrd);
       #1;
     end
     `endif
-
-endmodule
-// =============================================================================
-// Module:       Zero Pad
-// Design:       Eldrick Millares
-// Verification: Matthew Pauly
-// Notes:
-// Adds 1 leading and 1 trailing zero to stream
-//
-// Minimum dead time between frames is 2 clock cycles.
-// This increased dead-time is needed because we reduce latency in this
-// module to just 1 cycle.
-//
-// TODO: Gate registers with valid
-// =============================================================================
-
-module zero_pad #(
-    parameter BW         = 8,
-    parameter VECTOR_LEN = 13
-) (
-    // clock and reset
-    input                             clk_i,
-    input                             rst_n_i,
-
-    // streaming input
-    input  signed [VECTOR_BW - 1 : 0] data_i,
-    input                             valid_i,
-    input                             last_i,
-    output                            ready_o,
-
-    // streaming output
-    output signed [VECTOR_BW - 1 : 0] data_o,
-    output                            valid_o,
-    output                            last_o,
-    input                             ready_i
-);
-
-    // =========================================================================
-    // Local Parameters
-    // =========================================================================
-    localparam VECTOR_BW = VECTOR_LEN * BW;
-
-    // =========================================================================
-    // Delay Lines
-    // =========================================================================
-    reg signed [VECTOR_BW - 1 : 0] data_q, data_q2;
-    reg valid_q, valid_q2, valid_q3, last_q, last_q2, last_q3, ready_q;
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            valid_q  <= 'b0;
-            valid_q2 <= 'b0;
-            valid_q3 <= 'b0;
-            last_q   <= 'b0;
-            last_q2  <= 'b0;
-            last_q3  <= 'b0;
-            ready_q  <= 'b0;
-            data_q   <= 'b0;
-            data_q2  <= 'b0;
-        end else begin
-            valid_q  <= valid_i;
-            valid_q2 <= valid_q;
-            valid_q3 <= valid_q2;
-            last_q   <= last_i;
-            last_q2  <= last_q;
-            last_q3  <= last_q2;
-            ready_q  <= ready_i;
-            data_q   <= (valid_i) ? data_i : 0;
-            data_q2  <= (valid_q) ? data_q : 0;
-        end
-    end
-
-    // =========================================================================
-    // Edge Detectors
-    // =========================================================================
-    // positive edge detector to emit initial 0
-    wire valid_i_pos_edge  = valid_i  & (!valid_q);
-
-    // negative edge detectors to extend valid_o, emit last 0
-    wire valid_q_neg_edge  = valid_q2 & (!valid_q);
-    wire valid_q2_neg_edge = valid_q3 & (!valid_q2);
-
-    // =========================================================================
-    // Output Assignment
-    // =========================================================================
-    assign data_o  = (valid_q2_neg_edge | valid_i_pos_edge) ? 0 : data_q2;
-    assign valid_o = valid_q | valid_q_neg_edge | valid_q2_neg_edge;
-    assign last_o  = last_q3;
-    assign ready_o = ready_q;
-
-    // =========================================================================
-    // Simulation Only Waveform Dump (.vcd export)
-    // =========================================================================
-    `ifdef COCOTB_SIM
-    initial begin
-        $dumpfile ("wave.vcd");
-        $dumpvars (0, zero_pad);
-        #1;
-    end
     `endif
 
 endmodule
@@ -3610,11 +3904,14 @@ module comb # (
     // Simulation Only Waveform Dump (.vcd export)
     // =========================================================================
     `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
     initial begin
         $dumpfile ("wave.vcd");
         $dumpvars (0, comb);
         #1;
     end
+    `endif
     `endif
 
 endmodule
@@ -3628,7 +3925,12 @@ endmodule
 // comb filter
 // =============================================================================
 
-module decimator (
+module decimator #(
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter DATA_BW = 8
+) (
     // clock and reset
     input                       clk_i,
     input                       rst_n_i,
@@ -3646,7 +3948,6 @@ module decimator (
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam DATA_BW = 8;
     localparam DECIM_FACTOR = 250;
     localparam COUNTER_BW = $clog2(DECIM_FACTOR);
 
@@ -3678,11 +3979,14 @@ module decimator (
     // Simulation Only Waveform Dump (.vcd export)
     // =========================================================================
     `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
     initial begin
         $dumpfile ("wave.vcd");
         $dumpvars (0, decimator);
         #1;
     end
+    `endif
     `endif
 
 endmodule
@@ -3697,7 +4001,15 @@ endmodule
 // sent to ACO.
 // =============================================================================
 
-module dfe (
+module dfe #(
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    // These are not parameterized in the downstream modules; they are only
+    // here for readability
+    parameter OUTPUT_BW = 8
+
+) (
     // clock, reset, and enable
     input                               clk_i,
     input                               rst_n_i,
@@ -3715,13 +4027,6 @@ module dfe (
 );
 
     // =========================================================================
-    // Local Parameters
-    // =========================================================================
-    // These are not parameterized in the downstream modules; they are only
-    // here for readability
-    localparam OUTPUT_BW = 8;
-
-    // =========================================================================
     // PDM Clock Generator
     // =========================================================================
     pdm_clk comb_inst (
@@ -3731,7 +4036,7 @@ module dfe (
 
         .pdm_clk_o(pdm_clk_o)
     );
-    
+
     // =========================================================================
     // Sampler
     // =========================================================================
@@ -3776,11 +4081,14 @@ module dfe (
     // Simulation Only Waveform Dump (.vcd export)
     // =========================================================================
     `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
     initial begin
         $dumpfile ("wave.vcd");
         $dumpvars (0, dfe);
         #1;
     end
+    `endif
     `endif
 
 endmodule
@@ -3794,7 +4102,12 @@ endmodule
 // a 4MHz PDM input signal into a 8b 16kHz signal.
 // =============================================================================
 
-module filter (
+module filter #(
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter OUTPUT_BW = 8
+) (
     // clock and reset
     input                               clk_i,
     input                               rst_n_i,
@@ -3812,7 +4125,6 @@ module filter (
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam OUTPUT_BW = 8;
     localparam COMB_I_BW1 = 2;  // comb input bw must be 2 so two's complement
                                // can represent +1
     localparam COMB_O_BW1 = 2;  // -1, 0, or 1
@@ -3991,11 +4303,14 @@ module filter (
     // Simulation Only Waveform Dump (.vcd export)
     // =========================================================================
     `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
     initial begin
         $dumpfile ("wave.vcd");
         $dumpvars (0, filter);
         #1;
     end
+    `endif
     `endif
 
 endmodule
@@ -4061,11 +4376,14 @@ module integrator # (
     // Simulation Only Waveform Dump (.vcd export)
     // =========================================================================
     `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
     initial begin
         $dumpfile ("wave.vcd");
         $dumpvars (0, integrator);
         #1;
     end
+    `endif
     `endif
 
 endmodule
@@ -4126,11 +4444,14 @@ module pdm_clk (
     // Simulation Only Waveform Dump (.vcd export)
     // =========================================================================
     `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
     initial begin
         $dumpfile ("wave.vcd");
         $dumpvars (0, pdm_clk);
         #1;
     end
+    `endif
     `endif
 
 endmodule
@@ -4203,11 +4524,14 @@ module sampler (
     // Simulation Only Waveform Dump (.vcd export)
     // =========================================================================
     `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
     initial begin
         $dumpfile ("wave.vcd");
         $dumpvars (0, sampler);
         #1;
     end
+    `endif
     `endif
 
 endmodule
@@ -4220,7 +4544,18 @@ endmodule
 // Top level module for the acoustic featurization pipeline.
 // =============================================================================
 
-module aco (
+module aco #(
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter PREEMPH_I_BW     = 8,
+    parameter I_BW             = PREEMPH_I_BW,
+    parameter PACKING_I_BW     = 8,
+    parameter DCT_COEFS        = 13,
+    parameter PACKING_O_BW     = PACKING_I_BW * DCT_COEFS,
+    parameter WRD_FRAMING_O_BW = PACKING_O_BW,
+    parameter O_BW             = WRD_FRAMING_O_BW
+) (
     // clock and reset
     input                                   clk_i,
     input                                   rst_n_i,
@@ -4238,8 +4573,6 @@ module aco (
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam PREEMPH_I_BW             = 8;
-    localparam I_BW                     = PREEMPH_I_BW;
     localparam PREEMPH_O_BW             = 9;
 
     localparam FFT_FRAMING_I_BW         = 9;
@@ -4268,22 +4601,16 @@ module aco (
     localparam DCT_FRAMING_SKIP_ELEMS   = 0;
 
     localparam DCT_I_BW                 = 8;
-    localparam DCT_COEFS                = 13;
     localparam DCT_O_BW                 = 16;
 
     localparam QUANT_I_BW               = 16;
     localparam QUANT_O_BW               = 8;
 
-    localparam PACKING_I_BW             = 8;
-    localparam PACKING_O_BW             = PACKING_I_BW * DCT_COEFS;
-
     localparam WRD_FRAMING_I_BW         = PACKING_O_BW;
-    localparam WRD_FRAMING_O_BW         = PACKING_O_BW;
     localparam WRD_FRAME_LEN            = 50;
     localparam WRD_FRAMING_CADENCE      = 1;
     localparam WRD_FRAMING_SKIP_ELEMS   = 0;
 
-    localparam O_BW                     = WRD_FRAMING_O_BW;
 
     // =========================================================================
     // Preemphasis
@@ -4550,7 +4877,13 @@ endmodule
 // of each output coefficient simultaneously.
 // =============================================================================
 
-module dct (
+module dct #(
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter I_BW = 8,
+    parameter O_BW = 16
+) (
     // clock and reset
     input                                   clk_i,
     input                                   rst_n_i,
@@ -4566,11 +4899,10 @@ module dct (
     output                                  valid_o,
     output                                  last_o
 );
+
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam I_BW          = 8;
-    localparam O_BW          = 16;
     localparam INTERNAL_BW   = 32;
     localparam COEF_BW       = 16;
     localparam FRAME_LEN     = 32;  // length of the DCT
@@ -4581,6 +4913,13 @@ module dct (
     localparam SHIFT         = 15;
 
     localparam COEFFILE     = "dct.hex";
+
+    // =========================================================================
+    // Signal Declarations
+    // =========================================================================
+    reg signed [COEF_BW - 1 : 0] coefs;
+    reg [COEF_COUNT_BW - 1 : 0] coef_counter;
+    wire next_elem = (coef_counter == N_COEF - 'd1);
 
     // =========================================================================
     // Element Counter
@@ -4604,7 +4943,6 @@ module dct (
     // =========================================================================
     // Coefficient Counter (aka Cadence)
     // =========================================================================
-    reg [COEF_COUNT_BW - 1 : 0] coef_counter;
     always @(posedge clk_i) begin
         if (!rst_n_i | !en_i) begin
             coef_counter <= 'd0;
@@ -4618,7 +4956,6 @@ module dct (
             end
         end
     end
-    wire next_elem = (coef_counter == N_COEF - 'd1);
 
     // =========================================================================
     // Multiplication
@@ -4660,7 +4997,6 @@ module dct (
     // ROM Memory for DCT coefficients
     // =========================================================================
     // reg signed [COEF_BW - 1 : 0] coefs [0 : N_COEF * FRAME_LEN - 1];
-    reg signed [COEF_BW - 1 : 0] coefs;
     always @(*) begin
         case (addr)
             0   : coefs = 'h16a1;
@@ -5119,7 +5455,13 @@ endmodule
 //      reset the fft core, keeping it reset until the next valid frame
 // =============================================================================
 
-module fft_wrapper (
+module fft_wrapper #(
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter I_BW = 16,     // real input
+    parameter O_BW = 21 * 2  // complex output
+)(
     // clock and reset
     input                                   clk_i,
     input                                   rst_n_i,
@@ -5138,12 +5480,11 @@ module fft_wrapper (
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam I_BW         = 16;  // real input
-    localparam O_BW         = 21 * 2;  // complex output
-
     // output sample counter for holding valid_o
     localparam FFT_LEN                  = 256;
-    localparam RFFT_LEN                 = $rtoi(FFT_LEN / 2 + 1);
+    // TODO: $rtoi and $ceil are not supported in Design Compiler
+    // localparam RFFT_LEN                 = $rtoi(FFT_LEN / 2 + 1);
+    localparam RFFT_LEN                 = FFT_LEN / 2 + 1;
     localparam OUTPUT_COUNTER_BW        = $clog2(RFFT_LEN);
 
     // =========================================================================
@@ -5233,7 +5574,13 @@ endmodule
 //               Deassertions of valid are not permitted.
 // =============================================================================
 
-module filterbank (
+module filterbank #(
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter I_BW = 32,
+    parameter O_BW = 32
+) (
     // clock and reset
     input                                   clk_i,
     input                                   rst_n_i,
@@ -5252,9 +5599,6 @@ module filterbank (
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam I_BW         = 32;
-    localparam O_BW         = 32;
-
     localparam EVEN_COEFFILE            = "coef_even.hex";
     localparam ODD_COEFFILE             = "coef_odd.hex";
     localparam EVEN_BOUNDARYFILE        = "boundary_even.hex";
@@ -5333,8 +5677,14 @@ endmodule
 // =============================================================================
 
 module filterbank_half # (
-    parameter COEFFILE          = "coef_even.hex",
-    parameter BOUNDARYFILE      = "boundary_even.hex"
+    parameter COEFFILE     = "coef_even.hex",
+    parameter BOUNDARYFILE = "boundary_even.hex",
+
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter I_BW = 32,
+    parameter O_BW = 32
 ) (
     // clock and reset
     input                                   clk_i,
@@ -5354,14 +5704,19 @@ module filterbank_half # (
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam I_BW         = 32;
     localparam INTERNAL_BW  = 64;   // 48 would be sufficient but why not
-    localparam O_BW         = 32;
     localparam COEF_BW      = 16;   // bitwidth of the filterbank coefficients
     localparam INPUT_LEN    = 129;  // length of the power spectrum
     localparam NUM_BOUNDARY = 16;   // number of triangle boundary indices
                                     // Signals when a MFCC coefficient is done
     localparam BOUNDARY_BW  = 8;
+
+    // =========================================================================
+    // Signal Declarations
+    // =========================================================================
+    reg [COEF_BW - 1 : 0] coef;  // filters 0,2,...30 (even)
+                                                     // or      1,3,...31 (odd)
+    reg [BOUNDARY_BW - 1 : 0] boundary;  // boundaries
 
     // =========================================================================
     // Element counter
@@ -5440,9 +5795,6 @@ module filterbank_half # (
     // reg [COEF_BW - 1 : 0] coef [0 : INPUT_LEN - 1];  // filters 0,2,...30 (even)
     //                                                  // or      1,3,...31 (odd)
     // reg [BOUNDARY_BW - 1 : 0] boundary [0 : NUM_BOUNDARY - 1];  // boundaries
-    reg [COEF_BW - 1 : 0] coef;  // filters 0,2,...30 (even)
-                                                     // or      1,3,...31 (odd)
-    reg [BOUNDARY_BW - 1 : 0] boundary;  // boundaries
 
     generate
     if (COEFFILE == "coef_even.hex") begin
@@ -5816,24 +6168,42 @@ module framing # (
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    // localparam I_BW         = 9;   // preemphasis input
-    // localparam O_BW         = 16;  // FFT output
-    // localparam FRAME_LEN    = 256;
     localparam FIFO_DEPTH       = FRAME_LEN + 4;   // 4 spaces of headroom
     localparam COUNTER_BW       = $clog2(FIFO_DEPTH);
     localparam FULL_PERIOD      = FRAME_LEN + SKIP_ELEMS;
     localparam SKIP_COUNTER_BW  = $clog2(FIFO_DEPTH + SKIP_ELEMS);
     localparam CADENCE_BW       = $clog2(CADENCE_CYC);
 
-    // =========================================================================
-    // State Machine
-    // =========================================================================
     localparam STATE_LOAD   = 1'd0,
                STATE_UNLOAD = 1'd1;
+
+    // =========================================================================
+    // Signal Declarations
+    // =========================================================================
     reg state;
+
+    reg [COUNTER_BW - 1 : 0] fifo_count;  // number of elements in the fifo
+
     reg [COUNTER_BW - 1 : 0] frame_elem;  // Number of frame elements outputted.
                                           // Zero-indexed counting, so last
                                           // element is FRAME_LEN - 1
+    wire last_elem = (frame_elem == FRAME_LEN - 'd1);
+
+    // Determines how long to hold an output
+    reg [CADENCE_BW - 1 : 0] cadence;
+    wire next_elem = (cadence == CADENCE_CYC - 'd1);
+
+    wire fifo_deq = ((state == STATE_UNLOAD) & next_elem);
+
+    reg [COUNTER_BW - 1 : 0] skip_count;
+    wire skip = (skip_count >= FRAME_LEN);  // skip if already have FRAME_LEN
+                                            // elements in the current period
+
+    wire fifo_enq = (en_i & valid_i & !skip);
+
+    // =========================================================================
+    // State Machine
+    // =========================================================================
     always @(posedge clk_i) begin
         if (!rst_n_i | !en_i) begin
             frame_elem <= 'd0;
@@ -5858,12 +6228,10 @@ module framing # (
             endcase
         end
     end
-    wire last_elem = (frame_elem == FRAME_LEN - 'd1);
 
     // =========================================================================
     // FIFO element tracking
     // =========================================================================
-    reg [COUNTER_BW - 1 : 0] fifo_count;  // number of elements in the fifo
     always @(posedge clk_i) begin
         if (!rst_n_i | !en_i) begin
             fifo_count <= 'd0;
@@ -5883,13 +6251,12 @@ module framing # (
     // =========================================================================
     // Tracks the number of elements seen across one period, including
     // elements that are to be skipped
-    reg [COUNTER_BW - 1 : 0] skip_count;
     always @(posedge clk_i) begin
         if (!rst_n_i | !en_i) begin
             skip_count <= 'd0;
         end else begin
             if (valid_i & (skip_count == FULL_PERIOD - 'd1)) begin
-                skip_count = 'd0;
+                skip_count <= 'd0;
             end else if (valid_i) begin
                 skip_count <= skip_count + 'd1;
             end else begin
@@ -5897,14 +6264,10 @@ module framing # (
             end
         end
     end
-    wire skip = (skip_count >= FRAME_LEN);  // skip if already have FRAME_LEN
-                                            // elements in the current period
 
     // =========================================================================
     // Cadence
     // =========================================================================
-    // Determines how long to hold an output
-    reg [CADENCE_BW - 1 : 0] cadence;
     always @(posedge clk_i) begin
         if (!rst_n_i | !en_i) begin
             cadence <= 'd0;
@@ -5918,14 +6281,11 @@ module framing # (
             end
         end
     end
-    wire next_elem = (cadence == CADENCE_CYC - 'd1);
 
     // =========================================================================
     // FIFO
     // =========================================================================
     wire signed [I_BW - 1 : 0]  fifo_dout;
-    wire                        fifo_deq = ((state == STATE_UNLOAD) & next_elem);
-    wire                        fifo_enq = (en_i & valid_i & !skip);
     fifo #(
         .DATA_WIDTH(I_BW),
         .FIFO_DEPTH(FIFO_DEPTH)
@@ -5976,7 +6336,13 @@ endmodule
 // https://electronics.stackexchange.com/questions/196914/verilog-synthesize-high-speed-leading-zero-count
 // =============================================================================
 
-module log (
+module log #(
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter I_BW = 32,
+    parameter O_BW = 8
+) (
     // clock and reset
     input                       clk_i,
     input                       rst_n_i,
@@ -5992,12 +6358,6 @@ module log (
     output                      valid_o,
     output                      last_o
 );
-
-    // =========================================================================
-    // Local Parameters
-    // =========================================================================
-    localparam I_BW = 32;
-    localparam O_BW = 8;
 
     // =========================================================================
     // Encoding
@@ -6089,7 +6449,8 @@ endmodule // log
 module enc
 (
    input wire     [1:0]       d,
-   output logic   [1:0]       q
+   // output logic   [1:0]       q
+   output [1:0]       q
 );
 
     // original source:
@@ -6117,7 +6478,8 @@ module clzi #
 )
 (
    input wire     [WI-1:0]    d,
-   output logic   [WO-1:0]    q
+   // output logic   [WO-1:0]    q
+   output [WO-1:0]    q
 );
 
     // original source:
@@ -6151,7 +6513,14 @@ endmodule // clzi
 // highest order bits and the last sample in the lowest order bits.
 // =============================================================================
 
-module packing (
+module packing #(
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter I_BW   = 8,
+    parameter N_COEF = 13,
+    parameter O_BW   = I_BW * N_COEF
+) (
     // clock and reset
     input                                   clk_i,
     input                                   rst_n_i,
@@ -6167,18 +6536,17 @@ module packing (
     output                                  valid_o,
     output                                  last_o
 );
+
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam I_BW         = 8;
-    localparam N_COEF       = 13;
-    localparam COUNTER_BW   = $clog2(N_COEF);
-    localparam O_BW         = I_BW * N_COEF;
+    localparam COUNTER_BW = $clog2(N_COEF);
 
     // =========================================================================
     // Counter
     // =========================================================================
     reg [COUNTER_BW - 1 : 0] counter;
+    wire last_elem = (counter == N_COEF - 1);
     always @(posedge clk_i) begin
         if (!rst_n_i | !en_i) begin
             counter <= 'd0;
@@ -6192,7 +6560,6 @@ module packing (
             end
         end
     end
-    wire last_elem = (counter == N_COEF - 1);
     reg last_elem_q;  // emit result after packing all data
     always @(posedge clk_i) begin
         last_elem_q <= last_elem;
@@ -6255,7 +6622,13 @@ endmodule
 //               imaginary part squared.
 // =============================================================================
 
-module power_spectrum (
+module power_spectrum #(
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter I_BW = 21,
+    parameter O_BW = 32
+) (
     // clock and reset
     input                                   clk_i,
     input                                   rst_n_i,
@@ -6271,11 +6644,6 @@ module power_spectrum (
     output                                  valid_o,
     output                                  last_o
 );
-    // =========================================================================
-    // Local Parameters
-    // =========================================================================
-    localparam I_BW         = 21;
-    localparam O_BW         = 32;
 
     // =========================================================================
     // Register input to reduce long path length
@@ -6370,7 +6738,13 @@ endmodule
 //               multiplication by 31 and a right-shift by 5.
 // =============================================================================
 
-module preemphasis (
+module preemphasis #(
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter I_BW = 8,   // PCM input
+    parameter O_BW = 9
+) (
     // clock and reset
     input                                   clk_i,
     input                                   rst_n_i,
@@ -6387,8 +6761,6 @@ module preemphasis (
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam I_BW         = 8;   // PCM input
-    localparam O_BW         = 9;
     localparam MUL          = 31;
     localparam SHIFT        = 5;
 
@@ -6440,7 +6812,13 @@ endmodule
 // within 8b.
 // =============================================================================
 
-module quant (
+module quant #(
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter I_BW = 16,
+    parameter O_BW = 8
+) (
     // clock and reset
     input                                   clk_i,
     input                                   rst_n_i,
@@ -6459,9 +6837,9 @@ module quant (
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    localparam I_BW         = 16;
-    localparam O_BW         = 8;
-    localparam CLIP         = $pow(2, O_BW - 1) - 1;  // clip to this if larger
+    // TODO: Design Compiler does not support $pow()
+    // localparam CLIP = $pow(2, O_BW - 1) - 1;  // clip to this if larger
+    localparam CLIP = (1 << (O_BW - 1)) - 1;  // clip to this if larger
 
     wire signed [O_BW - 1 : 0] lower = data_i[O_BW - 1 : 0]; // lower O_BW bits
 
@@ -6816,7 +7194,12 @@ endmodule
 
 module dffram #(
     parameter WIDTH = 32,
-    parameter DEPTH = 256
+    parameter DEPTH = 256,
+
+    // ========================================================================
+    // Local Parameters - Do Not Edit
+    // ========================================================================
+    parameter ADDR_BW = $clog2(DEPTH)
 ) (
     input                    clk_i,
 
@@ -6827,8 +7210,6 @@ module dffram #(
     input  [WIDTH - 1 : 0]   data_i,
     output [WIDTH - 1 : 0]   data_o
 );
-
-    localparam ADDR_BW = $clog2(DEPTH);
 
     reg [WIDTH - 1 : 0] read_data;
     reg [WIDTH - 1 : 0] mem [DEPTH - 1 : 0];
@@ -6848,142 +7229,17 @@ module dffram #(
     // Simulation Only Waveform Dump (.vcd export)
     // ========================================================================
     `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
     initial begin
         $dumpfile ("wave.vcd");
         $dumpvars (0, dffram);
         #1;
     end
     `endif
+    `endif
     // ========================================================================
 
-endmodule
-////////////////////////////////////////////////////////////////////////////////
-//
-// Filename:	fft-core/bimpy.v
-// {{{
-// Project:	A General Purpose Pipelined FFT Implementation
-//
-// Purpose:	A simple 2-bit multiply based upon the fact that LUT's allow
-//		6-bits of input.  In other words, I could build a 3-bit
-//	multiply from 6 LUTs (5 actually, since the first could have two
-//	outputs).  This would allow multiplication of three bit digits, save
-//	only for the fact that you would need two bits of carry.  The bimpy
-//	approach throttles back a bit and does a 2x2 bit multiply in a LUT,
-//	guaranteeing that it will never carry more than one bit.  While this
-//	multiply is hardware independent (and can still run under Verilator
-//	therefore), it is really motivated by trying to optimize for a
-//	specific piece of hardware (Xilinx-7 series ...) that has at least
-//	4-input LUT's with carry chains.
-//
-//
-//
-// Creator:	Dan Gisselquist, Ph.D.
-//		Gisselquist Technology, LLC
-//
-////////////////////////////////////////////////////////////////////////////////
-// }}}
-// Copyright (C) 2015-2021, Gisselquist Technology, LLC
-// {{{
-// This file is part of the general purpose pipelined FFT project.
-//
-// The pipelined FFT project is free software (firmware): you can redistribute
-// it and/or modify it under the terms of the GNU Lesser General Public License
-// as published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version.
-//
-// The pipelined FFT project is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTIBILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser
-// General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with this program.  (It's in the $(ROOT)/doc directory.  Run make
-// with no target there if the PDF file isn't present.)  If not, see
-// <http://www.gnu.org/licenses/> for a copy.
-// }}}
-// License:	LGPL, v3, as defined and found on www.gnu.org,
-// {{{
-//		http://www.gnu.org/licenses/lgpl.html
-//
-// }}}
-////////////////////////////////////////////////////////////////////////////////
-//
-//
-`default_nettype	none
-//
-module	bimpy #(
-		// {{{
-		parameter	BW=18 // Number of bits in i_b
-		// }}}
-	) (
-		// {{{
-		input	wire			i_clk, i_reset, i_ce,
-		input	wire	[(LUTB-1):0]	i_a,
-		input	wire	[(BW-1):0]	i_b,
-		output	reg	[(BW+LUTB-1):0]	o_r
-		// }}}
-	);
-		localparam	LUTB=2; // Number of bits in i_a for our LUT multiply
-
-	// Local declarations
-	// {{{
-	wire	[(BW+LUTB-2):0]	w_r;
-	wire	[(BW+LUTB-3):1]	c;
-	// }}}
-
-	assign	w_r =  { ((i_a[1])?i_b:{(BW){1'b0}}), 1'b0 }
-				^ { 1'b0, ((i_a[0])?i_b:{(BW){1'b0}}) };
-	assign	c = { ((i_a[1])?i_b[(BW-2):0]:{(BW-1){1'b0}}) }
-			& ((i_a[0])?i_b[(BW-1):1]:{(BW-1){1'b0}});
-
-	// o_r
-	// {{{
-	initial o_r = 0;
-	always @(posedge i_clk)
-	if (i_reset)
-		o_r <= 0;
-	else if (i_ce)
-		o_r <= w_r + { c, 2'b0 };
-	// }}}
-
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-//
-// Formal property section
-// {{{
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-`ifdef	FORMAL
-	reg	f_past_valid;
-
-	initial	f_past_valid = 1'b0;
-	always @(posedge i_clk)
-	f_past_valid <= 1'b1;
-
-`define	ASSERT	assert
-
-	always @(posedge i_clk)
-	if ((!f_past_valid)||($past(i_reset)))
-	begin
-		`ASSERT(o_r == 0);
-	end else if ($past(i_ce))
-	begin
-		if ($past(i_a)==0)
-		begin
-			`ASSERT(o_r == 0);
-		end else if ($past(i_a) == 1)
-			`ASSERT(o_r == $past(i_b));
-
-		if ($past(i_b)==0)
-		begin
-			`ASSERT(o_r == 0);
-		end else if ($past(i_b) == 1)
-			`ASSERT(o_r[(LUTB-1):0] == $past(i_a));
-	end
-`endif
-// }}}
 endmodule
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -8592,1061 +8848,6 @@ module	convround(i_clk, i_ce, i_val, o_val);
 endmodule
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename:	fftmain.v
-// {{{
-// Project:	A General Purpose Pipelined FFT Implementation
-//
-// Purpose:	This is the main module in the General Purpose FPGA FFT
-//		implementation.  As such, all other modules are subordinate
-//	to this one.  This module accomplish a fixed size Complex FFT on
-//	256 data points.
-//	The FFT is fully pipelined, and accepts as inputs one complex two's
-//	complement sample per clock.
-//
-// Parameters:
-//	i_clk	The clock.  All operations are synchronous with this clock.
-//	i_reset	Synchronous reset, active high.  Setting this line will
-//			force the reset of all of the internals to this routine.
-//			Further, following a reset, the o_sync line will go
-//			high the same time the first output sample is valid.
-//	i_ce	A clock enable line.  If this line is set, this module
-//			will accept one complex input value, and produce
-//			one (possibly empty) complex output value.
-//	i_sample	The complex input sample.  This value is split
-//			into two two's complement numbers, 16 bits each, with
-//			the real portion in the high order bits, and the
-//			imaginary portion taking the bottom 16 bits.
-//	o_result	The output result, of the same format as i_sample,
-//			only having 21 bits for each of the real and imaginary
-//			components, leading to 42 bits total.
-//	o_sync	A one bit output indicating the first sample of the FFT frame.
-//			It also indicates the first valid sample out of the FFT
-//			on the first frame.
-//
-// Arguments:	This file was computer generated using the following command
-//		line:
-//
-//		% ./fftgen -f 256 -a hdr
-//
-//	This core will use hardware accelerated multiplies (DSPs)
-//	for 0 of the 8 stages
-//
-// Creator:	Dan Gisselquist, Ph.D.
-//		Gisselquist Technology, LLC
-//
-////////////////////////////////////////////////////////////////////////////////
-// }}}
-// Copyright (C) 2015-2021, Gisselquist Technology, LLC
-// {{{
-// This file is part of the general purpose pipelined FFT project.
-//
-// The pipelined FFT project is free software (firmware): you can redistribute
-// it and/or modify it under the terms of the GNU Lesser General Public License
-// as published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version.
-//
-// The pipelined FFT project is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTIBILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser
-// General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with this program.  (It's in the $(ROOT)/doc directory.  Run make
-// with no target there if the PDF file isn't present.)  If not, see
-// <http://www.gnu.org/licenses/> for a copy.
-// }}}
-// License:	LGPL, v3, as defined and found on www.gnu.org,
-// {{{
-//		http://www.gnu.org/licenses/lgpl.html
-//
-// }}}
-////////////////////////////////////////////////////////////////////////////////
-//
-//
-`default_nettype	none
-//
-//
-//
-module fftmain(i_clk, i_reset, i_ce,
-		i_sample, o_result, o_sync);
-	// The bit-width of the input, IWIDTH, output, OWIDTH, and the log
-	// of the FFT size.  These are localparams, rather than parameters,
-	// because once the core has been generated, they can no longer be
-	// changed.  (These values can be adjusted by running the core
-	// generator again.)  The reason is simply that these values have
-	// been hardwired into the core at several places.
-	localparam	IWIDTH=16, OWIDTH=21; // LGWIDTH=8;
-	//
-	input	wire				i_clk, i_reset, i_ce;
-	//
-	input	wire	[(2*IWIDTH-1):0]	i_sample;
-	output	reg	[(2*OWIDTH-1):0]	o_result;
-	output	reg				o_sync;
-
-
-	// Outputs of the FFT, ready for bit reversal.
-	wire				br_sync;
-	wire	[(2*OWIDTH-1):0]	br_result;
-
-
-	wire		w_s256;
-	wire	[33:0]	w_d256;
-	fftstage	#(IWIDTH,IWIDTH+4,17,7,0,
-			0, 1, "cmem_256.hex")
-		stage_256(i_clk, i_reset, i_ce,
-			(!i_reset), i_sample, w_d256, w_s256);
-
-
-	wire		w_s128;
-	wire	[35:0]	w_d128;
-	fftstage	#(17,21,18,6,0,
-			0, 1, "cmem_128.hex")
-		stage_128(i_clk, i_reset, i_ce,
-			w_s256, w_d256, w_d128, w_s128);
-
-	wire		w_s64;
-	wire	[35:0]	w_d64;
-	fftstage	#(18,22,18,5,0,
-			0, 1, "cmem_64.hex")
-		stage_64(i_clk, i_reset, i_ce,
-			w_s128, w_d128, w_d64, w_s64);
-
-	wire		w_s32;
-	wire	[37:0]	w_d32;
-	fftstage	#(18,22,19,4,0,
-			0, 1, "cmem_32.hex")
-		stage_32(i_clk, i_reset, i_ce,
-			w_s64, w_d64, w_d32, w_s32);
-
-	wire		w_s16;
-	wire	[37:0]	w_d16;
-	fftstage	#(19,23,19,3,0,
-			0, 1, "cmem_16.hex")
-		stage_16(i_clk, i_reset, i_ce,
-			w_s32, w_d32, w_d16, w_s16);
-
-	wire		w_s8;
-	wire	[39:0]	w_d8;
-	fftstage	#(19,23,20,2,0,
-			0, 1, "cmem_8.hex")
-		stage_8(i_clk, i_reset, i_ce,
-			w_s16, w_d16, w_d8, w_s8);
-
-	wire		w_s4;
-	wire	[39:0]	w_d4;
-	qtrstage	#(20,20,8,0,0)	stage_4(i_clk, i_reset, i_ce,
-						w_s8, w_d8, w_d4, w_s4);
-	wire		w_s2;
-	wire	[41:0]	w_d2;
-	laststage	#(20,21,1)	stage_2(i_clk, i_reset, i_ce,
-					w_s4, w_d4, w_d2, w_s2);
-
-
-	wire	br_start;
-	reg	r_br_started;
-	initial	r_br_started = 1'b0;
-	always @(posedge i_clk)
-	if (i_reset)
-		r_br_started <= 1'b0;
-	else if (i_ce)
-		r_br_started <= r_br_started || w_s2;
-	assign	br_start = r_br_started || w_s2;
-
-	// Now for the bit-reversal stage.
-	bitreverse	#(8,21)
-	revstage(
-		// {{{
-		.i_clk(i_clk),
-		.i_reset(i_reset),
-		.i_ce(i_ce & br_start),
-		.i_in(w_d2),
-		.o_out(br_result),
-		.o_sync(br_sync)
-		// }}}
-	);
-
-
-	// Last clock: Register our outputs, we're done.
-	initial	o_sync  = 1'b0;
-	always @(posedge i_clk)
-	if (i_reset)
-		o_sync  <= 1'b0;
-	else if (i_ce)
-		o_sync  <= br_sync;
-
-	always @(posedge i_clk)
-	if (i_ce)
-		o_result  <= br_result;
-
-
-    // =========================================================================
-    // Simulation Only Waveform Dump (.vcd export)
-    // =========================================================================
-    `ifdef COCOTB_SIM
-    `ifndef SCANNED
-    `define SCANNED
-    initial begin
-      $dumpfile ("wave.vcd");
-      $dumpvars (0, fftmain);
-      #1;
-    end
-    `endif
-    `endif
-
-endmodule
-////////////////////////////////////////////////////////////////////////////////
-//
-// Filename:	fftstage.v
-// {{{
-// Project:	A General Purpose Pipelined FFT Implementation
-//
-// Purpose:	This file is (almost) a Verilog source file.  It is meant to
-//		be used by a FFT core compiler to generate FFTs which may be
-//	used as part of an FFT core.  Specifically, this file encapsulates
-//	the options of an FFT-stage.  For any 2^N length FFT, there shall be
-//	(N-1) of these stages.
-//
-//
-// Operation:
-// 	Given a stream of values, operate upon them as though they were
-// 	value pairs, x[n] and x[n+N/2].  The stream begins when n=0, and ends
-// 	when n=N/2-1 (i.e. there's a full set of N values).  When the value
-// 	x[0] enters, the synchronization input, i_sync, must be true as well.
-//
-// 	For this stream, produce outputs
-// 	y[n    ] = x[n] + x[n+N/2], and
-// 	y[n+N/2] = (x[n] - x[n+N/2]) * c[n],
-// 			where c[n] is a complex coefficient found in the
-// 			external memory file COEFFILE.
-// 	When y[0] is output, a synchronization bit o_sync will be true as
-// 	well, otherwise it will be zero.
-//
-// 	Most of the work to do this is done within the butterfly, whether the
-// 	hardware accelerated butterfly (uses a DSP) or not.
-//
-// Creator:	Dan Gisselquist, Ph.D.
-//		Gisselquist Technology, LLC
-//
-////////////////////////////////////////////////////////////////////////////////
-// }}}
-// Copyright (C) 2015-2021, Gisselquist Technology, LLC
-// {{{
-// This file is part of the general purpose pipelined FFT project.
-//
-// The pipelined FFT project is free software (firmware): you can redistribute
-// it and/or modify it under the terms of the GNU Lesser General Public License
-// as published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version.
-//
-// The pipelined FFT project is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTIBILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser
-// General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with this program.  (It's in the $(ROOT)/doc directory.  Run make
-// with no target there if the PDF file isn't present.)  If not, see
-// <http://www.gnu.org/licenses/> for a copy.
-// }}}
-// License:	LGPL, v3, as defined and found on www.gnu.org,
-// {{{
-//		http://www.gnu.org/licenses/lgpl.html
-//
-// }}}
-////////////////////////////////////////////////////////////////////////////////
-//
-//
-`default_nettype	none
-//
-module	fftstage #(
-		// {{{
-		parameter	IWIDTH=16,CWIDTH=20,OWIDTH=17,
-		// Parameters specific to the core that should be changed when
-		// this core is built ... Note that the minimum LGSPAN (the base
-		// two log of the span, or the base two log of the current FFT
-		// size) is 3.  Smaller spans (i.e. the span of 2) must use the
-		// dbl laststage module.
-		// Verilator lint_off UNUSED
-		parameter	LGSPAN=7, BFLYSHIFT=0, // LGWIDTH=8
-		parameter [0:0]	OPT_HWMPY = 1,
-		// Clocks per CE.  If your incoming data rate is less than 50%
-		// of your clock speed, you can set CKPCE to 2'b10, make sure
-		// there's at least one clock between cycles when i_ce is high,
-		// and then use two multiplies instead of three.  Setting CKPCE
-		// to 2'b11, and insisting on at least two clocks with i_ce low
-		// between cycles with i_ce high, then the hardware optimized
-		// butterfly code will used one multiply instead of two.
-		parameter	CKPCE = 1,
-		// The COEFFILE parameter contains the name of the file
-		// containing the FFT twiddle factors
-		parameter	COEFFILE="cmem_256.hex"
-		// Verilator lint_on  UNUSED
-
-// `ifdef	VERILATOR
-		// parameter  [0:0]	ZERO_ON_IDLE = 1'b0
-// `else
-		// localparam [0:0]	ZERO_ON_IDLE = 1'b0
-// `endif // VERILATOR
-		// }}}
-	) (
-		// {{{
-		input	wire				i_clk, i_reset,
-							i_ce, i_sync,
-		input	wire	[(2*IWIDTH-1):0]	i_data,
-		output	reg	[(2*OWIDTH-1):0]	o_data,
-		output	reg				o_sync
-
-		// }}}
-	);
-		localparam [0:0]	ZERO_ON_IDLE = 1'b0;
-
-	// Local signal definitions
-	// {{{
-	// I am using the prefixes
-	// 	ib_*	to reference the inputs to the butterfly, and
-	// 	ob_*	to reference the outputs from the butterfly
-	reg	wait_for_sync;
-	reg	[(2*IWIDTH-1):0]	ib_a, ib_b;
-	reg	[(2*CWIDTH-1):0]	ib_c;
-	reg	ib_sync;
-
-	reg	b_started;
-	wire	ob_sync;
-	wire	[(2*OWIDTH-1):0]	ob_a, ob_b;
-
-	// cmem is defined as an array of real and complex values,
-	// where the top CWIDTH bits are the real value and the bottom
-	// CWIDTH bits are the imaginary value.
-	//
-	// cmem[i] = { (2^(CWIDTH-2)) * cos(2*pi*i/(2^LGWIDTH)),
-	//		(2^(CWIDTH-2)) * sin(2*pi*i/(2^LGWIDTH)) };
-	//
-	// reg	[(2*CWIDTH-1):0]	cmem [0:((1<<LGSPAN)-1)];
-    reg	[(2*CWIDTH-1):0]	cmem;
-`ifdef	FORMAL
-// Let the formal tool pick the coefficients
-`else
-	// initial	$readmemh(COEFFILE,cmem);
-    generate
-    if (COEFFILE == "cmem_256.hex") begin
-        always @(*) begin
-            case (iaddr[(LGSPAN-1):0])
-                0   : cmem = 40'h4000000000;
-                1   : cmem = 40'h3ffb1fe6df;
-                2   : cmem = 40'h3fec4fcdc1;
-                3   : cmem = 40'h3fd3afb4ab;
-                4   : cmem = 40'h3fb12f9ba1;
-                5   : cmem = 40'h3f84df82a7;
-                6   : cmem = 40'h3f4ebf69bf;
-                7   : cmem = 40'h3f0edf50ef;
-                8   : cmem = 40'h3ec53f383a;
-                9   : cmem = 40'h3e71ef1fa4;
-                10  : cmem = 40'h3e150f0730;
-                11  : cmem = 40'h3dae8eeee3;
-                12  : cmem = 40'h3d3e8ed6c0;
-                13  : cmem = 40'h3cc51ebeca;
-                14  : cmem = 40'h3c424ea706;
-                15  : cmem = 40'h3bb62e8f78;
-                16  : cmem = 40'h3b20de7822;
-                17  : cmem = 40'h3a827e6108;
-                18  : cmem = 40'h39dafe4a2f;
-                19  : cmem = 40'h392a9e3399;
-                20  : cmem = 40'h38716e1d4a;
-                21  : cmem = 40'h37af8e0746;
-                22  : cmem = 40'h36e50df18f;
-                23  : cmem = 40'h36121ddc2a;
-                24  : cmem = 40'h3536ddc719;
-                25  : cmem = 40'h34535db25f;
-                26  : cmem = 40'h3367cd9e01;
-                27  : cmem = 40'h32744d8a01;
-                28  : cmem = 40'h31790d7662;
-                29  : cmem = 40'h30762d6327;
-                30  : cmem = 40'h2f6bcd5053;
-                31  : cmem = 40'h2e5a1d3de9;
-                32  : cmem = 40'h2d414d2bec;
-                33  : cmem = 40'h2c217d1a5f;
-                34  : cmem = 40'h2afadd0944;
-                35  : cmem = 40'h29cd9cf89e;
-                36  : cmem = 40'h2899ece870;
-                37  : cmem = 40'h275ffcd8bc;
-                38  : cmem = 40'h261ffcc984;
-                39  : cmem = 40'h24da1cbacb;
-                40  : cmem = 40'h238e7cac93;
-                41  : cmem = 40'h223d6c9edf;
-                42  : cmem = 40'h20e71c91b0;
-                43  : cmem = 40'h1f8bac8508;
-                44  : cmem = 40'h1e2b6c78ea;
-                45  : cmem = 40'h1cc67c6d57;
-                46  : cmem = 40'h1b5d1c6251;
-                47  : cmem = 40'h19ef8c57d9;
-                48  : cmem = 40'h187dec4df3;
-                49  : cmem = 40'h17088c449e;
-                50  : cmem = 40'h158fac3bdc;
-                51  : cmem = 40'h14136c33af;
-                52  : cmem = 40'h12940c2c18;
-                53  : cmem = 40'h1111dc2518;
-                54  : cmem = 40'h0f8d0c1eb0;
-                55  : cmem = 40'h0e05cc18e2;
-                56  : cmem = 40'h0c7c6c13ad;
-                57  : cmem = 40'h0af11c0f13;
-                58  : cmem = 40'h09641c0b15;
-                59  : cmem = 40'h07d59c07b3;
-                60  : cmem = 40'h0645fc04ee;
-                61  : cmem = 40'h04b55c02c6;
-                62  : cmem = 40'h0323fc013c;
-                63  : cmem = 40'h01921c004f;
-                64  : cmem = 40'h00000c0000;
-                65  : cmem = 40'hfe6dfc004f;
-                66  : cmem = 40'hfcdc1c013c;
-                67  : cmem = 40'hfb4abc02c6;
-                68  : cmem = 40'hf9ba1c04ee;
-                69  : cmem = 40'hf82a7c07b3;
-                70  : cmem = 40'hf69bfc0b15;
-                71  : cmem = 40'hf50efc0f13;
-                72  : cmem = 40'hf383ac13ad;
-                73  : cmem = 40'hf1fa4c18e2;
-                74  : cmem = 40'hf0730c1eb0;
-                75  : cmem = 40'heeee3c2518;
-                76  : cmem = 40'hed6c0c2c18;
-                77  : cmem = 40'hebecac33af;
-                78  : cmem = 40'hea706c3bdc;
-                79  : cmem = 40'he8f78c449e;
-                80  : cmem = 40'he7822c4df3;
-                81  : cmem = 40'he6108c57d9;
-                82  : cmem = 40'he4a2fc6251;
-                83  : cmem = 40'he3399c6d57;
-                84  : cmem = 40'he1d4ac78ea;
-                85  : cmem = 40'he0746c8508;
-                86  : cmem = 40'hdf18fc91b0;
-                87  : cmem = 40'hddc2ac9edf;
-                88  : cmem = 40'hdc719cac93;
-                89  : cmem = 40'hdb25fcbacb;
-                90  : cmem = 40'hd9e01cc984;
-                91  : cmem = 40'hd8a01cd8bc;
-                92  : cmem = 40'hd7662ce870;
-                93  : cmem = 40'hd6327cf89e;
-                94  : cmem = 40'hd5053d0944;
-                95  : cmem = 40'hd3de9d1a5f;
-                96  : cmem = 40'hd2becd2bec;
-                97  : cmem = 40'hd1a5fd3de9;
-                98  : cmem = 40'hd0944d5053;
-                99  : cmem = 40'hcf89ed6327;
-                100 : cmem = 40'hce870d7662;
-                101 : cmem = 40'hcd8bcd8a01;
-                102 : cmem = 40'hcc984d9e01;
-                103 : cmem = 40'hcbacbdb25f;
-                104 : cmem = 40'hcac93dc719;
-                105 : cmem = 40'hc9edfddc2a;
-                106 : cmem = 40'hc91b0df18f;
-                107 : cmem = 40'hc8508e0746;
-                108 : cmem = 40'hc78eae1d4a;
-                109 : cmem = 40'hc6d57e3399;
-                110 : cmem = 40'hc6251e4a2f;
-                111 : cmem = 40'hc57d9e6108;
-                112 : cmem = 40'hc4df3e7822;
-                113 : cmem = 40'hc449ee8f78;
-                114 : cmem = 40'hc3bdcea706;
-                115 : cmem = 40'hc33afebeca;
-                116 : cmem = 40'hc2c18ed6c0;
-                117 : cmem = 40'hc2518eeee3;
-                118 : cmem = 40'hc1eb0f0730;
-                119 : cmem = 40'hc18e2f1fa4;
-                120 : cmem = 40'hc13adf383a;
-                121 : cmem = 40'hc0f13f50ef;
-                122 : cmem = 40'hc0b15f69bf;
-                123 : cmem = 40'hc07b3f82a7;
-                124 : cmem = 40'hc04eef9ba1;
-                125 : cmem = 40'hc02c6fb4ab;
-                126 : cmem = 40'hc013cfcdc1;
-                127 : cmem = 40'hc004ffe6df;
-            endcase
-        end
-    end else if (COEFFILE == "cmem_128.hex") begin
-        always @(*) begin
-            case (iaddr[(LGSPAN-1):0])
-                0   : cmem = 42'h10000000000;
-                1   : cmem = 42'h0ffb11f9b82;
-                2   : cmem = 42'h0fec47f3743;
-                3   : cmem = 42'h0fd3abed37f;
-                4   : cmem = 42'h0fb14de7074;
-                5   : cmem = 42'h0f8541e0e60;
-                6   : cmem = 42'h0f4fa1dad7f;
-                7   : cmem = 42'h0f1091d4e0d;
-                8   : cmem = 42'h0ec837cf044;
-                9   : cmem = 42'h0e76bfc945e;
-                10  : cmem = 42'h0e1c5bc3a94;
-                11  : cmem = 42'h0db943be31e;
-                12  : cmem = 42'h0d4db5b8e31;
-                13  : cmem = 42'h0cd9f1b3c02;
-                14  : cmem = 42'h0c5e41aecc3;
-                15  : cmem = 42'h0bdaf1aa0a6;
-                16  : cmem = 42'h0b5051a57d8;
-                17  : cmem = 42'h0abeb5a1288;
-                18  : cmem = 42'h0a267b9d0e0;
-                19  : cmem = 42'h0987fd99308;
-                20  : cmem = 42'h08e39f95926;
-                21  : cmem = 42'h0839c59235f;
-                22  : cmem = 42'h078ad98f1d3;
-                23  : cmem = 42'h06d7458c4a1;
-                24  : cmem = 42'h061f7989be5;
-                25  : cmem = 42'h0563e7877b8;
-                26  : cmem = 42'h04a50385830;
-                27  : cmem = 42'h03e34183d60;
-                28  : cmem = 42'h031f198275a;
-                29  : cmem = 42'h0259038162b;
-                30  : cmem = 42'h01917b809dd;
-                31  : cmem = 42'h00c8fd80278;
-                32  : cmem = 42'h00000180000;
-                33  : cmem = 42'h3f370580278;
-                34  : cmem = 42'h3e6e87809dd;
-                35  : cmem = 42'h3da6ff8162b;
-                36  : cmem = 42'h3ce0e98275a;
-                37  : cmem = 42'h3c1cc183d60;
-                38  : cmem = 42'h3b5aff85830;
-                39  : cmem = 42'h3a9c1b877b8;
-                40  : cmem = 42'h39e08989be5;
-                41  : cmem = 42'h3928bd8c4a1;
-                42  : cmem = 42'h3875298f1d3;
-                43  : cmem = 42'h37c63d9235f;
-                44  : cmem = 42'h371c6395926;
-                45  : cmem = 42'h36780599308;
-                46  : cmem = 42'h35d9879d0e0;
-                47  : cmem = 42'h35414da1288;
-                48  : cmem = 42'h34afb1a57d8;
-                49  : cmem = 42'h342511aa0a6;
-                50  : cmem = 42'h33a1c1aecc3;
-                51  : cmem = 42'h332611b3c02;
-                52  : cmem = 42'h32b24db8e31;
-                53  : cmem = 42'h3246bfbe31e;
-                54  : cmem = 42'h31e3a7c3a94;
-                55  : cmem = 42'h318943c945e;
-                56  : cmem = 42'h3137cbcf044;
-                57  : cmem = 42'h30ef71d4e0d;
-                58  : cmem = 42'h30b061dad7f;
-                59  : cmem = 42'h307ac1e0e60;
-                60  : cmem = 42'h304eb5e7074;
-                61  : cmem = 42'h302c57ed37f;
-                62  : cmem = 42'h3013bbf3743;
-                63  : cmem = 42'h3004f1f9b82;
-            endcase
-        end
-    end else if (COEFFILE == "cmem_64.hex") begin
-        always @(*) begin
-            case (iaddr[(LGSPAN-1):0])
-                0   : cmem = 44'h40000000000;
-                1   : cmem = 44'h3fb11fe6e86;
-                2   : cmem = 44'h3ec533ce0e9;
-                3   : cmem = 44'h3d3e87b5afe;
-                4   : cmem = 44'h3b20db9e087;
-                5   : cmem = 44'h38716787529;
-                6   : cmem = 44'h3536cf71c62;
-                7   : cmem = 44'h3179035d986;
-                8   : cmem = 44'h2d413f4afb1;
-                9   : cmem = 44'h2899eb3a1c0;
-                10  : cmem = 44'h238e7b2b24d;
-                11  : cmem = 44'h1e2b5f1e3a7;
-                12  : cmem = 44'h187de7137ca;
-                13  : cmem = 44'h12940b0b05f;
-                14  : cmem = 44'h0c7c5f04eb4;
-                15  : cmem = 44'h0645eb013b9;
-                16  : cmem = 44'h00000300000;
-                17  : cmem = 44'hf9ba1b013b9;
-                18  : cmem = 44'hf383a704eb4;
-                19  : cmem = 44'hed6bfb0b05f;
-                20  : cmem = 44'he7821f137ca;
-                21  : cmem = 44'he1d4a71e3a7;
-                22  : cmem = 44'hdc718b2b24d;
-                23  : cmem = 44'hd7661b3a1c0;
-                24  : cmem = 44'hd2bec74afb1;
-                25  : cmem = 44'hce87035d986;
-                26  : cmem = 44'hcac93771c62;
-                27  : cmem = 44'hc78e9f87529;
-                28  : cmem = 44'hc4df2b9e087;
-                29  : cmem = 44'hc2c17fb5afe;
-                30  : cmem = 44'hc13ad3ce0e9;
-                31  : cmem = 44'hc04ee7e6e86;
-            endcase
-        end
-    end else if (COEFFILE == "cmem_32.hex") begin
-        always @(*) begin
-            case (iaddr[(LGSPAN-1):0])
-                0   : cmem = 44'h40000000000;
-                1   : cmem = 44'h3ec533ce0e9;
-                2   : cmem = 44'h3b20db9e087;
-                3   : cmem = 44'h3536cf71c62;
-                4   : cmem = 44'h2d413f4afb1;
-                5   : cmem = 44'h238e7b2b24d;
-                6   : cmem = 44'h187de7137ca;
-                7   : cmem = 44'h0c7c5f04eb4;
-                8   : cmem = 44'h00000300000;
-                9   : cmem = 44'hf383a704eb4;
-                10  : cmem = 44'he7821f137ca;
-                11  : cmem = 44'hdc718b2b24d;
-                12  : cmem = 44'hd2bec74afb1;
-                13  : cmem = 44'hcac93771c62;
-                14  : cmem = 44'hc4df2b9e087;
-                15  : cmem = 44'hc13ad3ce0e9;
-            endcase
-        end
-    end else if (COEFFILE == "cmem_16.hex") begin
-        always @(*) begin
-            case (iaddr[(LGSPAN-1):0])
-                0   : cmem = 46'h100000000000;
-                1   : cmem = 46'h0ec83673c10f;
-                2   : cmem = 46'h0b504f695f62;
-                3   : cmem = 46'h061f78e26f94;
-                4   : cmem = 46'h000000600000;
-                5   : cmem = 46'h39e087e26f94;
-                6   : cmem = 46'h34afb1695f62;
-                7   : cmem = 46'h3137ca73c10f;
-            endcase
-        end
-    end else begin
-        always @(*) begin
-            case (iaddr[(LGSPAN-1):0])
-                0   : cmem = 46'h100000000000;
-                1   : cmem = 46'h0b504f695f62;
-                2   : cmem = 46'h000000600000;
-                3   : cmem = 46'h34afb1695f62;
-            endcase
-        end
-    end
-    endgenerate
-
-`endif
-
-	reg	[(LGSPAN):0]		iaddr;
-	reg	[(2*IWIDTH-1):0]	imem	[0:((1<<LGSPAN)-1)];
-
-	reg	[LGSPAN:0]		oaddr;
-	reg	[(2*OWIDTH-1):0]	omem	[0:((1<<LGSPAN)-1)];
-
-	wire				idle;
-	reg	[(LGSPAN-1):0]		nxt_oaddr;
-	reg	[(2*OWIDTH-1):0]	pre_ovalue;
-	// }}}
-
-	// wait_for_sync, iaddr
-	// {{{
-	initial wait_for_sync = 1'b1;
-	initial iaddr = 0;
-	always @(posedge i_clk)
-	if (i_reset)
-	begin
-		wait_for_sync <= 1'b1;
-		iaddr <= 0;
-	end else if ((i_ce)&&((!wait_for_sync)||(i_sync)))
-	begin
-		//
-		// First step: Record what we're not ready to use yet
-		//
-		iaddr <= iaddr + { {(LGSPAN){1'b0}}, 1'b1 };
-		wait_for_sync <= 1'b0;
-	end
-	// }}}
-
-	// Write to imem
-	// {{{
-	always @(posedge i_clk) // Need to make certain here that we don't read
-	if ((i_ce)&&(!iaddr[LGSPAN])) // and write the same address on
-		imem[iaddr[(LGSPAN-1):0]] <= i_data; // the same clk
-	// }}}
-
-	// ib_sync
-	// {{{
-	// Now, we have all the inputs, so let's feed the butterfly
-	//
-	// ib_sync is the synchronization bit to the butterfly.  It will
-	// be tracked within the butterfly, and used to create the o_sync
-	// value when the results from this output are produced
-	initial ib_sync = 1'b0;
-	always @(posedge i_clk)
-	if (i_reset)
-		ib_sync <= 1'b0;
-	else if (i_ce)
-	begin
-		// Set the sync to true on the very first
-		// valid input in, and hence on the very
-		// first valid data out per FFT.
-		ib_sync <= (iaddr==(1<<(LGSPAN)));
-	end
-	// }}}
-
-	// ib_a, ib_b, ib_c
-	// {{{
-	// Read the values from our input memory, and use them to feed
-	// first of two butterfly inputs
-	always	@(posedge i_clk)
-	if (i_ce)
-	begin
-		// One input from memory, ...
-		ib_a <= imem[iaddr[(LGSPAN-1):0]];
-		// One input clocked in from the top
-		ib_b <= i_data;
-		// and the coefficient or twiddle factor
-		// ib_c <= cmem[iaddr[(LGSPAN-1):0]];
-        ib_c <= cmem;
-	end
-	// }}}
-
-	// idle
-	// {{{
-	// The idle register is designed to keep track of when an input
-	// to the butterfly is important and going to be used.  It's used
-	// in a flag following, so that when useful values are placed
-	// into the butterfly they'll be non-zero (idle=0), otherwise when
-	// the inputs to the butterfly are irrelevant and will be ignored,
-	// then (idle=1) those inputs will be set to zero.  This
-	// functionality is not designed to be used in operation, but only
-	// within a Verilator simulation context when chasing a bug.
-	// In this limited environment, the non-zero answers will stand
-	// in a trace making it easier to highlight a bug.
-	generate if (ZERO_ON_IDLE)
-	begin : GEN_ZERO_ON_IDLE
-		reg	r_idle;
-
-		initial	r_idle = 1;
-		always @(posedge i_clk)
-		if (i_reset)
-			r_idle <= 1'b1;
-		else if (i_ce)
-			r_idle <= (!iaddr[LGSPAN])&&(!wait_for_sync);
-
-		assign	idle = r_idle;
-
-	end else begin : NO_IDLE_GENERATION
-
-		assign	idle = 0;
-
-	end endgenerate
-	// }}}
-
-	////////////////////////////////////////////////////////////////////////
-	//
-	// Instantiate the butterfly
-	// {{{
-	////////////////////////////////////////////////////////////////////////
-	//
-	//
-// For the formal proof, we'll assume the outputs of hwbfly and/or
-// butterfly, rather than actually calculating them.  This will simplify
-// the proof and (if done properly) will be equivalent.  Be careful of
-// defining FORMAL if you want the full logic!
-`ifndef	FORMAL
-	//
-	generate if (OPT_HWMPY)
-	begin : HWBFLY
-
-		hwbfly #(
-			// {{{
-			.IWIDTH(IWIDTH),
-			.CWIDTH(CWIDTH),
-			.OWIDTH(OWIDTH),
-			.CKPCE(CKPCE),
-			.SHIFT(BFLYSHIFT)
-			// }}}
-		) bfly(
-			// {{{
-			.i_clk(i_clk), .i_reset(i_reset), .i_ce(i_ce),
-			.i_coef((idle && !i_ce) ? 0:ib_c),
-			.i_left((idle && !i_ce) ? 0:ib_a),
-			.i_right((idle && !i_ce) ? 0:ib_b),
-			.i_aux(ib_sync && i_ce),
-			.o_left(ob_a), .o_right(ob_b), .o_aux(ob_sync)
-			// }}}
-		);
-
-	end else begin : FWBFLY
-
-		butterfly #(
-			// {{{
-			.IWIDTH(IWIDTH),
-			.CWIDTH(CWIDTH),
-			.OWIDTH(OWIDTH),
-			.CKPCE(CKPCE),
-			.SHIFT(BFLYSHIFT)
-			// }}}
-		) bfly(
-			// {{{
-			.i_clk(i_clk), .i_reset(i_reset), .i_ce(i_ce),
-			.i_coef( (idle && !i_ce)?0:ib_c),
-			.i_left( (idle && !i_ce)?0:ib_a),
-			.i_right((idle && !i_ce)?0:ib_b),
-			.i_aux(ib_sync && i_ce),
-			.o_left(ob_a), .o_right(ob_b), .o_aux(ob_sync)
-			// }}}
-		);
-
-	end endgenerate
-`else
-
-	// Verilator lint_off UNDRIVEN
-	(* anyseq *)    wire    [(2*OWIDTH-1):0]        f_ob_a, f_ob_b;
-	(* anyseq *)    wire    f_ob_sync;
-	// Verilator lint_on  UNDRIVEN
-
-	assign  ob_sync = f_ob_sync;
-	assign  ob_a    = f_ob_a;
-	assign  ob_b    = f_ob_b;
-
-`endif
-
-	// }}}
-
-	// oaddr, o_sync, b_started
-	// {{{
-	// Next step: recover the outputs from the butterfly
-	//
-	// The first output can go immediately to the output of this routine
-	// The second output must wait until this time in the idle cycle
-	// oaddr is the output memory address, keeping track of where we are
-	// in this output cycle.
-	initial oaddr     = 0;
-	initial o_sync    = 0;
-	initial b_started = 0;
-	always @(posedge i_clk)
-	if (i_reset)
-	begin
-		oaddr     <= 0;
-		o_sync    <= 0;
-		// b_started will be true once we've seen the first ob_sync
-		b_started <= 0;
-	end else if (i_ce)
-	begin
-		o_sync <= (!oaddr[LGSPAN])?ob_sync : 1'b0;
-		if (ob_sync||b_started)
-			oaddr <= oaddr + 1'b1;
-		if ((ob_sync)&&(!oaddr[LGSPAN]))
-			// If b_started is true, then a butterfly output
-			// is available
-			b_started <= 1'b1;
-	end
-	// }}}
-
-	// nxt_oaddr
-	// {{{
-	always @(posedge i_clk)
-	if (i_ce)
-		nxt_oaddr[0] <= oaddr[0];
-	generate if (LGSPAN>1)
-	begin
-
-		always @(posedge i_clk)
-		if (i_ce)
-			nxt_oaddr[LGSPAN-1:1] <= oaddr[LGSPAN-1:1] + 1'b1;
-
-	end endgenerate
-	// }}}
-
-	// omem
-	// {{{
-	// Only write to the memory on the first half of the outputs
-	// We'll use the memory value on the second half of the outputs
-	always @(posedge i_clk)
-	if ((i_ce)&&(!oaddr[LGSPAN]))
-		omem[oaddr[(LGSPAN-1):0]] <= ob_b;
-	// }}}
-
-	// pre_ovalue
-	// {{{
-	always @(posedge i_clk)
-	if (i_ce)
-		pre_ovalue <= omem[nxt_oaddr[(LGSPAN-1):0]];
-	// }}}
-
-	// o_data
-	// {{{
-	always @(posedge i_clk)
-	if (i_ce)
-		o_data <= (!oaddr[LGSPAN]) ? ob_a : pre_ovalue;
-	// }}}
-
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-//
-// Formal properties
-// {{{
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-`ifdef	FORMAL
-	// Local (formal) declarations
-	// {{{
-	// An arbitrary processing delay from butterfly input to
-	// butterfly output(s)
-	// Verilator lint_off UNDRIVEN
-	(* anyconst *) reg	[LGSPAN:0]	f_mpydelay;
-	(* anyconst *)	reg	[LGSPAN:0]	f_addr;
-	// Verilator lint_on  UNDRIVEN
-	reg	[2*IWIDTH-1:0]			f_left, f_right;
-	reg	[2*OWIDTH-1:0]	f_oleft, f_oright;
-	reg	[LGSPAN:0]	f_oaddr;
-	wire	[LGSPAN:0]	f_oaddr_m1 = f_oaddr - 1'b1;
-	reg	f_output_active;
-	// }}}
-
-
-	always @(*)
-		assume(f_mpydelay > 1);
-
-	reg	f_past_valid;
-	initial	f_past_valid = 1'b0;
-	always @(posedge i_clk)
-		f_past_valid <= 1'b1;
-
-	always @(posedge i_clk)
-	if ((!f_past_valid)||($past(i_reset)))
-	begin
-		assert(iaddr == 0);
-		assert(wait_for_sync);
-		assert(o_sync == 0);
-		assert(oaddr == 0);
-		assert(!b_started);
-		assert(!o_sync);
-	end
-
-	////////////////////////////////////////////////////////////////////////
-	//
-	// Formally verify the input half, from the inputs to this module
-	// to the inputs of the butterfly
-	//
-	////////////////////////////////////////////////////////////////////////
-	//
-	//
-
-	// Let's  verify a specific set of inputs
-
-	always @(posedge i_clk)
-	if (!$past(i_ce) && !$past(i_ce,2) && !$past(i_ce,3) && !$past(i_ce,4))
-		assume(!i_ce);
-
-	always @(*)
-		assume(f_addr[LGSPAN]==1'b0);
-
-	always @(posedge i_clk)
-	if ((i_ce)&&(iaddr[LGSPAN:0] == f_addr))
-		f_left <= i_data;
-
-	always @(*)
-	if (wait_for_sync)
-		assert(iaddr == 0);
-
-	wire	[LGSPAN:0]	f_last_addr = iaddr - 1'b1;
-
-	always @(posedge i_clk)
-	if ((!wait_for_sync)&&(f_last_addr >= { 1'b0, f_addr[LGSPAN-1:0]}))
-		assert(f_left == imem[f_addr[LGSPAN-1:0]]);
-
-	always @(posedge i_clk)
-	if ((i_ce)&&(iaddr == { 1'b1, f_addr[LGSPAN-1:0]}))
-		f_right <= i_data;
-
-	always @(posedge i_clk)
-	if (i_ce && !wait_for_sync
-		&& (f_last_addr == { 1'b1, f_addr[LGSPAN-1:0]}))
-	begin
-		assert(ib_a == f_left);
-		assert(ib_b == f_right);
-		assert(ib_c == cmem[f_addr[LGSPAN-1:0]]);
-	end
-
-	////////////////////////////////////////////////////////////////////////
-	//
-	// Formally verify the output half, from the output of the butterfly
-	// to the outputs of this module
-	//
-	////////////////////////////////////////////////////////////////////////
-	//
-	//
-
-	always @(*)
-		f_oaddr = iaddr - f_mpydelay + {1'b1,{(LGSPAN-1){1'b0}} };
-
-	assign	f_oaddr_m1 = f_oaddr - 1'b1;
-
-	initial	f_output_active = 1'b0;
-	always @(posedge i_clk)
-	if (i_reset)
-		f_output_active <= 1'b0;
-	else if ((i_ce)&&(ob_sync))
-		f_output_active <= 1'b1;
-
-	always @(*)
-		assert(f_output_active == b_started);
-
-	always @(*)
-	if (wait_for_sync)
-		assert(!f_output_active);
-
-	always @(*)
-	if (f_output_active)
-	begin
-		assert(oaddr == f_oaddr);
-	end else
-		assert(oaddr == 0);
-
-	always @(*)
-	if (wait_for_sync)
-		assume(!ob_sync);
-
-	always @(*)
-		assume(ob_sync == (f_oaddr == 0));
-
-	always @(posedge i_clk)
-	if ((f_past_valid)&&(!$past(i_ce)))
-	begin
-		assume($stable(ob_a));
-		assume($stable(ob_b));
-	end
-
-	initial	f_oleft  = 0;
-	initial	f_oright = 0;
-	always @(posedge i_clk)
-	if ((i_ce)&&(f_oaddr == f_addr))
-	begin
-		f_oleft  <= ob_a;
-		f_oright <= ob_b;
-	end
-
-	always @(posedge i_clk)
-	if ((f_output_active)&&(f_oaddr_m1 >= { 1'b0, f_addr[LGSPAN-1:0]}))
-		assert(omem[f_addr[LGSPAN-1:0]] == f_oright);
-
-	always @(posedge i_clk)
-	if ((i_ce)&&(f_oaddr_m1 == 0)&&(f_output_active))
-	begin
-		assert(o_sync);
-	end else if ((i_ce)||(!f_output_active))
-		assert(!o_sync);
-
-	always @(posedge i_clk)
-	if ((i_ce)&&(f_output_active)&&(f_oaddr_m1 == f_addr))
-		assert(o_data == f_oleft);
-
-	always @(posedge i_clk)
-	if ((i_ce)&&(f_output_active)&&(f_oaddr[LGSPAN])
-			&&(f_oaddr[LGSPAN-1:0] == f_addr[LGSPAN-1:0]))
-		assert(pre_ovalue == f_oright);
-
-	always @(posedge i_clk)
-	if ((i_ce)&&(f_output_active)&&(f_oaddr_m1[LGSPAN])
-			&&(f_oaddr_m1[LGSPAN-1:0] == f_addr[LGSPAN-1:0]))
-		assert(o_data == f_oright);
-
-	// Make Verilator happy
-	// {{{
-	// Verilator lint_off UNUSED
-	wire	unused_formal;
-	assign unused_formal = &{ 1'b0, idle, ib_sync };
-	// Verilator lint_on  UNUSED
-	// }}}
-
-`endif // FORMAL
-// }}}
-endmodule
-////////////////////////////////////////////////////////////////////////////////
-//
 // Filename:	hwbfly.v
 // {{{
 // Project:	A General Purpose Pipelined FFT Implementation
@@ -10727,6 +9928,1551 @@ module	laststage #(
 endmodule
 ////////////////////////////////////////////////////////////////////////////////
 //
+// Filename:	qtrstage.v
+// {{{
+// Project:	A General Purpose Pipelined FFT Implementation
+//
+// Purpose:	This file encapsulates the 4 point stage of a decimation in
+//		frequency FFT.  This particular implementation is optimized
+//	so that all of the multiplies are accomplished by additions and
+//	multiplexers only.
+//
+// Operation:
+// 	The operation of this stage is identical to the regular stages of
+// 	the FFT (see them for details), with one additional and critical
+// 	difference: this stage doesn't require any hardware multiplication.
+// 	The multiplies within it may all be accomplished using additions and
+// 	subtractions.
+//
+// 	Let's see how this is done.  Given x[n] and x[n+2], cause thats the
+// 	stage we are working on, with i_sync true for x[0] being input,
+// 	produce the output:
+//
+// 	y[n  ] = x[n] + x[n+2]
+// 	y[n+2] = (x[n] - x[n+2]) * e^{-j2pi n/2}	(forward transform)
+// 	       = (x[n] - x[n+2]) * -j^n
+//
+// 	y[n].r = x[n].r + x[n+2].r	(This is the easy part)
+// 	y[n].i = x[n].i + x[n+2].i
+//
+// 	y[2].r = x[0].r - x[2].r
+// 	y[2].i = x[0].i - x[2].i
+//
+// 	y[3].r =   (x[1].i - x[3].i)		(forward transform)
+// 	y[3].i = - (x[1].r - x[3].r)
+//
+// 	y[3].r = - (x[1].i - x[3].i)		(inverse transform)
+// 	y[3].i =   (x[1].r - x[3].r)		(INVERSE = 1)
+//
+// Creator:	Dan Gisselquist, Ph.D.
+//		Gisselquist Technology, LLC
+//
+////////////////////////////////////////////////////////////////////////////////
+// }}}
+// Copyright (C) 2015-2021, Gisselquist Technology, LLC
+// {{{
+// This file is part of the general purpose pipelined FFT project.
+//
+// The pipelined FFT project is free software (firmware): you can redistribute
+// it and/or modify it under the terms of the GNU Lesser General Public License
+// as published by the Free Software Foundation, either version 3 of the
+// License, or (at your option) any later version.
+//
+// The pipelined FFT project is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTIBILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser
+// General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program.  (It's in the $(ROOT)/doc directory.  Run make
+// with no target there if the PDF file isn't present.)  If not, see
+// <http://www.gnu.org/licenses/> for a copy.
+// }}}
+// License:	LGPL, v3, as defined and found on www.gnu.org,
+// {{{
+//		http://www.gnu.org/licenses/lgpl.html
+//
+// }}}
+////////////////////////////////////////////////////////////////////////////////
+//
+//
+`default_nettype	none
+//
+module	qtrstage(i_clk, i_reset, i_ce, i_sync, i_data, o_data, o_sync);
+	parameter	IWIDTH=16, OWIDTH=IWIDTH+1;
+	parameter	LGWIDTH=8, INVERSE=0,SHIFT=0;
+	input	wire				i_clk, i_reset, i_ce, i_sync;
+	input	wire	[(2*IWIDTH-1):0]	i_data;
+	output	reg	[(2*OWIDTH-1):0]	o_data;
+	output	reg				o_sync;
+	
+	reg		wait_for_sync;
+	reg	[2:0]	pipeline;
+
+	reg	signed [(IWIDTH):0]	sum_r, sum_i, diff_r, diff_i;
+
+	reg	[(2*OWIDTH-1):0]	ob_a;
+	wire	[(2*OWIDTH-1):0]	ob_b;
+	reg	[(OWIDTH-1):0]		ob_b_r, ob_b_i;
+	assign	ob_b = { ob_b_r, ob_b_i };
+
+	reg	[(LGWIDTH-1):0]		iaddr;
+	reg	[(2*IWIDTH-1):0]	imem	[0:1];
+
+	wire	signed	[(IWIDTH-1):0]	imem_r, imem_i;
+	assign	imem_r = imem[1][(2*IWIDTH-1):(IWIDTH)];
+	assign	imem_i = imem[1][(IWIDTH-1):0];
+
+	wire	signed	[(IWIDTH-1):0]	i_data_r, i_data_i;
+	assign	i_data_r = i_data[(2*IWIDTH-1):(IWIDTH)];
+	assign	i_data_i = i_data[(IWIDTH-1):0];
+
+	reg	[(2*OWIDTH-1):0]	omem [0:1];
+
+	//
+	// Round our output values down to OWIDTH bits
+	//
+	wire	signed	[(OWIDTH-1):0]	rnd_sum_r, rnd_sum_i,
+			rnd_diff_r, rnd_diff_i, n_rnd_diff_r, n_rnd_diff_i;
+	convround #(IWIDTH+1,OWIDTH,SHIFT)	do_rnd_sum_r(i_clk, i_ce,
+				sum_r, rnd_sum_r);
+
+	convround #(IWIDTH+1,OWIDTH,SHIFT)	do_rnd_sum_i(i_clk, i_ce,
+				sum_i, rnd_sum_i);
+
+	convround #(IWIDTH+1,OWIDTH,SHIFT)	do_rnd_diff_r(i_clk, i_ce,
+				diff_r, rnd_diff_r);
+
+	convround #(IWIDTH+1,OWIDTH,SHIFT)	do_rnd_diff_i(i_clk, i_ce,
+				diff_i, rnd_diff_i);
+
+	assign n_rnd_diff_r = - rnd_diff_r;
+	assign n_rnd_diff_i = - rnd_diff_i;
+	initial wait_for_sync = 1'b1;
+	initial iaddr = 0;
+	always @(posedge i_clk)
+	if (i_reset)
+	begin
+		wait_for_sync <= 1'b1;
+		iaddr <= 0;
+	end else if ((i_ce)&&((!wait_for_sync)||(i_sync)))
+	begin
+		iaddr <= iaddr + 1'b1;
+		wait_for_sync <= 1'b0;
+	end
+
+	always @(posedge i_clk)
+	if (i_ce)
+	begin
+		imem[0] <= i_data;
+		imem[1] <= imem[0];
+	end
+
+
+	// Note that we don't check on wait_for_sync or i_sync here.
+	// Why not?  Because iaddr will always be zero until after the
+	// first i_ce, so we are safe.
+	initial pipeline = 3'h0;
+	always	@(posedge i_clk)
+	if (i_reset)
+		pipeline <= 3'h0;
+	else if (i_ce) // is our pipeline process full?  Which stages?
+		pipeline <= { pipeline[1:0], iaddr[1] };
+
+	// This is the pipeline[-1] stage, pipeline[0] will be set next.
+	always	@(posedge i_clk)
+	if ((i_ce)&&(iaddr[1]))
+	begin
+		sum_r  <= imem_r + i_data_r;
+		sum_i  <= imem_i + i_data_i;
+		diff_r <= imem_r - i_data_r;
+		diff_i <= imem_i - i_data_i;
+	end
+
+	// pipeline[1] takes sum_x and diff_x and produces rnd_x
+
+	// Now for pipeline[2].  We can actually do this at all i_ce
+	// clock times, since nothing will listen unless pipeline[3]
+	// on the next clock.  Thus, we simplify this logic and do
+	// it independent of pipeline[2].
+	always	@(posedge i_clk)
+	if (i_ce)
+	begin
+		ob_a <= { rnd_sum_r, rnd_sum_i };
+		// on Even, W = e^{-j2pi 1/4 0} = 1
+		if (!iaddr[0])
+		begin
+			ob_b_r <= rnd_diff_r;
+			ob_b_i <= rnd_diff_i;
+		end else if (INVERSE==0) begin
+			// on Odd, W = e^{-j2pi 1/4} = -j
+			ob_b_r <=   rnd_diff_i;
+			ob_b_i <= n_rnd_diff_r;
+		end else begin
+			// on Odd, W = e^{j2pi 1/4} = j
+			ob_b_r <= n_rnd_diff_i;
+			ob_b_i <=   rnd_diff_r;
+		end
+	end
+
+	always	@(posedge i_clk)
+	if (i_ce)
+	begin // In sequence, clock = 3
+		omem[0] <= ob_b;
+		omem[1] <= omem[0];
+		if (pipeline[2])
+			o_data <= ob_a;
+		else
+			o_data <= omem[1];
+	end
+
+	initial	o_sync = 1'b0;
+	always	@(posedge i_clk)
+	if (i_reset)
+		o_sync <= 1'b0;
+	else if (i_ce)
+		o_sync <= (iaddr[2:0] == 3'b101);
+
+`ifdef	FORMAL
+	// Formal declarations
+	// {{{
+	reg				f_past_valid;
+	reg	signed [IWIDTH-1:0]	f_piped_real	[0:7];
+	reg	signed [IWIDTH-1:0]	f_piped_imag	[0:7];
+	reg				f_rsyncd;
+	wire				f_syncd;
+	reg	[1:0]			f_state;
+	wire	signed [OWIDTH-1:0]	f_o_real, f_o_imag;
+	// }}}
+
+	initial	f_past_valid = 1'b0;
+	always @(posedge i_clk)
+		f_past_valid <= 1'b1;
+
+`ifdef	QTRSTAGE
+	always @(posedge i_clk)
+		assume((i_ce)||($past(i_ce))||($past(i_ce,2)));
+`endif
+
+	// The below logic only works if the rounding stage does nothing
+	initial	assert(IWIDTH+1 == OWIDTH);
+
+
+	always @(posedge i_clk)
+	if (i_ce)
+	begin
+		f_piped_real[0] <= i_data[2*IWIDTH-1:IWIDTH];
+		f_piped_imag[0] <= i_data[  IWIDTH-1:0];
+
+		f_piped_real[1] <= f_piped_real[0];
+		f_piped_imag[1] <= f_piped_imag[0];
+
+		f_piped_real[2] <= f_piped_real[1];
+		f_piped_imag[2] <= f_piped_imag[1];
+
+		f_piped_real[3] <= f_piped_real[2];
+		f_piped_imag[3] <= f_piped_imag[2];
+
+		f_piped_real[4] <= f_piped_real[3];
+		f_piped_imag[4] <= f_piped_imag[3];
+
+		f_piped_real[5] <= f_piped_real[4];
+		f_piped_imag[5] <= f_piped_imag[4];
+
+		f_piped_real[6] <= f_piped_real[5];
+		f_piped_imag[6] <= f_piped_imag[5];
+
+		f_piped_real[7] <= f_piped_real[6];
+		f_piped_imag[7] <= f_piped_imag[6];
+	end
+
+
+	initial	f_rsyncd = 0;
+	always @(posedge i_clk)
+	if (i_reset)
+		f_rsyncd <= 1'b0;
+	else if (!f_rsyncd)
+		f_rsyncd <= (o_sync);
+	assign	f_syncd = (f_rsyncd)||(o_sync);
+
+
+	initial	f_state = 0;
+	always @(posedge i_clk)
+	if (i_reset)
+		f_state <= 0;
+	else if ((i_ce)&&((!wait_for_sync)||(i_sync)))
+		f_state <= f_state + 1;
+
+	always @(*)
+	if (f_state != 0)
+		assume(!i_sync);
+
+	always @(posedge i_clk)
+		assert(f_state[1:0] == iaddr[1:0]);
+
+	assign			f_o_real = o_data[2*OWIDTH-1:OWIDTH];
+	assign			f_o_imag = o_data[  OWIDTH-1:0];
+
+	always @(posedge i_clk)
+	if (f_state == 2'b11)
+	begin
+		assume(f_piped_real[0] != 3'sb100);
+		assume(f_piped_real[2] != 3'sb100);
+		assert(sum_r  == f_piped_real[2] + f_piped_real[0]);
+		assert(sum_i  == f_piped_imag[2] + f_piped_imag[0]);
+
+		assert(diff_r == f_piped_real[2] - f_piped_real[0]);
+		assert(diff_i == f_piped_imag[2] - f_piped_imag[0]);
+	end
+
+	always @(posedge i_clk)
+	if ((f_state == 2'b00)&&((f_syncd)||(iaddr >= 4)))
+	begin
+		assert(rnd_sum_r  == f_piped_real[3]+f_piped_real[1]);
+		assert(rnd_sum_i  == f_piped_imag[3]+f_piped_imag[1]);
+		assert(rnd_diff_r == f_piped_real[3]-f_piped_real[1]);
+		assert(rnd_diff_i == f_piped_imag[3]-f_piped_imag[1]);
+	end
+
+	always @(posedge i_clk)
+	if ((f_state == 2'b10)&&(f_syncd))
+	begin
+		// assert(o_sync);
+		assert(f_o_real == f_piped_real[5] + f_piped_real[3]);
+		assert(f_o_imag == f_piped_imag[5] + f_piped_imag[3]);
+	end
+
+	always @(posedge i_clk)
+	if ((f_state == 2'b11)&&(f_syncd))
+	begin
+		assert(!o_sync);
+		assert(f_o_real == f_piped_real[5] + f_piped_real[3]);
+		assert(f_o_imag == f_piped_imag[5] + f_piped_imag[3]);
+	end
+
+	always @(posedge i_clk)
+	if ((f_state == 2'b00)&&(f_syncd))
+	begin
+		assert(!o_sync);
+		assert(f_o_real == f_piped_real[7] - f_piped_real[5]);
+		assert(f_o_imag == f_piped_imag[7] - f_piped_imag[5]);
+	end
+
+	always @(*)
+	if ((iaddr[2:0] == 0)&&(!wait_for_sync))
+		assume(i_sync);
+
+	always @(*)
+	if (wait_for_sync)
+		assert((iaddr == 0)&&(f_state == 2'b00)&&(!o_sync)&&(!f_rsyncd));
+
+	always @(posedge i_clk)
+	if ((f_past_valid)&&($past(i_ce))&&($past(i_sync))&&(!$past(i_reset)))
+		assert(!wait_for_sync);
+
+	always @(posedge i_clk)
+	if ((f_state == 2'b01)&&(f_syncd))
+	begin
+		assert(!o_sync);
+		if (INVERSE)
+		begin
+			assert(f_o_real == -f_piped_imag[7]+f_piped_imag[5]);
+			assert(f_o_imag ==  f_piped_real[7]-f_piped_real[5]);
+		end else begin
+			assert(f_o_real ==  f_piped_imag[7]-f_piped_imag[5]);
+			assert(f_o_imag == -f_piped_real[7]+f_piped_real[5]);
+		end
+	end
+
+`endif
+endmodule
+////////////////////////////////////////////////////////////////////////////////
+//
+// Filename:	fftmain.v
+// {{{
+// Project:	A General Purpose Pipelined FFT Implementation
+//
+// Purpose:	This is the main module in the General Purpose FPGA FFT
+//		implementation.  As such, all other modules are subordinate
+//	to this one.  This module accomplish a fixed size Complex FFT on
+//	256 data points.
+//	The FFT is fully pipelined, and accepts as inputs one complex two's
+//	complement sample per clock.
+//
+// Parameters:
+//	i_clk	The clock.  All operations are synchronous with this clock.
+//	i_reset	Synchronous reset, active high.  Setting this line will
+//			force the reset of all of the internals to this routine.
+//			Further, following a reset, the o_sync line will go
+//			high the same time the first output sample is valid.
+//	i_ce	A clock enable line.  If this line is set, this module
+//			will accept one complex input value, and produce
+//			one (possibly empty) complex output value.
+//	i_sample	The complex input sample.  This value is split
+//			into two two's complement numbers, 16 bits each, with
+//			the real portion in the high order bits, and the
+//			imaginary portion taking the bottom 16 bits.
+//	o_result	The output result, of the same format as i_sample,
+//			only having 21 bits for each of the real and imaginary
+//			components, leading to 42 bits total.
+//	o_sync	A one bit output indicating the first sample of the FFT frame.
+//			It also indicates the first valid sample out of the FFT
+//			on the first frame.
+//
+// Arguments:	This file was computer generated using the following command
+//		line:
+//
+//		% ./fftgen -f 256 -a hdr
+//
+//	This core will use hardware accelerated multiplies (DSPs)
+//	for 0 of the 8 stages
+//
+// Creator:	Dan Gisselquist, Ph.D.
+//		Gisselquist Technology, LLC
+//
+////////////////////////////////////////////////////////////////////////////////
+// }}}
+// Copyright (C) 2015-2021, Gisselquist Technology, LLC
+// {{{
+// This file is part of the general purpose pipelined FFT project.
+//
+// The pipelined FFT project is free software (firmware): you can redistribute
+// it and/or modify it under the terms of the GNU Lesser General Public License
+// as published by the Free Software Foundation, either version 3 of the
+// License, or (at your option) any later version.
+//
+// The pipelined FFT project is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTIBILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser
+// General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program.  (It's in the $(ROOT)/doc directory.  Run make
+// with no target there if the PDF file isn't present.)  If not, see
+// <http://www.gnu.org/licenses/> for a copy.
+// }}}
+// License:	LGPL, v3, as defined and found on www.gnu.org,
+// {{{
+//		http://www.gnu.org/licenses/lgpl.html
+//
+// }}}
+////////////////////////////////////////////////////////////////////////////////
+//
+//
+`default_nettype	none
+//
+//
+//
+module fftmain(i_clk, i_reset, i_ce,
+		i_sample, o_result, o_sync);
+	// The bit-width of the input, IWIDTH, output, OWIDTH, and the log
+	// of the FFT size.  These are localparams, rather than parameters,
+	// because once the core has been generated, they can no longer be
+	// changed.  (These values can be adjusted by running the core
+	// generator again.)  The reason is simply that these values have
+	// been hardwired into the core at several places.
+	localparam	IWIDTH=16, OWIDTH=21; // LGWIDTH=8;
+	//
+	input	wire				i_clk, i_reset, i_ce;
+	//
+	input	wire	[(2*IWIDTH-1):0]	i_sample;
+	output	reg	[(2*OWIDTH-1):0]	o_result;
+	output	reg				o_sync;
+
+
+	// Outputs of the FFT, ready for bit reversal.
+	wire				br_sync;
+	wire	[(2*OWIDTH-1):0]	br_result;
+
+
+	wire		w_s256;
+	wire	[33:0]	w_d256;
+	fftstage	#(IWIDTH,IWIDTH+4,17,7,0,
+			0, 1, "cmem_256.hex")
+		stage_256(i_clk, i_reset, i_ce,
+			(!i_reset), i_sample, w_d256, w_s256);
+
+
+	wire		w_s128;
+	wire	[35:0]	w_d128;
+	fftstage	#(17,21,18,6,0,
+			0, 1, "cmem_128.hex")
+		stage_128(i_clk, i_reset, i_ce,
+			w_s256, w_d256, w_d128, w_s128);
+
+	wire		w_s64;
+	wire	[35:0]	w_d64;
+	fftstage	#(18,22,18,5,0,
+			0, 1, "cmem_64.hex")
+		stage_64(i_clk, i_reset, i_ce,
+			w_s128, w_d128, w_d64, w_s64);
+
+	wire		w_s32;
+	wire	[37:0]	w_d32;
+	fftstage	#(18,22,19,4,0,
+			0, 1, "cmem_32.hex")
+		stage_32(i_clk, i_reset, i_ce,
+			w_s64, w_d64, w_d32, w_s32);
+
+	wire		w_s16;
+	wire	[37:0]	w_d16;
+	fftstage	#(19,23,19,3,0,
+			0, 1, "cmem_16.hex")
+		stage_16(i_clk, i_reset, i_ce,
+			w_s32, w_d32, w_d16, w_s16);
+
+	wire		w_s8;
+	wire	[39:0]	w_d8;
+	fftstage	#(19,23,20,2,0,
+			0, 1, "cmem_8.hex")
+		stage_8(i_clk, i_reset, i_ce,
+			w_s16, w_d16, w_d8, w_s8);
+
+	wire		w_s4;
+	wire	[39:0]	w_d4;
+	qtrstage	#(20,20,8,0,0)	stage_4(i_clk, i_reset, i_ce,
+						w_s8, w_d8, w_d4, w_s4);
+	wire		w_s2;
+	wire	[41:0]	w_d2;
+	laststage	#(20,21,1)	stage_2(i_clk, i_reset, i_ce,
+					w_s4, w_d4, w_d2, w_s2);
+
+
+	wire	br_start;
+	reg	r_br_started;
+	initial	r_br_started = 1'b0;
+	always @(posedge i_clk)
+	if (i_reset)
+		r_br_started <= 1'b0;
+	else if (i_ce)
+		r_br_started <= r_br_started || w_s2;
+	assign	br_start = r_br_started || w_s2;
+
+	// Now for the bit-reversal stage.
+	bitreverse	#(8,21)
+	revstage(
+		// {{{
+		.i_clk(i_clk),
+		.i_reset(i_reset),
+		.i_ce(i_ce & br_start),
+		.i_in(w_d2),
+		.o_out(br_result),
+		.o_sync(br_sync)
+		// }}}
+	);
+
+
+	// Last clock: Register our outputs, we're done.
+	initial	o_sync  = 1'b0;
+	always @(posedge i_clk)
+	if (i_reset)
+		o_sync  <= 1'b0;
+	else if (i_ce)
+		o_sync  <= br_sync;
+
+	always @(posedge i_clk)
+	if (i_ce)
+		o_result  <= br_result;
+
+
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
+    initial begin
+      $dumpfile ("wave.vcd");
+      $dumpvars (0, fftmain);
+      #1;
+    end
+    `endif
+    `endif
+
+endmodule
+////////////////////////////////////////////////////////////////////////////////
+//
+// Filename:	fft-core/bimpy.v
+// {{{
+// Project:	A General Purpose Pipelined FFT Implementation
+//
+// Purpose:	A simple 2-bit multiply based upon the fact that LUT's allow
+//		6-bits of input.  In other words, I could build a 3-bit
+//	multiply from 6 LUTs (5 actually, since the first could have two
+//	outputs).  This would allow multiplication of three bit digits, save
+//	only for the fact that you would need two bits of carry.  The bimpy
+//	approach throttles back a bit and does a 2x2 bit multiply in a LUT,
+//	guaranteeing that it will never carry more than one bit.  While this
+//	multiply is hardware independent (and can still run under Verilator
+//	therefore), it is really motivated by trying to optimize for a
+//	specific piece of hardware (Xilinx-7 series ...) that has at least
+//	4-input LUT's with carry chains.
+//
+//
+//
+// Creator:	Dan Gisselquist, Ph.D.
+//		Gisselquist Technology, LLC
+//
+////////////////////////////////////////////////////////////////////////////////
+// }}}
+// Copyright (C) 2015-2021, Gisselquist Technology, LLC
+// {{{
+// This file is part of the general purpose pipelined FFT project.
+//
+// The pipelined FFT project is free software (firmware): you can redistribute
+// it and/or modify it under the terms of the GNU Lesser General Public License
+// as published by the Free Software Foundation, either version 3 of the
+// License, or (at your option) any later version.
+//
+// The pipelined FFT project is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTIBILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser
+// General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program.  (It's in the $(ROOT)/doc directory.  Run make
+// with no target there if the PDF file isn't present.)  If not, see
+// <http://www.gnu.org/licenses/> for a copy.
+// }}}
+// License:	LGPL, v3, as defined and found on www.gnu.org,
+// {{{
+//		http://www.gnu.org/licenses/lgpl.html
+//
+// }}}
+////////////////////////////////////////////////////////////////////////////////
+//
+//
+`default_nettype	none
+//
+module	bimpy #(
+		// {{{
+		parameter	BW=18, // Number of bits in i_b
+        // DESIGN COMPILER MODIFICATON - Parameters must be declared before use
+        parameter	LUTB=2 // Number of bits in i_a for our LUT multiply
+		// }}}
+	) (
+		// {{{
+		input	wire			i_clk, i_reset, i_ce,
+		input	wire	[(LUTB-1):0]	i_a,
+		input	wire	[(BW-1):0]	i_b,
+		output	reg	[(BW+LUTB-1):0]	o_r
+		// }}}
+	);
+		// localparam	LUTB=2; // Number of bits in i_a for our LUT multiply
+
+	// Local declarations
+	// {{{
+	wire	[(BW+LUTB-2):0]	w_r;
+	wire	[(BW+LUTB-3):1]	c;
+	// }}}
+
+	assign	w_r =  { ((i_a[1])?i_b:{(BW){1'b0}}), 1'b0 }
+				^ { 1'b0, ((i_a[0])?i_b:{(BW){1'b0}}) };
+	assign	c = { ((i_a[1])?i_b[(BW-2):0]:{(BW-1){1'b0}}) }
+			& ((i_a[0])?i_b[(BW-1):1]:{(BW-1){1'b0}});
+
+	// o_r
+	// {{{
+	initial o_r = 0;
+	always @(posedge i_clk)
+	if (i_reset)
+		o_r <= 0;
+	else if (i_ce)
+		o_r <= w_r + { c, 2'b0 };
+	// }}}
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//
+// Formal property section
+// {{{
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+`ifdef	FORMAL
+	reg	f_past_valid;
+
+	initial	f_past_valid = 1'b0;
+	always @(posedge i_clk)
+	f_past_valid <= 1'b1;
+
+`define	ASSERT	assert
+
+	always @(posedge i_clk)
+	if ((!f_past_valid)||($past(i_reset)))
+	begin
+		`ASSERT(o_r == 0);
+	end else if ($past(i_ce))
+	begin
+		if ($past(i_a)==0)
+		begin
+			`ASSERT(o_r == 0);
+		end else if ($past(i_a) == 1)
+			`ASSERT(o_r == $past(i_b));
+
+		if ($past(i_b)==0)
+		begin
+			`ASSERT(o_r == 0);
+		end else if ($past(i_b) == 1)
+			`ASSERT(o_r[(LUTB-1):0] == $past(i_a));
+	end
+`endif
+// }}}
+endmodule
+////////////////////////////////////////////////////////////////////////////////
+//
+// Filename:	fftstage.v
+// {{{
+// Project:	A General Purpose Pipelined FFT Implementation
+//
+// Purpose:	This file is (almost) a Verilog source file.  It is meant to
+//		be used by a FFT core compiler to generate FFTs which may be
+//	used as part of an FFT core.  Specifically, this file encapsulates
+//	the options of an FFT-stage.  For any 2^N length FFT, there shall be
+//	(N-1) of these stages.
+//
+//
+// Operation:
+// 	Given a stream of values, operate upon them as though they were
+// 	value pairs, x[n] and x[n+N/2].  The stream begins when n=0, and ends
+// 	when n=N/2-1 (i.e. there's a full set of N values).  When the value
+// 	x[0] enters, the synchronization input, i_sync, must be true as well.
+//
+// 	For this stream, produce outputs
+// 	y[n    ] = x[n] + x[n+N/2], and
+// 	y[n+N/2] = (x[n] - x[n+N/2]) * c[n],
+// 			where c[n] is a complex coefficient found in the
+// 			external memory file COEFFILE.
+// 	When y[0] is output, a synchronization bit o_sync will be true as
+// 	well, otherwise it will be zero.
+//
+// 	Most of the work to do this is done within the butterfly, whether the
+// 	hardware accelerated butterfly (uses a DSP) or not.
+//
+// Creator:	Dan Gisselquist, Ph.D.
+//		Gisselquist Technology, LLC
+//
+////////////////////////////////////////////////////////////////////////////////
+// }}}
+// Copyright (C) 2015-2021, Gisselquist Technology, LLC
+// {{{
+// This file is part of the general purpose pipelined FFT project.
+//
+// The pipelined FFT project is free software (firmware): you can redistribute
+// it and/or modify it under the terms of the GNU Lesser General Public License
+// as published by the Free Software Foundation, either version 3 of the
+// License, or (at your option) any later version.
+//
+// The pipelined FFT project is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTIBILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser
+// General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program.  (It's in the $(ROOT)/doc directory.  Run make
+// with no target there if the PDF file isn't present.)  If not, see
+// <http://www.gnu.org/licenses/> for a copy.
+// }}}
+// License:	LGPL, v3, as defined and found on www.gnu.org,
+// {{{
+//		http://www.gnu.org/licenses/lgpl.html
+//
+// }}}
+////////////////////////////////////////////////////////////////////////////////
+//
+//
+`default_nettype	none
+//
+module	fftstage #(
+		// {{{
+		parameter	IWIDTH=16,CWIDTH=20,OWIDTH=17,
+		// Parameters specific to the core that should be changed when
+		// this core is built ... Note that the minimum LGSPAN (the base
+		// two log of the span, or the base two log of the current FFT
+		// size) is 3.  Smaller spans (i.e. the span of 2) must use the
+		// dbl laststage module.
+		// Verilator lint_off UNUSED
+		parameter	LGSPAN=7, BFLYSHIFT=0, // LGWIDTH=8
+		parameter [0:0]	OPT_HWMPY = 1,
+		// Clocks per CE.  If your incoming data rate is less than 50%
+		// of your clock speed, you can set CKPCE to 2'b10, make sure
+		// there's at least one clock between cycles when i_ce is high,
+		// and then use two multiplies instead of three.  Setting CKPCE
+		// to 2'b11, and insisting on at least two clocks with i_ce low
+		// between cycles with i_ce high, then the hardware optimized
+		// butterfly code will used one multiply instead of two.
+		parameter	CKPCE = 1,
+		// The COEFFILE parameter contains the name of the file
+		// containing the FFT twiddle factors
+		parameter	COEFFILE="cmem_256.hex"
+		// Verilator lint_on  UNUSED
+
+// `ifdef	VERILATOR
+		// parameter  [0:0]	ZERO_ON_IDLE = 1'b0
+// `else
+		// localparam [0:0]	ZERO_ON_IDLE = 1'b0
+// `endif // VERILATOR
+		// }}}
+	) (
+		// {{{
+		input	wire				i_clk, i_reset,
+							i_ce, i_sync,
+		input	wire	[(2*IWIDTH-1):0]	i_data,
+		output	reg	[(2*OWIDTH-1):0]	o_data,
+		output	reg				o_sync
+
+		// }}}
+	);
+		localparam [0:0]	ZERO_ON_IDLE = 1'b0;
+
+	// Local signal definitions
+	// {{{
+	// I am using the prefixes
+	// 	ib_*	to reference the inputs to the butterfly, and
+	// 	ob_*	to reference the outputs from the butterfly
+	reg	wait_for_sync;
+	reg	[(2*IWIDTH-1):0]	ib_a, ib_b;
+	reg	[(2*CWIDTH-1):0]	ib_c;
+	reg	ib_sync;
+
+	reg	b_started;
+	wire	ob_sync;
+	wire	[(2*OWIDTH-1):0]	ob_a, ob_b;
+
+	// cmem is defined as an array of real and complex values,
+	// where the top CWIDTH bits are the real value and the bottom
+	// CWIDTH bits are the imaginary value.
+	//
+	// cmem[i] = { (2^(CWIDTH-2)) * cos(2*pi*i/(2^LGWIDTH)),
+	//		(2^(CWIDTH-2)) * sin(2*pi*i/(2^LGWIDTH)) };
+	//
+	// reg	[(2*CWIDTH-1):0]	cmem [0:((1<<LGSPAN)-1)];
+    reg	[(2*CWIDTH-1):0]	cmem;
+	reg	[(LGSPAN):0]		iaddr;
+`ifdef	FORMAL
+// Let the formal tool pick the coefficients
+`else
+	// initial	$readmemh(COEFFILE,cmem);
+    generate
+    if (COEFFILE == "cmem_256.hex") begin
+        always @(*) begin
+            case (iaddr[(LGSPAN-1):0])
+                0   : cmem = 40'h4000000000;
+                1   : cmem = 40'h3ffb1fe6df;
+                2   : cmem = 40'h3fec4fcdc1;
+                3   : cmem = 40'h3fd3afb4ab;
+                4   : cmem = 40'h3fb12f9ba1;
+                5   : cmem = 40'h3f84df82a7;
+                6   : cmem = 40'h3f4ebf69bf;
+                7   : cmem = 40'h3f0edf50ef;
+                8   : cmem = 40'h3ec53f383a;
+                9   : cmem = 40'h3e71ef1fa4;
+                10  : cmem = 40'h3e150f0730;
+                11  : cmem = 40'h3dae8eeee3;
+                12  : cmem = 40'h3d3e8ed6c0;
+                13  : cmem = 40'h3cc51ebeca;
+                14  : cmem = 40'h3c424ea706;
+                15  : cmem = 40'h3bb62e8f78;
+                16  : cmem = 40'h3b20de7822;
+                17  : cmem = 40'h3a827e6108;
+                18  : cmem = 40'h39dafe4a2f;
+                19  : cmem = 40'h392a9e3399;
+                20  : cmem = 40'h38716e1d4a;
+                21  : cmem = 40'h37af8e0746;
+                22  : cmem = 40'h36e50df18f;
+                23  : cmem = 40'h36121ddc2a;
+                24  : cmem = 40'h3536ddc719;
+                25  : cmem = 40'h34535db25f;
+                26  : cmem = 40'h3367cd9e01;
+                27  : cmem = 40'h32744d8a01;
+                28  : cmem = 40'h31790d7662;
+                29  : cmem = 40'h30762d6327;
+                30  : cmem = 40'h2f6bcd5053;
+                31  : cmem = 40'h2e5a1d3de9;
+                32  : cmem = 40'h2d414d2bec;
+                33  : cmem = 40'h2c217d1a5f;
+                34  : cmem = 40'h2afadd0944;
+                35  : cmem = 40'h29cd9cf89e;
+                36  : cmem = 40'h2899ece870;
+                37  : cmem = 40'h275ffcd8bc;
+                38  : cmem = 40'h261ffcc984;
+                39  : cmem = 40'h24da1cbacb;
+                40  : cmem = 40'h238e7cac93;
+                41  : cmem = 40'h223d6c9edf;
+                42  : cmem = 40'h20e71c91b0;
+                43  : cmem = 40'h1f8bac8508;
+                44  : cmem = 40'h1e2b6c78ea;
+                45  : cmem = 40'h1cc67c6d57;
+                46  : cmem = 40'h1b5d1c6251;
+                47  : cmem = 40'h19ef8c57d9;
+                48  : cmem = 40'h187dec4df3;
+                49  : cmem = 40'h17088c449e;
+                50  : cmem = 40'h158fac3bdc;
+                51  : cmem = 40'h14136c33af;
+                52  : cmem = 40'h12940c2c18;
+                53  : cmem = 40'h1111dc2518;
+                54  : cmem = 40'h0f8d0c1eb0;
+                55  : cmem = 40'h0e05cc18e2;
+                56  : cmem = 40'h0c7c6c13ad;
+                57  : cmem = 40'h0af11c0f13;
+                58  : cmem = 40'h09641c0b15;
+                59  : cmem = 40'h07d59c07b3;
+                60  : cmem = 40'h0645fc04ee;
+                61  : cmem = 40'h04b55c02c6;
+                62  : cmem = 40'h0323fc013c;
+                63  : cmem = 40'h01921c004f;
+                64  : cmem = 40'h00000c0000;
+                65  : cmem = 40'hfe6dfc004f;
+                66  : cmem = 40'hfcdc1c013c;
+                67  : cmem = 40'hfb4abc02c6;
+                68  : cmem = 40'hf9ba1c04ee;
+                69  : cmem = 40'hf82a7c07b3;
+                70  : cmem = 40'hf69bfc0b15;
+                71  : cmem = 40'hf50efc0f13;
+                72  : cmem = 40'hf383ac13ad;
+                73  : cmem = 40'hf1fa4c18e2;
+                74  : cmem = 40'hf0730c1eb0;
+                75  : cmem = 40'heeee3c2518;
+                76  : cmem = 40'hed6c0c2c18;
+                77  : cmem = 40'hebecac33af;
+                78  : cmem = 40'hea706c3bdc;
+                79  : cmem = 40'he8f78c449e;
+                80  : cmem = 40'he7822c4df3;
+                81  : cmem = 40'he6108c57d9;
+                82  : cmem = 40'he4a2fc6251;
+                83  : cmem = 40'he3399c6d57;
+                84  : cmem = 40'he1d4ac78ea;
+                85  : cmem = 40'he0746c8508;
+                86  : cmem = 40'hdf18fc91b0;
+                87  : cmem = 40'hddc2ac9edf;
+                88  : cmem = 40'hdc719cac93;
+                89  : cmem = 40'hdb25fcbacb;
+                90  : cmem = 40'hd9e01cc984;
+                91  : cmem = 40'hd8a01cd8bc;
+                92  : cmem = 40'hd7662ce870;
+                93  : cmem = 40'hd6327cf89e;
+                94  : cmem = 40'hd5053d0944;
+                95  : cmem = 40'hd3de9d1a5f;
+                96  : cmem = 40'hd2becd2bec;
+                97  : cmem = 40'hd1a5fd3de9;
+                98  : cmem = 40'hd0944d5053;
+                99  : cmem = 40'hcf89ed6327;
+                100 : cmem = 40'hce870d7662;
+                101 : cmem = 40'hcd8bcd8a01;
+                102 : cmem = 40'hcc984d9e01;
+                103 : cmem = 40'hcbacbdb25f;
+                104 : cmem = 40'hcac93dc719;
+                105 : cmem = 40'hc9edfddc2a;
+                106 : cmem = 40'hc91b0df18f;
+                107 : cmem = 40'hc8508e0746;
+                108 : cmem = 40'hc78eae1d4a;
+                109 : cmem = 40'hc6d57e3399;
+                110 : cmem = 40'hc6251e4a2f;
+                111 : cmem = 40'hc57d9e6108;
+                112 : cmem = 40'hc4df3e7822;
+                113 : cmem = 40'hc449ee8f78;
+                114 : cmem = 40'hc3bdcea706;
+                115 : cmem = 40'hc33afebeca;
+                116 : cmem = 40'hc2c18ed6c0;
+                117 : cmem = 40'hc2518eeee3;
+                118 : cmem = 40'hc1eb0f0730;
+                119 : cmem = 40'hc18e2f1fa4;
+                120 : cmem = 40'hc13adf383a;
+                121 : cmem = 40'hc0f13f50ef;
+                122 : cmem = 40'hc0b15f69bf;
+                123 : cmem = 40'hc07b3f82a7;
+                124 : cmem = 40'hc04eef9ba1;
+                125 : cmem = 40'hc02c6fb4ab;
+                126 : cmem = 40'hc013cfcdc1;
+                127 : cmem = 40'hc004ffe6df;
+            endcase
+        end
+    end else if (COEFFILE == "cmem_128.hex") begin
+        always @(*) begin
+            case (iaddr[(LGSPAN-1):0])
+                0   : cmem = 42'h10000000000;
+                1   : cmem = 42'h0ffb11f9b82;
+                2   : cmem = 42'h0fec47f3743;
+                3   : cmem = 42'h0fd3abed37f;
+                4   : cmem = 42'h0fb14de7074;
+                5   : cmem = 42'h0f8541e0e60;
+                6   : cmem = 42'h0f4fa1dad7f;
+                7   : cmem = 42'h0f1091d4e0d;
+                8   : cmem = 42'h0ec837cf044;
+                9   : cmem = 42'h0e76bfc945e;
+                10  : cmem = 42'h0e1c5bc3a94;
+                11  : cmem = 42'h0db943be31e;
+                12  : cmem = 42'h0d4db5b8e31;
+                13  : cmem = 42'h0cd9f1b3c02;
+                14  : cmem = 42'h0c5e41aecc3;
+                15  : cmem = 42'h0bdaf1aa0a6;
+                16  : cmem = 42'h0b5051a57d8;
+                17  : cmem = 42'h0abeb5a1288;
+                18  : cmem = 42'h0a267b9d0e0;
+                19  : cmem = 42'h0987fd99308;
+                20  : cmem = 42'h08e39f95926;
+                21  : cmem = 42'h0839c59235f;
+                22  : cmem = 42'h078ad98f1d3;
+                23  : cmem = 42'h06d7458c4a1;
+                24  : cmem = 42'h061f7989be5;
+                25  : cmem = 42'h0563e7877b8;
+                26  : cmem = 42'h04a50385830;
+                27  : cmem = 42'h03e34183d60;
+                28  : cmem = 42'h031f198275a;
+                29  : cmem = 42'h0259038162b;
+                30  : cmem = 42'h01917b809dd;
+                31  : cmem = 42'h00c8fd80278;
+                32  : cmem = 42'h00000180000;
+                33  : cmem = 42'h3f370580278;
+                34  : cmem = 42'h3e6e87809dd;
+                35  : cmem = 42'h3da6ff8162b;
+                36  : cmem = 42'h3ce0e98275a;
+                37  : cmem = 42'h3c1cc183d60;
+                38  : cmem = 42'h3b5aff85830;
+                39  : cmem = 42'h3a9c1b877b8;
+                40  : cmem = 42'h39e08989be5;
+                41  : cmem = 42'h3928bd8c4a1;
+                42  : cmem = 42'h3875298f1d3;
+                43  : cmem = 42'h37c63d9235f;
+                44  : cmem = 42'h371c6395926;
+                45  : cmem = 42'h36780599308;
+                46  : cmem = 42'h35d9879d0e0;
+                47  : cmem = 42'h35414da1288;
+                48  : cmem = 42'h34afb1a57d8;
+                49  : cmem = 42'h342511aa0a6;
+                50  : cmem = 42'h33a1c1aecc3;
+                51  : cmem = 42'h332611b3c02;
+                52  : cmem = 42'h32b24db8e31;
+                53  : cmem = 42'h3246bfbe31e;
+                54  : cmem = 42'h31e3a7c3a94;
+                55  : cmem = 42'h318943c945e;
+                56  : cmem = 42'h3137cbcf044;
+                57  : cmem = 42'h30ef71d4e0d;
+                58  : cmem = 42'h30b061dad7f;
+                59  : cmem = 42'h307ac1e0e60;
+                60  : cmem = 42'h304eb5e7074;
+                61  : cmem = 42'h302c57ed37f;
+                62  : cmem = 42'h3013bbf3743;
+                63  : cmem = 42'h3004f1f9b82;
+            endcase
+        end
+    end else if (COEFFILE == "cmem_64.hex") begin
+        always @(*) begin
+            case (iaddr[(LGSPAN-1):0])
+                0   : cmem = 44'h40000000000;
+                1   : cmem = 44'h3fb11fe6e86;
+                2   : cmem = 44'h3ec533ce0e9;
+                3   : cmem = 44'h3d3e87b5afe;
+                4   : cmem = 44'h3b20db9e087;
+                5   : cmem = 44'h38716787529;
+                6   : cmem = 44'h3536cf71c62;
+                7   : cmem = 44'h3179035d986;
+                8   : cmem = 44'h2d413f4afb1;
+                9   : cmem = 44'h2899eb3a1c0;
+                10  : cmem = 44'h238e7b2b24d;
+                11  : cmem = 44'h1e2b5f1e3a7;
+                12  : cmem = 44'h187de7137ca;
+                13  : cmem = 44'h12940b0b05f;
+                14  : cmem = 44'h0c7c5f04eb4;
+                15  : cmem = 44'h0645eb013b9;
+                16  : cmem = 44'h00000300000;
+                17  : cmem = 44'hf9ba1b013b9;
+                18  : cmem = 44'hf383a704eb4;
+                19  : cmem = 44'hed6bfb0b05f;
+                20  : cmem = 44'he7821f137ca;
+                21  : cmem = 44'he1d4a71e3a7;
+                22  : cmem = 44'hdc718b2b24d;
+                23  : cmem = 44'hd7661b3a1c0;
+                24  : cmem = 44'hd2bec74afb1;
+                25  : cmem = 44'hce87035d986;
+                26  : cmem = 44'hcac93771c62;
+                27  : cmem = 44'hc78e9f87529;
+                28  : cmem = 44'hc4df2b9e087;
+                29  : cmem = 44'hc2c17fb5afe;
+                30  : cmem = 44'hc13ad3ce0e9;
+                31  : cmem = 44'hc04ee7e6e86;
+            endcase
+        end
+    end else if (COEFFILE == "cmem_32.hex") begin
+        always @(*) begin
+            case (iaddr[(LGSPAN-1):0])
+                0   : cmem = 44'h40000000000;
+                1   : cmem = 44'h3ec533ce0e9;
+                2   : cmem = 44'h3b20db9e087;
+                3   : cmem = 44'h3536cf71c62;
+                4   : cmem = 44'h2d413f4afb1;
+                5   : cmem = 44'h238e7b2b24d;
+                6   : cmem = 44'h187de7137ca;
+                7   : cmem = 44'h0c7c5f04eb4;
+                8   : cmem = 44'h00000300000;
+                9   : cmem = 44'hf383a704eb4;
+                10  : cmem = 44'he7821f137ca;
+                11  : cmem = 44'hdc718b2b24d;
+                12  : cmem = 44'hd2bec74afb1;
+                13  : cmem = 44'hcac93771c62;
+                14  : cmem = 44'hc4df2b9e087;
+                15  : cmem = 44'hc13ad3ce0e9;
+            endcase
+        end
+    end else if (COEFFILE == "cmem_16.hex") begin
+        always @(*) begin
+            case (iaddr[(LGSPAN-1):0])
+                0   : cmem = 46'h100000000000;
+                1   : cmem = 46'h0ec83673c10f;
+                2   : cmem = 46'h0b504f695f62;
+                3   : cmem = 46'h061f78e26f94;
+                4   : cmem = 46'h000000600000;
+                5   : cmem = 46'h39e087e26f94;
+                6   : cmem = 46'h34afb1695f62;
+                7   : cmem = 46'h3137ca73c10f;
+            endcase
+        end
+    end else begin
+        always @(*) begin
+            case (iaddr[(LGSPAN-1):0])
+                0   : cmem = 46'h100000000000;
+                1   : cmem = 46'h0b504f695f62;
+                2   : cmem = 46'h000000600000;
+                3   : cmem = 46'h34afb1695f62;
+            endcase
+        end
+    end
+    endgenerate
+
+`endif
+
+	reg	[(2*IWIDTH-1):0]	imem	[0:((1<<LGSPAN)-1)];
+
+	reg	[LGSPAN:0]		oaddr;
+	reg	[(2*OWIDTH-1):0]	omem	[0:((1<<LGSPAN)-1)];
+
+	wire				idle;
+	reg	[(LGSPAN-1):0]		nxt_oaddr;
+	reg	[(2*OWIDTH-1):0]	pre_ovalue;
+	// }}}
+
+	// wait_for_sync, iaddr
+	// {{{
+	initial wait_for_sync = 1'b1;
+	initial iaddr = 0;
+	always @(posedge i_clk)
+	if (i_reset)
+	begin
+		wait_for_sync <= 1'b1;
+		iaddr <= 0;
+	end else if ((i_ce)&&((!wait_for_sync)||(i_sync)))
+	begin
+		//
+		// First step: Record what we're not ready to use yet
+		//
+		iaddr <= iaddr + { {(LGSPAN){1'b0}}, 1'b1 };
+		wait_for_sync <= 1'b0;
+	end
+	// }}}
+
+	// Write to imem
+	// {{{
+	always @(posedge i_clk) // Need to make certain here that we don't read
+	if ((i_ce)&&(!iaddr[LGSPAN])) // and write the same address on
+		imem[iaddr[(LGSPAN-1):0]] <= i_data; // the same clk
+	// }}}
+
+	// ib_sync
+	// {{{
+	// Now, we have all the inputs, so let's feed the butterfly
+	//
+	// ib_sync is the synchronization bit to the butterfly.  It will
+	// be tracked within the butterfly, and used to create the o_sync
+	// value when the results from this output are produced
+	initial ib_sync = 1'b0;
+	always @(posedge i_clk)
+	if (i_reset)
+		ib_sync <= 1'b0;
+	else if (i_ce)
+	begin
+		// Set the sync to true on the very first
+		// valid input in, and hence on the very
+		// first valid data out per FFT.
+		ib_sync <= (iaddr==(1<<(LGSPAN)));
+	end
+	// }}}
+
+	// ib_a, ib_b, ib_c
+	// {{{
+	// Read the values from our input memory, and use them to feed
+	// first of two butterfly inputs
+	always	@(posedge i_clk)
+	if (i_ce)
+	begin
+		// One input from memory, ...
+		ib_a <= imem[iaddr[(LGSPAN-1):0]];
+		// One input clocked in from the top
+		ib_b <= i_data;
+		// and the coefficient or twiddle factor
+		// ib_c <= cmem[iaddr[(LGSPAN-1):0]];
+        ib_c <= cmem;
+	end
+	// }}}
+
+	// idle
+	// {{{
+	// The idle register is designed to keep track of when an input
+	// to the butterfly is important and going to be used.  It's used
+	// in a flag following, so that when useful values are placed
+	// into the butterfly they'll be non-zero (idle=0), otherwise when
+	// the inputs to the butterfly are irrelevant and will be ignored,
+	// then (idle=1) those inputs will be set to zero.  This
+	// functionality is not designed to be used in operation, but only
+	// within a Verilator simulation context when chasing a bug.
+	// In this limited environment, the non-zero answers will stand
+	// in a trace making it easier to highlight a bug.
+	generate if (ZERO_ON_IDLE)
+	begin : GEN_ZERO_ON_IDLE
+		reg	r_idle;
+
+		initial	r_idle = 1;
+		always @(posedge i_clk)
+		if (i_reset)
+			r_idle <= 1'b1;
+		else if (i_ce)
+			r_idle <= (!iaddr[LGSPAN])&&(!wait_for_sync);
+
+		assign	idle = r_idle;
+
+	end else begin : NO_IDLE_GENERATION
+
+		assign	idle = 0;
+
+	end endgenerate
+	// }}}
+
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Instantiate the butterfly
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
+// For the formal proof, we'll assume the outputs of hwbfly and/or
+// butterfly, rather than actually calculating them.  This will simplify
+// the proof and (if done properly) will be equivalent.  Be careful of
+// defining FORMAL if you want the full logic!
+`ifndef	FORMAL
+	//
+	generate if (OPT_HWMPY)
+	begin : HWBFLY
+
+		hwbfly #(
+			// {{{
+			.IWIDTH(IWIDTH),
+			.CWIDTH(CWIDTH),
+			.OWIDTH(OWIDTH),
+			.CKPCE(CKPCE),
+			.SHIFT(BFLYSHIFT)
+			// }}}
+		) bfly(
+			// {{{
+			.i_clk(i_clk), .i_reset(i_reset), .i_ce(i_ce),
+			.i_coef((idle && !i_ce) ? 0:ib_c),
+			.i_left((idle && !i_ce) ? 0:ib_a),
+			.i_right((idle && !i_ce) ? 0:ib_b),
+			.i_aux(ib_sync && i_ce),
+			.o_left(ob_a), .o_right(ob_b), .o_aux(ob_sync)
+			// }}}
+		);
+
+	end else begin : FWBFLY
+
+		butterfly #(
+			// {{{
+			.IWIDTH(IWIDTH),
+			.CWIDTH(CWIDTH),
+			.OWIDTH(OWIDTH),
+			.CKPCE(CKPCE),
+			.SHIFT(BFLYSHIFT)
+			// }}}
+		) bfly(
+			// {{{
+			.i_clk(i_clk), .i_reset(i_reset), .i_ce(i_ce),
+			.i_coef( (idle && !i_ce)?0:ib_c),
+			.i_left( (idle && !i_ce)?0:ib_a),
+			.i_right((idle && !i_ce)?0:ib_b),
+			.i_aux(ib_sync && i_ce),
+			.o_left(ob_a), .o_right(ob_b), .o_aux(ob_sync)
+			// }}}
+		);
+
+	end endgenerate
+`else
+
+	// Verilator lint_off UNDRIVEN
+	(* anyseq *)    wire    [(2*OWIDTH-1):0]        f_ob_a, f_ob_b;
+	(* anyseq *)    wire    f_ob_sync;
+	// Verilator lint_on  UNDRIVEN
+
+	assign  ob_sync = f_ob_sync;
+	assign  ob_a    = f_ob_a;
+	assign  ob_b    = f_ob_b;
+
+`endif
+
+	// }}}
+
+	// oaddr, o_sync, b_started
+	// {{{
+	// Next step: recover the outputs from the butterfly
+	//
+	// The first output can go immediately to the output of this routine
+	// The second output must wait until this time in the idle cycle
+	// oaddr is the output memory address, keeping track of where we are
+	// in this output cycle.
+	initial oaddr     = 0;
+	initial o_sync    = 0;
+	initial b_started = 0;
+	always @(posedge i_clk)
+	if (i_reset)
+	begin
+		oaddr     <= 0;
+		o_sync    <= 0;
+		// b_started will be true once we've seen the first ob_sync
+		b_started <= 0;
+	end else if (i_ce)
+	begin
+		o_sync <= (!oaddr[LGSPAN])?ob_sync : 1'b0;
+		if (ob_sync||b_started)
+			oaddr <= oaddr + 1'b1;
+		if ((ob_sync)&&(!oaddr[LGSPAN]))
+			// If b_started is true, then a butterfly output
+			// is available
+			b_started <= 1'b1;
+	end
+	// }}}
+
+	// nxt_oaddr
+	// {{{
+	always @(posedge i_clk)
+	if (i_ce)
+		nxt_oaddr[0] <= oaddr[0];
+	generate if (LGSPAN>1)
+	begin
+
+		always @(posedge i_clk)
+		if (i_ce)
+			nxt_oaddr[LGSPAN-1:1] <= oaddr[LGSPAN-1:1] + 1'b1;
+
+	end endgenerate
+	// }}}
+
+	// omem
+	// {{{
+	// Only write to the memory on the first half of the outputs
+	// We'll use the memory value on the second half of the outputs
+	always @(posedge i_clk)
+	if ((i_ce)&&(!oaddr[LGSPAN]))
+		omem[oaddr[(LGSPAN-1):0]] <= ob_b;
+	// }}}
+
+	// pre_ovalue
+	// {{{
+	always @(posedge i_clk)
+	if (i_ce)
+		pre_ovalue <= omem[nxt_oaddr[(LGSPAN-1):0]];
+	// }}}
+
+	// o_data
+	// {{{
+	always @(posedge i_clk)
+	if (i_ce)
+		o_data <= (!oaddr[LGSPAN]) ? ob_a : pre_ovalue;
+	// }}}
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//
+// Formal properties
+// {{{
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+`ifdef	FORMAL
+	// Local (formal) declarations
+	// {{{
+	// An arbitrary processing delay from butterfly input to
+	// butterfly output(s)
+	// Verilator lint_off UNDRIVEN
+	(* anyconst *) reg	[LGSPAN:0]	f_mpydelay;
+	(* anyconst *)	reg	[LGSPAN:0]	f_addr;
+	// Verilator lint_on  UNDRIVEN
+	reg	[2*IWIDTH-1:0]			f_left, f_right;
+	reg	[2*OWIDTH-1:0]	f_oleft, f_oright;
+	reg	[LGSPAN:0]	f_oaddr;
+	wire	[LGSPAN:0]	f_oaddr_m1 = f_oaddr - 1'b1;
+	reg	f_output_active;
+	// }}}
+
+
+	always @(*)
+		assume(f_mpydelay > 1);
+
+	reg	f_past_valid;
+	initial	f_past_valid = 1'b0;
+	always @(posedge i_clk)
+		f_past_valid <= 1'b1;
+
+	always @(posedge i_clk)
+	if ((!f_past_valid)||($past(i_reset)))
+	begin
+		assert(iaddr == 0);
+		assert(wait_for_sync);
+		assert(o_sync == 0);
+		assert(oaddr == 0);
+		assert(!b_started);
+		assert(!o_sync);
+	end
+
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Formally verify the input half, from the inputs to this module
+	// to the inputs of the butterfly
+	//
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
+
+	// Let's  verify a specific set of inputs
+
+	always @(posedge i_clk)
+	if (!$past(i_ce) && !$past(i_ce,2) && !$past(i_ce,3) && !$past(i_ce,4))
+		assume(!i_ce);
+
+	always @(*)
+		assume(f_addr[LGSPAN]==1'b0);
+
+	always @(posedge i_clk)
+	if ((i_ce)&&(iaddr[LGSPAN:0] == f_addr))
+		f_left <= i_data;
+
+	always @(*)
+	if (wait_for_sync)
+		assert(iaddr == 0);
+
+	wire	[LGSPAN:0]	f_last_addr = iaddr - 1'b1;
+
+	always @(posedge i_clk)
+	if ((!wait_for_sync)&&(f_last_addr >= { 1'b0, f_addr[LGSPAN-1:0]}))
+		assert(f_left == imem[f_addr[LGSPAN-1:0]]);
+
+	always @(posedge i_clk)
+	if ((i_ce)&&(iaddr == { 1'b1, f_addr[LGSPAN-1:0]}))
+		f_right <= i_data;
+
+	always @(posedge i_clk)
+	if (i_ce && !wait_for_sync
+		&& (f_last_addr == { 1'b1, f_addr[LGSPAN-1:0]}))
+	begin
+		assert(ib_a == f_left);
+		assert(ib_b == f_right);
+		assert(ib_c == cmem[f_addr[LGSPAN-1:0]]);
+	end
+
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Formally verify the output half, from the output of the butterfly
+	// to the outputs of this module
+	//
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
+
+	always @(*)
+		f_oaddr = iaddr - f_mpydelay + {1'b1,{(LGSPAN-1){1'b0}} };
+
+	assign	f_oaddr_m1 = f_oaddr - 1'b1;
+
+	initial	f_output_active = 1'b0;
+	always @(posedge i_clk)
+	if (i_reset)
+		f_output_active <= 1'b0;
+	else if ((i_ce)&&(ob_sync))
+		f_output_active <= 1'b1;
+
+	always @(*)
+		assert(f_output_active == b_started);
+
+	always @(*)
+	if (wait_for_sync)
+		assert(!f_output_active);
+
+	always @(*)
+	if (f_output_active)
+	begin
+		assert(oaddr == f_oaddr);
+	end else
+		assert(oaddr == 0);
+
+	always @(*)
+	if (wait_for_sync)
+		assume(!ob_sync);
+
+	always @(*)
+		assume(ob_sync == (f_oaddr == 0));
+
+	always @(posedge i_clk)
+	if ((f_past_valid)&&(!$past(i_ce)))
+	begin
+		assume($stable(ob_a));
+		assume($stable(ob_b));
+	end
+
+	initial	f_oleft  = 0;
+	initial	f_oright = 0;
+	always @(posedge i_clk)
+	if ((i_ce)&&(f_oaddr == f_addr))
+	begin
+		f_oleft  <= ob_a;
+		f_oright <= ob_b;
+	end
+
+	always @(posedge i_clk)
+	if ((f_output_active)&&(f_oaddr_m1 >= { 1'b0, f_addr[LGSPAN-1:0]}))
+		assert(omem[f_addr[LGSPAN-1:0]] == f_oright);
+
+	always @(posedge i_clk)
+	if ((i_ce)&&(f_oaddr_m1 == 0)&&(f_output_active))
+	begin
+		assert(o_sync);
+	end else if ((i_ce)||(!f_output_active))
+		assert(!o_sync);
+
+	always @(posedge i_clk)
+	if ((i_ce)&&(f_output_active)&&(f_oaddr_m1 == f_addr))
+		assert(o_data == f_oleft);
+
+	always @(posedge i_clk)
+	if ((i_ce)&&(f_output_active)&&(f_oaddr[LGSPAN])
+			&&(f_oaddr[LGSPAN-1:0] == f_addr[LGSPAN-1:0]))
+		assert(pre_ovalue == f_oright);
+
+	always @(posedge i_clk)
+	if ((i_ce)&&(f_output_active)&&(f_oaddr_m1[LGSPAN])
+			&&(f_oaddr_m1[LGSPAN-1:0] == f_addr[LGSPAN-1:0]))
+		assert(o_data == f_oright);
+
+	// Make Verilator happy
+	// {{{
+	// Verilator lint_off UNUSED
+	wire	unused_formal;
+	assign unused_formal = &{ 1'b0, idle, ib_sync };
+	// Verilator lint_on  UNUSED
+	// }}}
+
+`endif // FORMAL
+// }}}
+endmodule
+////////////////////////////////////////////////////////////////////////////////
+//
 // Filename: 	fft-core/longbimpy.v
 // {{{
 // Project:	A General Purpose Pipelined FFT Implementation
@@ -10779,7 +11525,10 @@ endmodule
 module	longbimpy #(
 		// {{{
 		parameter	IAW=8,	// The width of i_a, min width is 5
-				IBW=12	// The width of i_b, can be anything
+				IBW=12,	// The width of i_b, can be anything
+        // DESIGN COMPILER MODIFICATON - Parameters must be declared before use
+        parameter	AW = (IAW<IBW) ? IAW : IBW,
+        parameter	BW = (IAW<IBW) ? IBW : IAW
 		// }}}
 	) (
 		// {{{
@@ -10798,8 +11547,8 @@ module	longbimpy #(
 			// by any implementation, but are based upon hardware
 			// and the above values:
 			// OW=IAW+IBW;	// The output width
-		localparam	AW = (IAW<IBW) ? IAW : IBW;
-                localparam	BW = (IAW<IBW) ? IBW : IAW;
+		// localparam	AW = (IAW<IBW) ? IAW : IBW;
+        //         localparam	BW = (IAW<IBW) ? IBW : IAW;
 	        localparam	IW=(AW+1)&(-2);	// Internal width of A
 		localparam	LUTB=2;	// How many bits to mpy at once
 		localparam	TLEN=(AW+(LUTB-1))/LUTB; // Rows in our tableau
@@ -11202,364 +11951,4 @@ module	longbimpy #(
 `endif	// BUTTERFLY
 `endif	// FORMAL
 // }}}
-endmodule
-////////////////////////////////////////////////////////////////////////////////
-//
-// Filename:	qtrstage.v
-// {{{
-// Project:	A General Purpose Pipelined FFT Implementation
-//
-// Purpose:	This file encapsulates the 4 point stage of a decimation in
-//		frequency FFT.  This particular implementation is optimized
-//	so that all of the multiplies are accomplished by additions and
-//	multiplexers only.
-//
-// Operation:
-// 	The operation of this stage is identical to the regular stages of
-// 	the FFT (see them for details), with one additional and critical
-// 	difference: this stage doesn't require any hardware multiplication.
-// 	The multiplies within it may all be accomplished using additions and
-// 	subtractions.
-//
-// 	Let's see how this is done.  Given x[n] and x[n+2], cause thats the
-// 	stage we are working on, with i_sync true for x[0] being input,
-// 	produce the output:
-//
-// 	y[n  ] = x[n] + x[n+2]
-// 	y[n+2] = (x[n] - x[n+2]) * e^{-j2pi n/2}	(forward transform)
-// 	       = (x[n] - x[n+2]) * -j^n
-//
-// 	y[n].r = x[n].r + x[n+2].r	(This is the easy part)
-// 	y[n].i = x[n].i + x[n+2].i
-//
-// 	y[2].r = x[0].r - x[2].r
-// 	y[2].i = x[0].i - x[2].i
-//
-// 	y[3].r =   (x[1].i - x[3].i)		(forward transform)
-// 	y[3].i = - (x[1].r - x[3].r)
-//
-// 	y[3].r = - (x[1].i - x[3].i)		(inverse transform)
-// 	y[3].i =   (x[1].r - x[3].r)		(INVERSE = 1)
-//
-// Creator:	Dan Gisselquist, Ph.D.
-//		Gisselquist Technology, LLC
-//
-////////////////////////////////////////////////////////////////////////////////
-// }}}
-// Copyright (C) 2015-2021, Gisselquist Technology, LLC
-// {{{
-// This file is part of the general purpose pipelined FFT project.
-//
-// The pipelined FFT project is free software (firmware): you can redistribute
-// it and/or modify it under the terms of the GNU Lesser General Public License
-// as published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version.
-//
-// The pipelined FFT project is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTIBILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser
-// General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with this program.  (It's in the $(ROOT)/doc directory.  Run make
-// with no target there if the PDF file isn't present.)  If not, see
-// <http://www.gnu.org/licenses/> for a copy.
-// }}}
-// License:	LGPL, v3, as defined and found on www.gnu.org,
-// {{{
-//		http://www.gnu.org/licenses/lgpl.html
-//
-// }}}
-////////////////////////////////////////////////////////////////////////////////
-//
-//
-`default_nettype	none
-//
-module	qtrstage(i_clk, i_reset, i_ce, i_sync, i_data, o_data, o_sync);
-	parameter	IWIDTH=16, OWIDTH=IWIDTH+1;
-	parameter	LGWIDTH=8, INVERSE=0,SHIFT=0;
-	input	wire				i_clk, i_reset, i_ce, i_sync;
-	input	wire	[(2*IWIDTH-1):0]	i_data;
-	output	reg	[(2*OWIDTH-1):0]	o_data;
-	output	reg				o_sync;
-	
-	reg		wait_for_sync;
-	reg	[2:0]	pipeline;
-
-	reg	signed [(IWIDTH):0]	sum_r, sum_i, diff_r, diff_i;
-
-	reg	[(2*OWIDTH-1):0]	ob_a;
-	wire	[(2*OWIDTH-1):0]	ob_b;
-	reg	[(OWIDTH-1):0]		ob_b_r, ob_b_i;
-	assign	ob_b = { ob_b_r, ob_b_i };
-
-	reg	[(LGWIDTH-1):0]		iaddr;
-	reg	[(2*IWIDTH-1):0]	imem	[0:1];
-
-	wire	signed	[(IWIDTH-1):0]	imem_r, imem_i;
-	assign	imem_r = imem[1][(2*IWIDTH-1):(IWIDTH)];
-	assign	imem_i = imem[1][(IWIDTH-1):0];
-
-	wire	signed	[(IWIDTH-1):0]	i_data_r, i_data_i;
-	assign	i_data_r = i_data[(2*IWIDTH-1):(IWIDTH)];
-	assign	i_data_i = i_data[(IWIDTH-1):0];
-
-	reg	[(2*OWIDTH-1):0]	omem [0:1];
-
-	//
-	// Round our output values down to OWIDTH bits
-	//
-	wire	signed	[(OWIDTH-1):0]	rnd_sum_r, rnd_sum_i,
-			rnd_diff_r, rnd_diff_i, n_rnd_diff_r, n_rnd_diff_i;
-	convround #(IWIDTH+1,OWIDTH,SHIFT)	do_rnd_sum_r(i_clk, i_ce,
-				sum_r, rnd_sum_r);
-
-	convround #(IWIDTH+1,OWIDTH,SHIFT)	do_rnd_sum_i(i_clk, i_ce,
-				sum_i, rnd_sum_i);
-
-	convround #(IWIDTH+1,OWIDTH,SHIFT)	do_rnd_diff_r(i_clk, i_ce,
-				diff_r, rnd_diff_r);
-
-	convround #(IWIDTH+1,OWIDTH,SHIFT)	do_rnd_diff_i(i_clk, i_ce,
-				diff_i, rnd_diff_i);
-
-	assign n_rnd_diff_r = - rnd_diff_r;
-	assign n_rnd_diff_i = - rnd_diff_i;
-	initial wait_for_sync = 1'b1;
-	initial iaddr = 0;
-	always @(posedge i_clk)
-	if (i_reset)
-	begin
-		wait_for_sync <= 1'b1;
-		iaddr <= 0;
-	end else if ((i_ce)&&((!wait_for_sync)||(i_sync)))
-	begin
-		iaddr <= iaddr + 1'b1;
-		wait_for_sync <= 1'b0;
-	end
-
-	always @(posedge i_clk)
-	if (i_ce)
-	begin
-		imem[0] <= i_data;
-		imem[1] <= imem[0];
-	end
-
-
-	// Note that we don't check on wait_for_sync or i_sync here.
-	// Why not?  Because iaddr will always be zero until after the
-	// first i_ce, so we are safe.
-	initial pipeline = 3'h0;
-	always	@(posedge i_clk)
-	if (i_reset)
-		pipeline <= 3'h0;
-	else if (i_ce) // is our pipeline process full?  Which stages?
-		pipeline <= { pipeline[1:0], iaddr[1] };
-
-	// This is the pipeline[-1] stage, pipeline[0] will be set next.
-	always	@(posedge i_clk)
-	if ((i_ce)&&(iaddr[1]))
-	begin
-		sum_r  <= imem_r + i_data_r;
-		sum_i  <= imem_i + i_data_i;
-		diff_r <= imem_r - i_data_r;
-		diff_i <= imem_i - i_data_i;
-	end
-
-	// pipeline[1] takes sum_x and diff_x and produces rnd_x
-
-	// Now for pipeline[2].  We can actually do this at all i_ce
-	// clock times, since nothing will listen unless pipeline[3]
-	// on the next clock.  Thus, we simplify this logic and do
-	// it independent of pipeline[2].
-	always	@(posedge i_clk)
-	if (i_ce)
-	begin
-		ob_a <= { rnd_sum_r, rnd_sum_i };
-		// on Even, W = e^{-j2pi 1/4 0} = 1
-		if (!iaddr[0])
-		begin
-			ob_b_r <= rnd_diff_r;
-			ob_b_i <= rnd_diff_i;
-		end else if (INVERSE==0) begin
-			// on Odd, W = e^{-j2pi 1/4} = -j
-			ob_b_r <=   rnd_diff_i;
-			ob_b_i <= n_rnd_diff_r;
-		end else begin
-			// on Odd, W = e^{j2pi 1/4} = j
-			ob_b_r <= n_rnd_diff_i;
-			ob_b_i <=   rnd_diff_r;
-		end
-	end
-
-	always	@(posedge i_clk)
-	if (i_ce)
-	begin // In sequence, clock = 3
-		omem[0] <= ob_b;
-		omem[1] <= omem[0];
-		if (pipeline[2])
-			o_data <= ob_a;
-		else
-			o_data <= omem[1];
-	end
-
-	initial	o_sync = 1'b0;
-	always	@(posedge i_clk)
-	if (i_reset)
-		o_sync <= 1'b0;
-	else if (i_ce)
-		o_sync <= (iaddr[2:0] == 3'b101);
-
-`ifdef	FORMAL
-	// Formal declarations
-	// {{{
-	reg				f_past_valid;
-	reg	signed [IWIDTH-1:0]	f_piped_real	[0:7];
-	reg	signed [IWIDTH-1:0]	f_piped_imag	[0:7];
-	reg				f_rsyncd;
-	wire				f_syncd;
-	reg	[1:0]			f_state;
-	wire	signed [OWIDTH-1:0]	f_o_real, f_o_imag;
-	// }}}
-
-	initial	f_past_valid = 1'b0;
-	always @(posedge i_clk)
-		f_past_valid <= 1'b1;
-
-`ifdef	QTRSTAGE
-	always @(posedge i_clk)
-		assume((i_ce)||($past(i_ce))||($past(i_ce,2)));
-`endif
-
-	// The below logic only works if the rounding stage does nothing
-	initial	assert(IWIDTH+1 == OWIDTH);
-
-
-	always @(posedge i_clk)
-	if (i_ce)
-	begin
-		f_piped_real[0] <= i_data[2*IWIDTH-1:IWIDTH];
-		f_piped_imag[0] <= i_data[  IWIDTH-1:0];
-
-		f_piped_real[1] <= f_piped_real[0];
-		f_piped_imag[1] <= f_piped_imag[0];
-
-		f_piped_real[2] <= f_piped_real[1];
-		f_piped_imag[2] <= f_piped_imag[1];
-
-		f_piped_real[3] <= f_piped_real[2];
-		f_piped_imag[3] <= f_piped_imag[2];
-
-		f_piped_real[4] <= f_piped_real[3];
-		f_piped_imag[4] <= f_piped_imag[3];
-
-		f_piped_real[5] <= f_piped_real[4];
-		f_piped_imag[5] <= f_piped_imag[4];
-
-		f_piped_real[6] <= f_piped_real[5];
-		f_piped_imag[6] <= f_piped_imag[5];
-
-		f_piped_real[7] <= f_piped_real[6];
-		f_piped_imag[7] <= f_piped_imag[6];
-	end
-
-
-	initial	f_rsyncd = 0;
-	always @(posedge i_clk)
-	if (i_reset)
-		f_rsyncd <= 1'b0;
-	else if (!f_rsyncd)
-		f_rsyncd <= (o_sync);
-	assign	f_syncd = (f_rsyncd)||(o_sync);
-
-
-	initial	f_state = 0;
-	always @(posedge i_clk)
-	if (i_reset)
-		f_state <= 0;
-	else if ((i_ce)&&((!wait_for_sync)||(i_sync)))
-		f_state <= f_state + 1;
-
-	always @(*)
-	if (f_state != 0)
-		assume(!i_sync);
-
-	always @(posedge i_clk)
-		assert(f_state[1:0] == iaddr[1:0]);
-
-	assign			f_o_real = o_data[2*OWIDTH-1:OWIDTH];
-	assign			f_o_imag = o_data[  OWIDTH-1:0];
-
-	always @(posedge i_clk)
-	if (f_state == 2'b11)
-	begin
-		assume(f_piped_real[0] != 3'sb100);
-		assume(f_piped_real[2] != 3'sb100);
-		assert(sum_r  == f_piped_real[2] + f_piped_real[0]);
-		assert(sum_i  == f_piped_imag[2] + f_piped_imag[0]);
-
-		assert(diff_r == f_piped_real[2] - f_piped_real[0]);
-		assert(diff_i == f_piped_imag[2] - f_piped_imag[0]);
-	end
-
-	always @(posedge i_clk)
-	if ((f_state == 2'b00)&&((f_syncd)||(iaddr >= 4)))
-	begin
-		assert(rnd_sum_r  == f_piped_real[3]+f_piped_real[1]);
-		assert(rnd_sum_i  == f_piped_imag[3]+f_piped_imag[1]);
-		assert(rnd_diff_r == f_piped_real[3]-f_piped_real[1]);
-		assert(rnd_diff_i == f_piped_imag[3]-f_piped_imag[1]);
-	end
-
-	always @(posedge i_clk)
-	if ((f_state == 2'b10)&&(f_syncd))
-	begin
-		// assert(o_sync);
-		assert(f_o_real == f_piped_real[5] + f_piped_real[3]);
-		assert(f_o_imag == f_piped_imag[5] + f_piped_imag[3]);
-	end
-
-	always @(posedge i_clk)
-	if ((f_state == 2'b11)&&(f_syncd))
-	begin
-		assert(!o_sync);
-		assert(f_o_real == f_piped_real[5] + f_piped_real[3]);
-		assert(f_o_imag == f_piped_imag[5] + f_piped_imag[3]);
-	end
-
-	always @(posedge i_clk)
-	if ((f_state == 2'b00)&&(f_syncd))
-	begin
-		assert(!o_sync);
-		assert(f_o_real == f_piped_real[7] - f_piped_real[5]);
-		assert(f_o_imag == f_piped_imag[7] - f_piped_imag[5]);
-	end
-
-	always @(*)
-	if ((iaddr[2:0] == 0)&&(!wait_for_sync))
-		assume(i_sync);
-
-	always @(*)
-	if (wait_for_sync)
-		assert((iaddr == 0)&&(f_state == 2'b00)&&(!o_sync)&&(!f_rsyncd));
-
-	always @(posedge i_clk)
-	if ((f_past_valid)&&($past(i_ce))&&($past(i_sync))&&(!$past(i_reset)))
-		assert(!wait_for_sync);
-
-	always @(posedge i_clk)
-	if ((f_state == 2'b01)&&(f_syncd))
-	begin
-		assert(!o_sync);
-		if (INVERSE)
-		begin
-			assert(f_o_real == -f_piped_imag[7]+f_piped_imag[5]);
-			assert(f_o_imag ==  f_piped_real[7]-f_piped_real[5]);
-		end else begin
-			assert(f_o_real ==  f_piped_imag[7]-f_piped_imag[5]);
-			assert(f_o_imag == -f_piped_real[7]+f_piped_real[5]);
-		end
-	end
-
-`endif
 endmodule

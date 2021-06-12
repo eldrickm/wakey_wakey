@@ -160,3 +160,126 @@ def get_params():
               conv2_weights, conv2_biases, bitshifts[1],
               fc1_weights, fc1_biases]
     return params
+
+# ==============================================================================
+# Memory Writing
+# ==============================================================================
+# Main source at rtl/top/top/test_wakey_wakey.py
+
+def bytes_to_word(byte_arr):
+    """
+    Combine 4 bytes to 1 32b word.
+    Index 0 is the MSB, Index 3 is the LSB
+    """
+    assert len(byte_arr) == 4
+    # set to 32b in order to have left shifts work
+    byte_arr = byte_arr.astype(np.int32)
+    # assemble via mask and shift
+    word = (((byte_arr[0] & 0xff) << 24) | ((byte_arr[1] & 0xff) << 16) |
+            ((byte_arr[2] & 0xff) << 8) | (byte_arr[3] & 0xff))
+    return word
+
+def partition_weights(weight_vector):
+    """
+    Return 4 32b values for use in CFG writes from a vector of 8b values
+
+    weight_vector should be no more than 16 entries
+
+    A list of 4 32b words are returned, MSB at index 0
+    """
+    n_channels = len(weight_vector)
+    assert n_channels <= 16
+
+    # properly pad the weight vector to 16 8b entries
+    full_word = np.zeros(16, dtype=np.int8)
+    for i in range(n_channels):
+        full_word[i + (16 - n_channels)] = weight_vector[i]
+
+    # get 32b words from 4 bytes
+    msb    = bytes_to_word(full_word[0:4])
+    data_2 = bytes_to_word(full_word[4:8])
+    data_1 = bytes_to_word(full_word[8:12])
+    lsb    = bytes_to_word(full_word[12:16])
+
+    return [msb, data_2, data_1, lsb]
+
+def pack_conv_weights(weights):
+    """
+    Convert a list of conv weights into a list ready for CFG stores
+
+    The CFG store format is 4 32b words
+    """
+    filter_width, n_channels, n_filters = weights.shape
+    packed = np.zeros((filter_width, 4, n_filters), dtype=np.int32)
+    for j in range(filter_width):
+        for i in range(n_filters):
+            vector = weights[j, :, i]
+            partitioned = partition_weights(vector)
+            packed[j, 0, i] = partitioned[0]
+            packed[j, 1, i] = partitioned[1]
+            packed[j, 2, i] = partitioned[2]
+            packed[j, 3, i] = partitioned[3]
+    return packed
+
+def printn(x):
+    print(x, end='')
+
+def print_hex_int(x):
+    printn('0x{:x}'.format(x & 0xffffffff))
+
+def pretty_print_conv_weights(conv_num, cw):
+    weights_packed = pack_conv_weights(cw)
+    filter_width = weights_packed.shape[0]
+    n_filters = weights_packed.shape[2]
+    print('const int conv{}_filter_width = {};'.format(conv_num, filter_width))
+    print('const int conv{}_n_filters = {};'.format(conv_num, n_filters))
+    print('// CFG reg order: {data3, data2, data1, data0}')
+    print('const int conv{}_weights[{}][{}][4] = {{'.format(conv_num,
+                                                    filter_width, n_filters))
+    for j in range(filter_width):
+        printn('{')
+        for i in range(n_filters):
+            printn('{')
+            for k in range(4):
+                # printn('0x{:x}'.format(weights_packed[j, k, i] & 0xffffffff))
+                print_hex_int(weights_packed[j, k, i])
+                if k < 4 - 1: printn(', ')
+            printn('}')
+            if i < n_filters - 1: print(',')
+        printn('}')
+        if j < filter_width - 1: print(',')
+    print('};\n')
+
+def pretty_print_conv_biases(conv_num, biases):
+    n_filters = biases.size
+    print('// Conv biases should each be written to the CFG data0 reg.')
+    print('const int conv{}_biases[{}] = {{'.format(conv_num, n_filters))
+    for i in range(n_filters):
+        # printn('0x{:x}'.format(biases[i] & ))
+        print_hex_int(biases[i])
+        if i < n_filters - 1: print(', ')
+    print('};\n')
+
+def pretty_print_conv_shift(conv_num, shift):
+    printn('const int conv{}_shift = '.format(conv_num))
+    print_hex_int(shift)
+    print(';\n')
+
+def pretty_print_params():
+    '''Pretty print the params so that they can be included in a .h file in
+    management soc firmware. The params are already packed so that they can
+    be written via the 32-bit wishbone interface without modification.'''
+    # params = [conv1_weights, conv1_biases, bitshifts[0],
+              # conv2_weights, conv2_biases, bitshifts[1],
+              # fc1_weights, fc1_biases]
+    pretty_print_conv_weights(1, conv1_weights)
+    pretty_print_conv_biases(1, conv1_biases)
+    pretty_print_conv_shift(1, bitshifts[0])
+
+    pretty_print_conv_weights(2, conv2_weights)
+    pretty_print_conv_biases(2, conv2_biases)
+    pretty_print_conv_shift(2, bitshifts[1])
+
+
+if __name__ == "__main__":
+    pretty_print_params()

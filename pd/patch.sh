@@ -22,11 +22,11 @@ cp caravel_integration/verilog/rtl/user_project_wrapper.v caravel_user_project/v
 # ==============================================================================
 # open-source only flow
 # ==============================================================================
-# # combine all verilog source files from rtl/
-# cd ../rtl/
-# make
-# mv design.v ../pd/caravel_integration/verilog/rtl/
-# cd ../pd/
+# combine all verilog source files from rtl/
+cd ../rtl/
+make
+mv design.v ../pd/caravel_integration/verilog/rtl/
+cd ../pd/
 #
 # # copy over rtl files
 # cp -r caravel_integration/verilog/rtl/ caravel_user_project/verilog/

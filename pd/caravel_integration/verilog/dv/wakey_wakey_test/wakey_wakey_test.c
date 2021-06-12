@@ -63,6 +63,7 @@ void cfg_load(int addr, int *data)
     // write the load command - 0x2
     cfg_reg_ctrl = 0x2;
     // TODO: Currently need to wait one clock cycle before read starts - fix?
+    __asm__("nop\n\t");
 
     // read the data words
     data[0] = cfg_reg_data_0;
@@ -80,6 +81,26 @@ void cfg_load(int addr, int *data)
         5. Write CFG Data via wishbone
         6. Read CFG Data via wishbone
 */
+ 
+// void cfg_store(int addr, int data_3, int data_2, int data_1, int data_0)
+// void cfg_load(int addr, int *data)
+bool check_output(int *expected, int *observed) {
+    for (int i = 0; i < 4; i++) {
+        if (expected[i] != observed[i]) return false;
+    }
+    return true;
+}
+
+/* Returns true if the test passes and false if not. */
+bool run_test() {
+    int writebuf[4] = {1, 3, 4, 2};
+    int readbuf[4] = {0,0,0,0};
+    cfg_store(0, writebuf[3], writebuf[2], writebuf[1], writebuf[0]);
+    cfg_load(0, readbuf);
+    return check_output(writebuf, readbuf);
+    // return true;
+}
+
 int i = 0; 
 int clk = 0;
 
@@ -110,36 +131,41 @@ void main()
 	// so that the CSB line is not left floating.  This allows
 	// all of the GPIO pins to be used for user functions.
 
-    /* reg_mprj_io_31 = GPIO_MODE_MGMT_STD_OUTPUT; */
-    /* reg_mprj_io_30 = GPIO_MODE_MGMT_STD_OUTPUT; */
-    /* reg_mprj_io_29 = GPIO_MODE_MGMT_STD_OUTPUT; */
-    /* reg_mprj_io_28 = GPIO_MODE_MGMT_STD_OUTPUT; */
-    /* reg_mprj_io_27 = GPIO_MODE_MGMT_STD_OUTPUT; */
-    /* reg_mprj_io_26 = GPIO_MODE_MGMT_STD_OUTPUT; */
-    /* reg_mprj_io_25 = GPIO_MODE_MGMT_STD_OUTPUT; */
-    /* reg_mprj_io_24 = GPIO_MODE_MGMT_STD_OUTPUT; */
-    /* reg_mprj_io_23 = GPIO_MODE_MGMT_STD_OUTPUT; */
-    /* reg_mprj_io_22 = GPIO_MODE_MGMT_STD_OUTPUT; */
-    /* reg_mprj_io_21 = GPIO_MODE_MGMT_STD_OUTPUT; */
-    /* reg_mprj_io_20 = GPIO_MODE_MGMT_STD_OUTPUT; */
-    /* reg_mprj_io_19 = GPIO_MODE_MGMT_STD_OUTPUT; */
-    /* reg_mprj_io_18 = GPIO_MODE_MGMT_STD_OUTPUT; */
-    /* reg_mprj_io_17 = GPIO_MODE_MGMT_STD_OUTPUT; */
-    /* reg_mprj_io_16 = GPIO_MODE_MGMT_STD_OUTPUT; */
+    reg_mprj_io_31 = GPIO_MODE_MGMT_STD_OUTPUT;
+    reg_mprj_io_30 = GPIO_MODE_MGMT_STD_OUTPUT;
+    reg_mprj_io_29 = GPIO_MODE_MGMT_STD_OUTPUT;
+    reg_mprj_io_28 = GPIO_MODE_MGMT_STD_OUTPUT;
+    reg_mprj_io_27 = GPIO_MODE_MGMT_STD_OUTPUT;
+    reg_mprj_io_26 = GPIO_MODE_MGMT_STD_OUTPUT;
+    reg_mprj_io_25 = GPIO_MODE_MGMT_STD_OUTPUT;
+    reg_mprj_io_24 = GPIO_MODE_MGMT_STD_OUTPUT;
+    reg_mprj_io_23 = GPIO_MODE_MGMT_STD_OUTPUT;
+    reg_mprj_io_22 = GPIO_MODE_MGMT_STD_OUTPUT;
+    reg_mprj_io_21 = GPIO_MODE_MGMT_STD_OUTPUT;
+    reg_mprj_io_20 = GPIO_MODE_MGMT_STD_OUTPUT;
+    reg_mprj_io_19 = GPIO_MODE_MGMT_STD_OUTPUT;
+    reg_mprj_io_18 = GPIO_MODE_MGMT_STD_OUTPUT;
+    reg_mprj_io_17 = GPIO_MODE_MGMT_STD_OUTPUT;
+    reg_mprj_io_16 = GPIO_MODE_MGMT_STD_OUTPUT;
 
      /* Apply configuration */
-    /* reg_mprj_xfer = 1; */
-    /* while (reg_mprj_xfer == 1); */
+    reg_mprj_xfer = 1;
+    while (reg_mprj_xfer == 1)
 
-	/* reg_la2_oenb = reg_la2_iena = 0xFFFFFFFF;    // [95:64] */
+	reg_la2_oenb = reg_la2_iena = 0xFFFFFFFF;    // [95:64]
 
     // Flag start of the test
-	reg_mprj_datal = 0xAB600000;
+    reg_mprj_datal = 0xAB600000;
 
+    reg_mprj_datal = 0xAB610000;
+    /*
     reg_mprj_slave = 0x00002710;
     if (reg_mprj_slave == 0x2752) {
         reg_mprj_datal = 0xAB610000;
     } else {
         reg_mprj_datal = 0xAB600000;
     }
+    */
+    if (run_test()) reg_mprj_datal = 0xAB610000;
+    else            reg_mprj_datal = 0xAB600000;
 }
