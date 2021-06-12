@@ -1,0 +1,59 @@
+[*]
+[*] GTKWave Analyzer v3.3.61 (w)1999-2014 BSI
+[*] Sat Jun 12 16:38:02 2021
+[*]
+[dumpfile] "/tmp/mjpauly-ee272/wakey_wakey/pd/caravel_integration/verilog/dv/wakey_wakey_test/wakey_wakey_test.vcd"
+[dumpfile_mtime] "Sat Jun 12 04:38:58 2021"
+[dumpfile_size] 2012056498
+[savefile] "/tmp/mjpauly-ee272/wakey_wakey/pd/caravel_integration/verilog/dv/wakey_wakey_test/view.gtkw"
+[timestart] 196100000
+[size] 1872 1037
+[pos] 6 -2
+*-26.000000 336300000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] wakey_wakey_test_tb.
+[treeopen] wakey_wakey_test_tb.uut.
+[treeopen] wakey_wakey_test_tb.uut.mprj.
+[treeopen] wakey_wakey_test_tb.uut.mprj.mprj.
+[treeopen] wakey_wakey_test_tb.uut.mprj.mprj.wakey_wakey_inst.
+[sst_width] 401
+[signals_width] 250
+[sst_expanded] 1
+[sst_vpaned_height] 296
+@28
+wakey_wakey_test_tb.uut.mprj.mprj.wakey_wakey_inst.cfg_inst.clk_i
+@200
+-
+-
+@22
+wakey_wakey_test_tb.uut.mprj.mprj.wakey_wakey_inst.cfg_inst.addr[31:0]
+wakey_wakey_test_tb.uut.mprj.mprj.wakey_wakey_inst.cfg_inst.ctrl[31:0]
+wakey_wakey_test_tb.uut.mprj.mprj.wakey_wakey_inst.cfg_inst.data_0[31:0]
+wakey_wakey_test_tb.uut.mprj.mprj.wakey_wakey_inst.cfg_inst.data_1[31:0]
+wakey_wakey_test_tb.uut.mprj.mprj.wakey_wakey_inst.cfg_inst.data_2[31:0]
+wakey_wakey_test_tb.uut.mprj.mprj.wakey_wakey_inst.cfg_inst.data_3[31:0]
+@200
+-
+@28
+wakey_wakey_test_tb.uut.mprj.mprj.wakey_wakey_inst.cfg_inst.conv1_rd_wr_addr_o[2:0]
+wakey_wakey_test_tb.uut.mprj.mprj.wakey_wakey_inst.cfg_inst.conv1_sel
+wakey_wakey_test_tb.uut.mprj.mprj.wakey_wakey_inst.cfg_inst.conv1_wr_en_o
+@200
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+[pattern_trace] 1
+[pattern_trace] 0
