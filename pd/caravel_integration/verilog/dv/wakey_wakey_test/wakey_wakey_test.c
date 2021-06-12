@@ -93,6 +93,12 @@ bool check_output(int *expected, int *observed) {
     return true;
 }
 
+void mult_arr(int *arr) {
+    for (int k = 0; k < 4; k++) {
+        arr[k] *= 2;
+    }
+}
+
 /* Returns true if the test passes and false if not. */
 bool run_test() {
     // return false;
@@ -103,8 +109,25 @@ bool run_test() {
     int writebuf[4] = {1, 3, 4, 2};
     cfg_store(0, writebuf[3], writebuf[2], writebuf[1], writebuf[0]);
     cfg_store(1, writebuf[3]*2, writebuf[2]*2, writebuf[1]*2, writebuf[0]*2);
+    cfg_store(2, writebuf[3]*4, writebuf[2]*4, writebuf[1]*4, writebuf[0]*4);
+    cfg_store(3, writebuf[3]*8, writebuf[2]*8, writebuf[1]*8, writebuf[0]*8);
+    // cfg_store(4, writebuf[3]*5, writebuf[2]*5, writebuf[1]*5, writebuf[0]*5);
+    // cfg_store(5, writebuf[3]*6, writebuf[2]*6, writebuf[1]*6, writebuf[0]*6);
+    // cfg_store(6, writebuf[3]*7, writebuf[2]*7, writebuf[1]*7, writebuf[0]*7);
+    // cfg_store(7, writebuf[3]*8, writebuf[2]*8, writebuf[1]*8, writebuf[0]*8);
+
     cfg_load(0, readbuf);
     if (!check_output(writebuf, readbuf)) return false;
+
+    cfg_load(1, readbuf);
+    mult_arr(writebuf);
+    if (!check_output(writebuf, readbuf)) return false;
+
+    cfg_load(2, readbuf);
+    mult_arr(writebuf);
+    if (!check_output(writebuf, readbuf)) return false;
+
+    // return true;
     // return check_output(writebuf, readbuf);
     // */
 
@@ -113,7 +136,8 @@ bool run_test() {
     // WRITING
 
     // Sequential write to conv1 memory banks
-    for (int j = 0; j < 4; j++) {  // banks
+    // for (int j = 0; j < 4; j++) {  // banks
+    for (int j = 0; j < 1; j++) {  // banks
         for (int k = 0; k < 8; k++) {
             cfg_store(k + j*0x10, k+3, k+2, k+1, k+0);
         }
@@ -144,9 +168,11 @@ bool run_test() {
     
     // READING
 
-    for (int j = 0; j < 4; j++) {  // banks
+    // for (int j = 0; j < 4; j++) {  // banks
+    for (int j = 0; j < 1; j++) {  // banks
         for (int k = 0; k < 8; k++) {
-            int expected[4] = {k+3, k+2, k+1, k+0};
+            // int expected[4] = {k+3, k+2, k+1, k+0};
+            int expected[4] = {k, k+1, k+2, k+3};
             cfg_load(k + j*0x10, readbuf);
             if (!check_output(expected, readbuf)) return false;
         }
