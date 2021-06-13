@@ -6,4 +6,4 @@ outputs:
 commands:
   - cd ${{WAKEY_WAKEY_TOP}}/rtl/wrapper/wrapper/
   - make PLUSARGS="+n_tests=2"
-  - mv wave.vcd ${{OLDPWD}}/outputs/run.vcd
+  - cp wave.vcd ${{OLDPWD}}/outputs/run.vcd
