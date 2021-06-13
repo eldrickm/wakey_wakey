@@ -75,4 +75,8 @@ endif
 clean:
 	rm -f *.elf *.hex *.bin *.vvp *.vcd *.log
 
+wave:
+	gtkwave wakey_wakey_test.vcd view.gtkw
+
+
 .PHONY: clean hex all
