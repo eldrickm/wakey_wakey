@@ -151,6 +151,9 @@ set compile_seqmap_honor_sync_set_reset true
 
 set compile_optimize_unloaded_seq_logic_with_no_bound_opt true
 
+# Make netlist case insensitive, which can be important for LVS
+define_name_rules verilog -case_insensitive
+
 # Remove new variable info messages from the end of the log file
 
 set_app_var sh_new_variable_message false

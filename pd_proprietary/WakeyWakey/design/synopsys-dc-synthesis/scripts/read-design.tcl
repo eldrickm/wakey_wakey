@@ -35,6 +35,9 @@ link
 # Write out useful files
 #-------------------------------------------------------------------------
 
+# May help improve LVS
+change_names -rules verilog -hierarchy
+
 # This ddc can be used as a checkpoint to load up to the current state
 
 write -hierarchy -format ddc \
