@@ -125,11 +125,11 @@ module user_proj_example (
     // =========================================================================
     // Pin Directions (Output Enable)
     // =========================================================================
-    assign io_oeb[37] = 1'b1;       // wake_o
-    assign io_oeb[36] = 1'b0;       // pdm_data_i
-    assign io_oeb[35] = 1'b1;       // pdm_clk_o
-    assign io_oeb[34] = 1'b0;       // vad_i
-    assign io_oeb[33:0] = 34'b0;    // unused, except by test bench
+    assign io_oeb[37] = 1'b0;       // wake_o
+    assign io_oeb[36] = 1'b1;       // pdm_data_i
+    assign io_oeb[35] = 1'b0;       // pdm_clk_o
+    assign io_oeb[34] = 1'b1;       // vad_i
+    assign io_oeb[33:0] = 34'b1;    // unused, except by test bench
 
     // =========================================================================
     // Wakey Wakey Outputs
