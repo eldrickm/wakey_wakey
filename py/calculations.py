@@ -25,4 +25,4 @@ def calculate_pll_config(f_system_clk=16e6):
               '{:.03f}% error'.format(i, code_hex, f / 1e6, div, err))
 
 if __name__ == '__main__':
-    calculate_pll_config(8e6)
+    calculate_pll_config(16e6)

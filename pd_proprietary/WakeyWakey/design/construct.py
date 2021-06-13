@@ -26,7 +26,7 @@ def construct():
   parameters = {
     'construct_path' : __file__,
     'design_name'    : 'user_proj_example',
-    'clock_period'   : 250.0,
+    'clock_period'   : 62.5,
     'adk'            : adk_name,
     'adk_view'       : adk_view,
     'topographical'  : True,
@@ -76,11 +76,11 @@ def construct():
   magic_antenna   = Step( this_dir + '/open-magic-antenna'              )
 
   export         = Step( this_dir + '/export-to-openlane'         )
+  dc              = Step( this_dir + '/synopsys-dc-synthesis')  # NEW DC with netname case sensitivity fix
 
   # Default steps
 
   info            = Step( 'info',                          default=True )
-  dc              = Step( 'synopsys-dc-synthesis',         default=True )
 
   # Need to use clone if you want to instantiate the same node more than once
   # in your graph but configure it differently, for example, RTL simulation and
