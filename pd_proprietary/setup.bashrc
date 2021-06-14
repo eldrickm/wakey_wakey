@@ -13,7 +13,8 @@ module load syn
 module load xcelium
 module load genus
 module load innovus
-module load calibre/2019.1
+# module load calibre/2019.1
+module load calibre/2021.2_18
 module load prime
 module load magic/latest
 module load netgen/latest
