@@ -3,8 +3,6 @@
 // Design: Eldrick Millares
 // Verification: Matthew Pauly
 // Notes:
-// TODO: Can we synthesize a variable arithmetic right shift?
-// TODO: Does this need to be signed? Guess is no since it is after ReLU
 // ============================================================================
 
 module quantizer #(

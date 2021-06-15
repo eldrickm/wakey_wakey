@@ -37,7 +37,7 @@ module wrd #(
 
     // conv_sipo module parameters
     parameter CONV_SIPO_BW         = MAX_POOL1_BW,                    // 8
-    // TODO: $rtoi and $ceil are not supported in Design Compiler
+    // INFO: $rtoi and $ceil are not supported in Design Compiler
     // parameter CONV_SIPO_FRAME_LEN  = $rtoi($ceil(I_FRAME_LEN / 2.0)), // 25
     parameter CONV_SIPO_FRAME_LEN  = I_FRAME_LEN / 2, // 25
     parameter CONV_SIPO_VECTOR_LEN = CONV1_NUM_FILTERS,               // 8
@@ -64,7 +64,7 @@ module wrd #(
 
     // max_pool2 module parameters
     parameter MAX_POOL2_BW        = CONV_SIPO_BW, // 8
-    // TODO: $rtoi and $ceil are not supported in Design Compiler
+    // INFO: $rtoi and $ceil are not supported in Design Compiler
     // parameter MAX_POOL2_FRAME_LEN = $rtoi($ceil(CONV_SIPO_FRAME_LEN / 2.0)), //13
     parameter MAX_POOL2_FRAME_LEN = CONV_SIPO_FRAME_LEN / 2 + 1, //13
 
@@ -78,7 +78,7 @@ module wrd #(
     parameter FC_VECTOR_O_BW = FC_O_BW * FC_NUM_CLASSES, // 64
     // fc memory configuration parameters
     parameter FC_BANK_BW = $clog2(FC_NUM_CLASSES * 2),
-    // TODO: Yosys will not resolve FC_FRAME_LEN, need to hard code
+    // INFO: Yosys will not resolve FC_FRAME_LEN, need to hard code
     // parameter FC_ADDR_BW = $clog2(FC_FRAME_LEN),
     parameter FC_ADDR_BW = $clog2(208),
 

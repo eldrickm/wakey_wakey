@@ -3,7 +3,6 @@
 // Design:       Eldrick Millares
 // Verification: Matthew Pauly
 // Notes:
-// TODO: Can we make elements in sum minimum length?
 // ============================================================================
 
 module red_add #(

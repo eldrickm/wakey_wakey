@@ -27,18 +27,12 @@ module ctl # (
     // Local Parameters
     // =========================================================================
     // 5ms empirically determined with microphone. See test/pdm_capture_test.
-    // Design Compiler does not support rtoi
+    // INFO: Design Compiler does not support rtoi
     // localparam COUNT_CYCLES   = $rtoi(0.005 * F_SYSTEM_CLK);
-    // integer type needed to keep DC from flaggging COUNT_CYCLES as a non
-    // constant expression
-    // TODO: make sure that this value is as expected after DC Synthesis
-    // Could also use a division by integer if multiplication by decimal does not
-    // expand as expected
-    // localparam integer COUNT_CYCLES   = F_SYSTEM_CLK / 200;
     `ifdef COCOTB_SIM
-    localparam integer COUNT_CYCLES  = 0.005 * 1000;
+    localparam integer COUNT_CYCLES  = 1000 / 200;
     `else
-    localparam integer COUNT_CYCLES  = 0.005 * F_SYSTEM_CLK;
+    localparam integer COUNT_CYCLES  = F_SYSTEM_CLK / 200;
     `endif
     localparam COUNTER_BW            = $clog2(COUNT_CYCLES + 1);
 

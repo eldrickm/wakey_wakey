@@ -6,8 +6,6 @@
 // Assumes that biases have 2x bitwidth of weights, and outputs are 3x bitwidth
 // Also assumes that packet lengths are > 3 (which is the propogation length of
 // the bias out to the output, since it is pipelined).
-//
-// TODO: Check which signals have to be signed
 // ============================================================================
 
 module mac #(

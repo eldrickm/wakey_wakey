@@ -3,7 +3,6 @@
 // Design:       Eldrick Millares
 // Verification: Matthew Pauly
 // Notes:
-// TODO: Clock this module? Add registers?
 // =============================================================================
 
 module dbg #(

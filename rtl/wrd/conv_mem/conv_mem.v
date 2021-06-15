@@ -3,7 +3,6 @@
 // Design:       Eldrick Millares
 // Verification: Matthew Pauly
 // Notes:
-// TODO: Implement rd_data_o for reading memories
 //
 // Stores weights, biases, and shifts in different banks, numbered like so:
 // [0, NUM_FILTERS-1] : Kernel weights for nth output channel

@@ -4,7 +4,6 @@
 // Verification: Matthew Pauly
 // Notes:
 // Constraint: BIAS_BW > BW
-// TODO: Implement rd_data_o for reading memories
 // =============================================================================
 
 module fc_mem #(

@@ -3,7 +3,6 @@
 // Design:       Eldrick Millares
 // Verification: Matthew Pauly
 // Notes:
-// TODO: Handle Full and Empty
 // ============================================================================
 
 module conv_sipo #(

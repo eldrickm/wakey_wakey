@@ -8,8 +8,6 @@
 // Minimum dead time between frames is 2 clock cycles.
 // This increased dead-time is needed because we reduce latency in this
 // module to just 1 cycle.
-//
-// TODO: Gate registers with valid
 // =============================================================================
 
 module zero_pad #(

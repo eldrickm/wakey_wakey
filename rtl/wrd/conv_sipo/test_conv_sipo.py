@@ -63,7 +63,7 @@ async def test_conv_sipo(dut):
     dut.last_i <= 0
     dut.valid_i <= 0
 
-    # TODO: Add a real test for this block
+    # INFO: This is not a real unit test, but it works in integration tests
     # Output Checking
     await FallingEdge(dut.clk_i)
     for i in range(50):

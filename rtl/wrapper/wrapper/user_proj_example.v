@@ -24,7 +24,7 @@
  *
  * user_proj_example
  *
- * TODO: Write Description
+ * Instatiates WakeyWakey in user_proj_example for Caravel integration
  *-------------------------------------------------------------
  */
 

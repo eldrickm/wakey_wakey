@@ -156,7 +156,6 @@ module wakey_wakey (
         // clock, reset, and enable
         .clk_i(clk_i),
         .rst_n_i(rst_n_i),
-        // TODO: Activate Pin hooks up here
         .en_i(pipeline_en),
 
         // pdm input

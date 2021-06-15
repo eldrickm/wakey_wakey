@@ -3,8 +3,8 @@
 // Design:       Eldrick Millares
 // Verification: Matthew Pauly
 // Notes:
-// TODO: Make multi-class?
-// TODO: Make SUSTAIN_LEN configurable?
+// INFO: Assumes wake word class is 0th bit of data_i
+// INFO: SUSTAIN_LEN hard coded for 1/2 second
 // ============================================================================
 
 module wake #(

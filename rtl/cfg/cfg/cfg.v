@@ -4,10 +4,8 @@
 // Verification: Matthew Pauly
 // Notes:
 // User address space goes from 0x3000_0000 to 0x7FFF_FFFF
-// TODO: Sensitize to cyc_i?
-// TODO: Adjust wishbone ack for Store and Load on CTRL?
-// TODO: Remove technically unecessary mux to zeros in Data Registers
-// TODO: Check wave timings on ack for new delayed signals
+// INFO: Design not sensitized to cyc_i; only strobe is needed if trust wb
+// INFO: Wishbone ack may be one cycle too early, add NOP to firmware if needed
 // =============================================================================
 
 module cfg #(

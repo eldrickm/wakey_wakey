@@ -7,9 +7,8 @@
 // Constraint: FILTER_LEN == 3
 // In order to change filter size, you'll have to parameterize the vec_add
 // unit.
-// TODO: Fix initial deque errors
-// TODO: Handle deassertions of valid midstream
-// TODO: Handle Full and Empty
+// INFO: SizedFIFO issues deque warning but functionality is correct.
+// INFO: Deassertions of valid midstream not permitted
 // =============================================================================
 
 module recycler #(

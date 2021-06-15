@@ -5,7 +5,7 @@
 // Notes:
 // Constraint: FRAME_LEN > FILTER_LEN
 // Constraint: FILTER_LEN == 3
-// TODO: Deal with ready's / backpressure
+// INFO: Does not deal with ready's / backpressure
 // =============================================================================
 
 module conv_top #(

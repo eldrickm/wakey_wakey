@@ -4,8 +4,6 @@
 // Verification: Matthew Pauly
 // Notes:
 // Assumes BIAS_BW > BW
-// TODO: Implement rd_data_o for reading memories
-// TODO: Calculate O_BW from NUM_CLASSES?
 // ============================================================================
 
 module fc_top #(

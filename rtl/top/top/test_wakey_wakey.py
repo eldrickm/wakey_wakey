@@ -163,7 +163,7 @@ async def cfg_load(dut, addr):
     await wishbone_write(dut, 0x30000000, addr)
     # write the load command - 0x2
     await wishbone_write(dut, 0x30000004, 0x2)
-    # TODO: Currently need to wait one clock cycle before read starts - fix?
+    # INFO: Need to wait one clock cycle before read starts
     await FallingEdge(dut.clk_i)
     # read the data words
     data_0 = await wishbone_read(dut, 0x30000008)

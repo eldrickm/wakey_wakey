@@ -3,7 +3,7 @@
 // Design:       Eldrick Millares
 // Verification: Matthew Pauly
 // Notes:
-// TODO: Hard coded for 2 elements - can we parameterize the one-hot compare?
+// INFO: Hard coded for 2 elements.
 // ============================================================================
 
 module argmax #(
