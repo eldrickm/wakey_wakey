@@ -1,0 +1,213 @@
+[*]
+[*] GTKWave Analyzer v3.3.103 (w)1999-2019 BSI
+[*] Mon Jun 14 03:37:27 2021
+[*]
+[dumpfile] "/home/eldrick/wakey_wakey/rtl/dbg/dbg/wave.vcd"
+[dumpfile_mtime] "Mon Jun 14 03:35:58 2021"
+[dumpfile_size] 2116
+[savefile] "/home/eldrick/wakey_wakey/rtl/dbg/dbg/view.gtkw"
+[timestart] 0
+[size] 1244 1376
+[pos] -1 -1
+*-24.662376 25000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 233
+[signals_width] 498
+[sst_expanded] 1
+[sst_vpaned_height] 414
+@28
+dbg.clk_i
+dbg.rst_n_i
+@200
+-Logic Analyzer Signals
+@22
+dbg.la_data_in_i[127:0]
+@800022
+dbg.la_data_out_o[127:0]
+@28
+(0)dbg.la_data_out_o[127:0]
+(1)dbg.la_data_out_o[127:0]
+(2)dbg.la_data_out_o[127:0]
+(3)dbg.la_data_out_o[127:0]
+(4)dbg.la_data_out_o[127:0]
+(5)dbg.la_data_out_o[127:0]
+(6)dbg.la_data_out_o[127:0]
+(7)dbg.la_data_out_o[127:0]
+(8)dbg.la_data_out_o[127:0]
+(9)dbg.la_data_out_o[127:0]
+(10)dbg.la_data_out_o[127:0]
+(11)dbg.la_data_out_o[127:0]
+(12)dbg.la_data_out_o[127:0]
+(13)dbg.la_data_out_o[127:0]
+(14)dbg.la_data_out_o[127:0]
+(15)dbg.la_data_out_o[127:0]
+(16)dbg.la_data_out_o[127:0]
+(17)dbg.la_data_out_o[127:0]
+(18)dbg.la_data_out_o[127:0]
+(19)dbg.la_data_out_o[127:0]
+(20)dbg.la_data_out_o[127:0]
+(21)dbg.la_data_out_o[127:0]
+(22)dbg.la_data_out_o[127:0]
+(23)dbg.la_data_out_o[127:0]
+(24)dbg.la_data_out_o[127:0]
+(25)dbg.la_data_out_o[127:0]
+(26)dbg.la_data_out_o[127:0]
+(27)dbg.la_data_out_o[127:0]
+(28)dbg.la_data_out_o[127:0]
+(29)dbg.la_data_out_o[127:0]
+(30)dbg.la_data_out_o[127:0]
+(31)dbg.la_data_out_o[127:0]
+(32)dbg.la_data_out_o[127:0]
+(33)dbg.la_data_out_o[127:0]
+(34)dbg.la_data_out_o[127:0]
+(35)dbg.la_data_out_o[127:0]
+(36)dbg.la_data_out_o[127:0]
+(37)dbg.la_data_out_o[127:0]
+(38)dbg.la_data_out_o[127:0]
+(39)dbg.la_data_out_o[127:0]
+(40)dbg.la_data_out_o[127:0]
+(41)dbg.la_data_out_o[127:0]
+(42)dbg.la_data_out_o[127:0]
+(43)dbg.la_data_out_o[127:0]
+(44)dbg.la_data_out_o[127:0]
+(45)dbg.la_data_out_o[127:0]
+(46)dbg.la_data_out_o[127:0]
+(47)dbg.la_data_out_o[127:0]
+(48)dbg.la_data_out_o[127:0]
+(49)dbg.la_data_out_o[127:0]
+(50)dbg.la_data_out_o[127:0]
+(51)dbg.la_data_out_o[127:0]
+(52)dbg.la_data_out_o[127:0]
+(53)dbg.la_data_out_o[127:0]
+(54)dbg.la_data_out_o[127:0]
+(55)dbg.la_data_out_o[127:0]
+(56)dbg.la_data_out_o[127:0]
+(57)dbg.la_data_out_o[127:0]
+(58)dbg.la_data_out_o[127:0]
+(59)dbg.la_data_out_o[127:0]
+(60)dbg.la_data_out_o[127:0]
+(61)dbg.la_data_out_o[127:0]
+(62)dbg.la_data_out_o[127:0]
+(63)dbg.la_data_out_o[127:0]
+(64)dbg.la_data_out_o[127:0]
+(65)dbg.la_data_out_o[127:0]
+(66)dbg.la_data_out_o[127:0]
+(67)dbg.la_data_out_o[127:0]
+(68)dbg.la_data_out_o[127:0]
+(69)dbg.la_data_out_o[127:0]
+(70)dbg.la_data_out_o[127:0]
+(71)dbg.la_data_out_o[127:0]
+(72)dbg.la_data_out_o[127:0]
+(73)dbg.la_data_out_o[127:0]
+(74)dbg.la_data_out_o[127:0]
+(75)dbg.la_data_out_o[127:0]
+(76)dbg.la_data_out_o[127:0]
+(77)dbg.la_data_out_o[127:0]
+(78)dbg.la_data_out_o[127:0]
+(79)dbg.la_data_out_o[127:0]
+(80)dbg.la_data_out_o[127:0]
+(81)dbg.la_data_out_o[127:0]
+(82)dbg.la_data_out_o[127:0]
+(83)dbg.la_data_out_o[127:0]
+(84)dbg.la_data_out_o[127:0]
+(85)dbg.la_data_out_o[127:0]
+(86)dbg.la_data_out_o[127:0]
+(87)dbg.la_data_out_o[127:0]
+(88)dbg.la_data_out_o[127:0]
+(89)dbg.la_data_out_o[127:0]
+(90)dbg.la_data_out_o[127:0]
+(91)dbg.la_data_out_o[127:0]
+(92)dbg.la_data_out_o[127:0]
+(93)dbg.la_data_out_o[127:0]
+(94)dbg.la_data_out_o[127:0]
+(95)dbg.la_data_out_o[127:0]
+(96)dbg.la_data_out_o[127:0]
+(97)dbg.la_data_out_o[127:0]
+(98)dbg.la_data_out_o[127:0]
+(99)dbg.la_data_out_o[127:0]
+(100)dbg.la_data_out_o[127:0]
+(101)dbg.la_data_out_o[127:0]
+(102)dbg.la_data_out_o[127:0]
+(103)dbg.la_data_out_o[127:0]
+(104)dbg.la_data_out_o[127:0]
+(105)dbg.la_data_out_o[127:0]
+(106)dbg.la_data_out_o[127:0]
+(107)dbg.la_data_out_o[127:0]
+(108)dbg.la_data_out_o[127:0]
+(109)dbg.la_data_out_o[127:0]
+(110)dbg.la_data_out_o[127:0]
+(111)dbg.la_data_out_o[127:0]
+(112)dbg.la_data_out_o[127:0]
+(113)dbg.la_data_out_o[127:0]
+(114)dbg.la_data_out_o[127:0]
+(115)dbg.la_data_out_o[127:0]
+(116)dbg.la_data_out_o[127:0]
+(117)dbg.la_data_out_o[127:0]
+@1001200
+-group_end
+@22
+dbg.la_oenb_i[127:0]
+@200
+-CTL Signals
+@28
+dbg.ctl_pipeline_en_i
+dbg.ctl_pipeline_en_o
+@29
+(127)dbg.la_data_out_o[127:0]
+@200
+-MIC Signals
+@28
+dbg.mic_pdm_data_i
+@200
+-
+@28
+dbg.mic_pdm_data_o
+@200
+-
+@28
+(126)dbg.la_data_out_o[127:0]
+@200
+-DFE Signals
+@22
+dbg.dfe_data_i[7:0]
+@28
+dbg.dfe_valid_i
+@200
+-
+@22
+dbg.dfe_data_o[7:0]
+@28
+dbg.dfe_valid_o
+@200
+-
+@c00022
+#{dbg.la_data_out_o[9:2]} (118)dbg.la_data_out_o[127:0] (119)dbg.la_data_out_o[127:0] (120)dbg.la_data_out_o[127:0] (121)dbg.la_data_out_o[127:0] (122)dbg.la_data_out_o[127:0] (123)dbg.la_data_out_o[127:0] (124)dbg.la_data_out_o[127:0] (125)dbg.la_data_out_o[127:0]
+@28
+(118)dbg.la_data_out_o[127:0]
+(119)dbg.la_data_out_o[127:0]
+(120)dbg.la_data_out_o[127:0]
+(121)dbg.la_data_out_o[127:0]
+(122)dbg.la_data_out_o[127:0]
+(123)dbg.la_data_out_o[127:0]
+(124)dbg.la_data_out_o[127:0]
+(125)dbg.la_data_out_o[127:0]
+@1401200
+-group_end
+@200
+-ACO Signals
+@22
+dbg.aco_data_i[103:0]
+dbg.aco_data_o[103:0]
+@28
+dbg.aco_last_i
+dbg.aco_last_o
+dbg.aco_valid_i
+dbg.aco_valid_o
+@200
+-WRD Signals
+@28
+dbg.wrd_wake_i
+dbg.wrd_wake_o
+dbg.wrd_wake_valid_i
+dbg.wrd_wake_valid_o
+[pattern_trace] 1
+[pattern_trace] 0
