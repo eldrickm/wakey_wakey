@@ -65,6 +65,7 @@ module dbg #(
                                  dfe_data_i,
                                  mic_pdm_data_i,
                                  ctl_pipeline_en_i};
+    assign la_data_out_o = packed_input;
     wire [127:0] packed_output;
 
     // =========================================================================
