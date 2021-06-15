@@ -81,25 +81,25 @@ module dbg #(
     // =========================================================================
 
     // CTL -> *** - 1 Pin(s)
-    assign ctl_pipeline_en_o = (la_oenb_i[0]) ? la_data_in_i[0] :
-                                                ctl_pipeline_en_i;
+    assign ctl_pipeline_en_o = (!la_oenb_i[0]) ? la_data_in_i[0] :
+                                                 ctl_pipeline_en_i;
 
     // MIC -> DFE - 1 Pin(s)
-    assign mic_pdm_data_o = (la_oenb_i[1]) ? la_data_in_i[1] : mic_pdm_data_i;
+    assign mic_pdm_data_o = (!la_oenb_i[1]) ? la_data_in_i[1] : mic_pdm_data_i;
 
     // DFE -> ACO - 9 Pin(s)
-    assign dfe_data_o  = (la_oenb_i[2]) ? la_data_in_i[9:2] : dfe_data_i;
-    assign dfe_valid_o = (la_oenb_i[2]) ? la_data_in_i[10] : dfe_valid_i;
+    assign dfe_data_o  = (!la_oenb_i[2]) ? la_data_in_i[9:2] : dfe_data_i;
+    assign dfe_valid_o = (!la_oenb_i[2]) ? la_data_in_i[10] : dfe_valid_i;
 
     // ACO -> WRD - 106 Pin(s)
-    assign aco_data_o  = (la_oenb_i[3]) ? la_data_in_i[114:11] : aco_data_i;
-    assign aco_valid_o = (la_oenb_i[3]) ? la_data_in_i[115] : aco_valid_i;
-    assign aco_last_o  = (la_oenb_i[3]) ? la_data_in_i[116] : aco_last_i;
+    assign aco_data_o  = (!la_oenb_i[3]) ? la_data_in_i[114:11] : aco_data_i;
+    assign aco_valid_o = (!la_oenb_i[3]) ? la_data_in_i[115] : aco_valid_i;
+    assign aco_last_o  = (!la_oenb_i[3]) ? la_data_in_i[116] : aco_last_i;
 
     // WRD -> WAKE - 2 Pin(s)
-    assign wrd_wake_o       = (la_oenb_i[4]) ? la_data_in_i[117] : wrd_wake_i;
-    assign wrd_wake_valid_o = (la_oenb_i[4]) ? la_data_in_i[118] :
-                                               wrd_wake_valid_i;
+    assign wrd_wake_o       = (!la_oenb_i[4]) ? la_data_in_i[117] : wrd_wake_i;
+    assign wrd_wake_valid_o = (!la_oenb_i[4]) ? la_data_in_i[118] :
+                                                wrd_wake_valid_i;
 
 
     // =========================================================================
