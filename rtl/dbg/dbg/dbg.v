@@ -51,62 +51,55 @@ module dbg #(
     output wrd_wake_o,
     output wrd_wake_valid_o
 );
+    // =========================================================================
+    // Pack input signals into one 128-bit vector
+    // =========================================================================
+
+    wire [127:0] packed_input = {9'd0,
+                                 wrd_wake_valid_i,
+                                 wrd_wake_i,
+                                 aco_last_i,
+                                 aco_valid_i,
+                                 aco_data_i,
+                                 dfe_valid_i,
+                                 dfe_data_i,
+                                 mic_pdm_data_i,
+                                 ctl_pipeline_en_i};
+    wire [127:0] packed_output;
 
     // =========================================================================
-    // Logic Analyzer Read Assignments
+    // Mux each bit between the logic analyzer input and the original signal
+    // =========================================================================
+
+    genvar i;
+    generate
+        for (i = 0; i < 128; i = i + 1) begin
+            assign packed_output[i] = (!la_oenb_i[i]) ? la_data_in_i[i] : packed_input[i];
+        end
+    endgenerate
+
+    // =========================================================================
+    // Unpack muxed data
     // =========================================================================
 
     // CTL -> *** - 1 Pin(s)
-    assign la_data_out_o[0] = ctl_pipeline_en_i;
+    assign ctl_pipeline_en_o = packed_output[0];
 
     // MIC -> DFE - 1 Pin(s)
-    assign la_data_out_o[1] = mic_pdm_data_i;
+    assign mic_pdm_data_o = packed_output[1];
 
     // DFE -> ACO - 9 Pin(s)
-    assign la_data_out_o[9:2] = dfe_data_i;
-    assign la_data_out_o[10]  = dfe_valid_i;
+    assign dfe_data_o  = packed_output[9:2];
+    assign dfe_valid_o = packed_output[10];
 
     // ACO -> WRD - 106 Pin(s)
-    assign la_data_out_o[114:11] = aco_data_i;
-    assign la_data_out_o[115]    = aco_valid_i;
-    assign la_data_out_o[116]    = aco_last_i;
+    assign aco_data_o  = packed_output[114:11];
+    assign aco_valid_o = packed_output[115];
+    assign aco_last_o  = packed_output[116];
 
     // WRD -> WAKE - 2 Pin(s)
-    assign la_data_out_o[117] = wrd_wake_i;
-    assign la_data_out_o[118] = wrd_wake_valid_i;
-
-
-    // =========================================================================
-    // Logic Analyzer Write Assignments
-    // =========================================================================
-
-    // CTL -> *** - 1 Pin(s)
-    assign ctl_pipeline_en_o = (!la_oenb_i[0]) ? la_data_in_i[0] :
-                                                 ctl_pipeline_en_i;
-
-    // MIC -> DFE - 1 Pin(s)
-    assign mic_pdm_data_o = (!la_oenb_i[1]) ? la_data_in_i[1] : mic_pdm_data_i;
-
-    // DFE -> ACO - 9 Pin(s)
-    assign dfe_data_o  = (!la_oenb_i[2]) ? la_data_in_i[9:2] : dfe_data_i;
-    assign dfe_valid_o = (!la_oenb_i[2]) ? la_data_in_i[10] : dfe_valid_i;
-
-    // ACO -> WRD - 106 Pin(s)
-    assign aco_data_o  = (!la_oenb_i[3]) ? la_data_in_i[114:11] : aco_data_i;
-    assign aco_valid_o = (!la_oenb_i[3]) ? la_data_in_i[115] : aco_valid_i;
-    assign aco_last_o  = (!la_oenb_i[3]) ? la_data_in_i[116] : aco_last_i;
-
-    // WRD -> WAKE - 2 Pin(s)
-    assign wrd_wake_o       = (!la_oenb_i[4]) ? la_data_in_i[117] : wrd_wake_i;
-    assign wrd_wake_valid_o = (!la_oenb_i[4]) ? la_data_in_i[118] :
-                                                wrd_wake_valid_i;
-
-
-    // =========================================================================
-    // Tie Off Unused la_data_out signals
-    // =========================================================================
-    assign la_data_out_o[127:119] = 'b0;
-
+    assign wrd_wake_o       = packed_output[117];
+    assign wrd_wake_valid_o = packed_output[118];
 
     // =========================================================================
     // Simulation Only Waveform Dump (.vcd export)
