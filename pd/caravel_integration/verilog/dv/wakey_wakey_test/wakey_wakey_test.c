@@ -190,18 +190,20 @@ bool run_test() {
  */
 void la_test() {
     // reg_la2_oenb = reg_la2_iena = 0xFFFFFFFF;    // [95:64]
+    reg_la0_data = 0xAAAAAAAA;  // setupt output values
+    reg_la1_data = 0xAAAAAAAA;
+    reg_la2_data = 0xAAAAAAAA;
+    reg_la3_data = 0xAAAAAAAA;
     reg_la0_oenb = reg_la0_iena = 0x0;  // OUTPUT
     reg_la1_oenb = reg_la1_iena = 0x0;
     reg_la2_oenb = reg_la2_iena = 0x0;
     reg_la3_oenb = reg_la3_iena = 0x0;
-    reg_la0_data = 0xAAAAAAAA;
-    reg_la1_data = 0xAAAAAAAA;
-    reg_la2_data = 0xAAAAAAAA;
-    reg_la3_data = 0xAAAAAAAA;
 
     reg_la1_oenb = reg_la1_iena = 0xFFFFFFFF;  // INPUT
-    int read = reg_la1_data;   // READ DATA
-    reg_la3_data = read;   // WRITE ON REG 3
+    int read = reg_la1_data;   // read data (h77777777)
+    reg_la3_data = read;   // write on reg 3
+    reg_la1_oenb = reg_la1_iena = 0x0;  // test switching speed
+    reg_la1_oenb = reg_la1_iena = 0xFFFFFFFF;
     reg_la1_oenb = reg_la1_iena = 0x0;
 
 }
