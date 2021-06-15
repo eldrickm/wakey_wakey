@@ -1,22 +1,22 @@
 [*]
 [*] GTKWave Analyzer v3.3.61 (w)1999-2014 BSI
-[*] Sat Jun 12 20:46:03 2021
+[*] Tue Jun 15 19:42:50 2021
 [*]
 [dumpfile] "/tmp/mjpauly-ee272/wakey_wakey/pd/caravel_integration/verilog/dv/wakey_wakey_test/wakey_wakey_test.vcd"
-[dumpfile_mtime] "Sat Jun 12 20:33:43 2021"
-[dumpfile_size] 386470951
+[dumpfile_mtime] "Tue Jun 15 19:42:50 2021"
+[dumpfile_size] 302706688
 [savefile] "/tmp/mjpauly-ee272/wakey_wakey/pd/caravel_integration/verilog/dv/wakey_wakey_test/view.gtkw"
-[timestart] 0
+[timestart] 83600000
 [size] 1870 1033
-[pos] 61 0
-*-28.000000 244000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[pos] -1 -1
+*-26.000000 214700000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] wakey_wakey_test_tb.
 [treeopen] wakey_wakey_test_tb.uut.
 [treeopen] wakey_wakey_test_tb.uut.mprj.
 [treeopen] wakey_wakey_test_tb.uut.mprj.mprj.
 [treeopen] wakey_wakey_test_tb.uut.mprj.mprj.wakey_wakey_inst.
 [sst_width] 401
-[signals_width] 250
+[signals_width] 572
 [sst_expanded] 1
 [sst_vpaned_height] 471
 @28
@@ -64,12 +64,20 @@ wakey_wakey_test_tb.uut.mprj.mprj.wakey_wakey_inst.aco_valid
 wakey_wakey_test_tb.uut.mprj.mprj.wakey_wakey_inst.aco_last
 @200
 -
-@23
+@22
 wakey_wakey_test_tb.uut.mprj.mprj.io_in[37:0]
 @200
 -
 -
+@22
+wakey_wakey_test_tb.uut.mprj.mprj.la_data_in[127:0]
+wakey_wakey_test_tb.uut.mprj.mprj.la_data_out[127:0]
+wakey_wakey_test_tb.uut.mprj.mprj.la_oenb[127:0]
+@200
 -
+@23
+wakey_wakey_test_tb.uut.mprj.la_data_out[127:0]
+@200
 -
 -
 -

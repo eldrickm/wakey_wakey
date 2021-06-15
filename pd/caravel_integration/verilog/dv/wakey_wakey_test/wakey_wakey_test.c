@@ -64,7 +64,7 @@ void cfg_load(int addr, int *data)
     cfg_reg_addr = addr;
     // write the load command - 0x2
     cfg_reg_ctrl = 0x2;
-    // TODO: Currently need to wait one clock cycle before read starts - fix?
+    // INFO: Currently need to wait one clock cycle before read starts
     __asm__("nop\n\t");
 
     // read the data words
@@ -185,6 +185,27 @@ bool run_test() {
     // return false;  // test that returning false actually fails the test bench
 }
 
+/* Test the logic analyzer using the waveforms. Hardcode la_data_out to 'h7777777...
+ * in user_project_wrapper.
+ */
+void la_test() {
+    // reg_la2_oenb = reg_la2_iena = 0xFFFFFFFF;    // [95:64]
+    reg_la0_oenb = reg_la0_iena = 0x0;  // OUTPUT
+    reg_la1_oenb = reg_la1_iena = 0x0;
+    reg_la2_oenb = reg_la2_iena = 0x0;
+    reg_la3_oenb = reg_la3_iena = 0x0;
+    reg_la0_data = 0xAAAAAAAA;
+    reg_la1_data = 0xAAAAAAAA;
+    reg_la2_data = 0xAAAAAAAA;
+    reg_la3_data = 0xAAAAAAAA;
+
+    reg_la1_oenb = reg_la1_iena = 0xFFFFFFFF;  // INPUT
+    int read = reg_la1_data;   // READ DATA
+    reg_la3_data = read;   // WRITE ON REG 3
+    reg_la1_oenb = reg_la1_iena = 0x0;
+
+}
+
 int i = 0; 
 int clk = 0;
 
@@ -234,9 +255,10 @@ void main()
 
      /* Apply configuration */
     reg_mprj_xfer = 1;
-    while (reg_mprj_xfer == 1)
+    while (reg_mprj_xfer == 1) {}
 
-	reg_la2_oenb = reg_la2_iena = 0xFFFFFFFF;    // [95:64]
+    la_test();
+
 
     // Flag start of the test
     reg_mprj_datal = 0xAB600000;
