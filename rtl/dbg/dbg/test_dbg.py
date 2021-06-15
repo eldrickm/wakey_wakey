@@ -155,11 +155,9 @@ async def main(dut):
 
     # test ACO -> WRD
     await FallingEdge(dut.clk_i)
-    # assert dut.aco_data_o.value == 0xDEADBEEFDEADBEEFDEADBEEFCC
     assert dut.aco_data_o.value == 0
     assert dut.aco_valid_o.value == 0
     assert dut.aco_last_o.value == 0
-    # assert get_la_data_slice(dut, aco_data_slice) == 0xDEADBEEFDEADBEEFDEADBEEFCC
     assert get_la_data_slice(dut, aco_data_slice) == 0
     assert get_la_data_slice(dut, aco_valid_slice) == 0
     assert get_la_data_slice(dut, aco_last_slice) == 0
