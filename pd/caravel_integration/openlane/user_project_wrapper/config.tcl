@@ -36,7 +36,7 @@ set ::env(CLOCK_NET) "mprj.clk"
 
 # TODO: What should we set these to?
 # set ::env(CLOCK_PERIOD) "10"
-set ::env(CLOCK_PERIOD) "250"
+set ::env(CLOCK_PERIOD) "62.5"
 
 ## Internal Macros
 ### Macro Placement
@@ -70,3 +70,6 @@ set ::env(DIODE_INSERTION_STRATEGY) 0
 set ::env(FILL_INSERTION) 0
 set ::env(TAP_DECAP_INSERTION) 0
 set ::env(CLOCK_TREE_SYNTH) 0
+
+set ::env(VDD_NETS) "VDD"
+set ::env(GND_NETS) "VSS"
