@@ -87,7 +87,7 @@ async def main(dut):
 
     dut.ctl_pipeline_en_i <= 0
 
-    dut.mic_pdm_data_i <= 0
+    # dut.mic_pdm_data_i <= 0
 
     dut.dfe_data_i <= 0
     dut.dfe_valid_i <= 0
@@ -119,6 +119,7 @@ async def main(dut):
     disable_la_write(dut)
 
     # test MIC -> DFE
+    '''  # skip pdm for cocotb sim
     await FallingEdge(dut.clk_i)
     assert dut.mic_pdm_data_o.value == 0
     assert get_la_data_slice(dut, mic_data_slice) == 0
@@ -131,6 +132,7 @@ async def main(dut):
     check_other_slices_unchanged(dut, [mic_data_slice])
 
     disable_la_write(dut)
+    '''
 
     # test DFE -> ACO
     await FallingEdge(dut.clk_i)

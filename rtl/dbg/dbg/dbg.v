@@ -23,10 +23,12 @@ module dbg #(
 
     output ctl_pipeline_en_o,
 
+    `ifndef COCOTB_SIM
     // mic -> dfe
     input   mic_pdm_data_i,
 
     output  mic_pdm_data_o,
+    `endif
 
     // dfe -> aco
     input [DFE_OUTPUT_BW - 1 : 0] dfe_data_i,
@@ -63,7 +65,11 @@ module dbg #(
                                  aco_data_i,
                                  dfe_valid_i,
                                  dfe_data_i,
+                                 `ifndef COCOTB_SIM
                                  mic_pdm_data_i,
+                                 `else
+                                 1'b0,
+                                 `endif
                                  ctl_pipeline_en_i};
     assign la_data_out_o = packed_input;
     wire [127:0] packed_output;
@@ -87,7 +93,9 @@ module dbg #(
     assign ctl_pipeline_en_o = packed_output[0];
 
     // MIC -> DFE - 1 Pin(s)
+    `ifndef COCOTB_SIM
     assign mic_pdm_data_o = packed_output[1];
+    `endif
 
     // DFE -> ACO - 9 Pin(s)
     assign dfe_data_o  = packed_output[9:2];

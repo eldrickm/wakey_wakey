@@ -440,7 +440,7 @@ async def read_wake(dut, wake_expected):
         await FallingEdge(dut.clk_i)
     for i in range(3):
         await FallingEdge(dut.clk_i)
-    wake = dut.wrd_inst.wake_o_muxed.value
+    wake = dut.wrd_inst.wake_o.value
     if wake_expected:
         assert wake == 1, 'Wake not asserted as expected.'
     else:
@@ -452,7 +452,7 @@ async def read_wake_no_assert(dut):
         await FallingEdge(dut.clk_i)
     for i in range(3):
         await FallingEdge(dut.clk_i)
-    wake = dut.wrd_inst.wake_o_muxed.value
+    wake = dut.wrd_inst.wake_o.value
     print('Received wake determination', wake)
     wake_bool = True if (wake == 1) else False
     return wake_bool
@@ -920,7 +920,6 @@ async def test_wakey_wakey(dut):
     #      await write_mem_params(dut, params)
     #      await do_mfcc_test(dut)
 
-    print('Make sure to source setup.bashrc!')
     print('To limit the number of tests, run with: make PLUSARGS="+n_tests=2"')
     params = na.get_params()
     await write_mem_params(dut, params)

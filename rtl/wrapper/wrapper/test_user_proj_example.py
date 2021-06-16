@@ -892,7 +892,6 @@ async def test_wakey_wakey(dut):
     #      await write_mem_params(dut, params)
     #      await do_mfcc_test(dut)
 
-    print('Make sure to source setup.bashrc!')
     print('To limit the number of tests, run with: make PLUSARGS="+n_tests=2"')
     params = na.get_params()
     await write_mem_params(dut, params)

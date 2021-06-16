@@ -155,10 +155,10 @@ module wakey_wakey (
     // =========================================================================
     localparam DFE_OUTPUT_BW = 8;
 
-    wire pdm_data_i_muxed;
     wire [DFE_OUTPUT_BW - 1 : 0] dfe_data_muxed;
     wire                         dfe_valid_muxed;
     `ifndef COCOTB_SIM
+    wire pdm_data_i_muxed;
     wire [DFE_OUTPUT_BW - 1 : 0] dfe_data;
     wire                         dfe_valid;
 
@@ -272,9 +272,11 @@ module wakey_wakey (
         .ctl_pipeline_en_i(pipeline_en),
         .ctl_pipeline_en_o(pipeline_en_muxed),
 
+        `ifndef COCOTB_SIM
         // mic -> dfe
         .mic_pdm_data_i(pdm_data_i),
         .mic_pdm_data_o(pdm_data_i_muxed),
+        `endif
 
         // dfe -> aco
         .dfe_data_i(dfe_data),
