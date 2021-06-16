@@ -75,6 +75,7 @@ def construct():
   netgen_lvs      = Step( this_dir + '/open-netgen-lvs'                 )
   magic_antenna   = Step( this_dir + '/open-magic-antenna'              )
   calibre_lvs     = Step( this_dir + '/mentor-calibre-comparison'       )
+  pt_timing       = Step( this_dir + '/synopsys-pt-timing-signoff'      )
 
   export         = Step( this_dir + '/export-to-openlane'         )
   dc              = Step( this_dir + '/synopsys-dc-synthesis')  # NEW DC with netname case sensitivity fix
@@ -98,7 +99,7 @@ def construct():
   route           = Step( 'cadence-innovus-route',         default=True )
   postroute       = Step( 'cadence-innovus-postroute',     default=True )
   gdsmerge        = Step( 'mentor-calibre-gdsmerge',       default=True )
-  pt_timing       = Step( 'synopsys-pt-timing-signoff',    default=True )
+  # pt_timing       = Step( 'synopsys-pt-timing-signoff',    default=True )
 
   gen_saif        = Step( 'synopsys-vcd2saif-convert',     default=True )
   gen_saif_rtl    = gen_saif.clone()
