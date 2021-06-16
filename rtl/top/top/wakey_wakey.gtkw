@@ -1,18 +1,18 @@
 [*]
 [*] GTKWave Analyzer v3.3.61 (w)1999-2014 BSI
-[*] Fri Jun 11 04:28:34 2021
+[*] Tue Jun 15 23:30:28 2021
 [*]
 [dumpfile] "/tmp/mjpauly-ee272/wakey_wakey/rtl/top/top/wave.vcd"
-[dumpfile_mtime] "Fri Jun 11 04:28:34 2021"
-[dumpfile_size] 2314711040
+[dumpfile_mtime] "Tue Jun 15 23:28:20 2021"
+[dumpfile_size] 21093513
 [savefile] "/tmp/mjpauly-ee272/wakey_wakey/rtl/top/top/wakey_wakey.gtkw"
 [timestart] 0
 [size] 1870 1033
 [pos] -1 -1
-*-37.843563 811400000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-37.843563 325000000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] wakey_wakey.
 [sst_width] 265
-[signals_width] 302
+[signals_width] 403
 [sst_expanded] 1
 [sst_vpaned_height] 392
 @200
@@ -67,7 +67,6 @@ wakey_wakey.aco_valid
 -Wake Output
 @28
 wakey_wakey.wake_o
-@29
 wakey_wakey.wake_valid
 @200
 -
