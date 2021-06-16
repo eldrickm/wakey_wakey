@@ -744,6 +744,9 @@ async def test_wakey_wakey(dut):
     #  dut.io_in.value[34] <= 0 # vad_i
     dut.io_in <= 0
 
+    dut.la_data_in <= 0
+    dut.la_oenb <= 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+
     # wait long enough for reset to be effective
     for _ in range(50):
         await FallingEdge(dut.wb_clk_i)

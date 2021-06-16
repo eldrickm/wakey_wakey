@@ -48,6 +48,7 @@ VERILOG_SOURCES += ../../aco/dct/*.v
 VERILOG_SOURCES += ../../aco/quant/*.v
 VERILOG_SOURCES += ../../aco/packing/*.v
 VERILOG_SOURCES += ../../ctl/ctl/*.v
+VERILOG_SOURCES += ../../dbg/dbg/*.v
 VERILOG_SOURCES += ../../top/top/*.v
 
 # ==============================================================================

@@ -212,6 +212,7 @@ module wakey_wakey (
     // WRD - Word Recognition DNN Accelerator Module
     // =========================================================================
     wire wrd_ready;
+    wire wake_o;
 
     wrd wrd_inst (
         // clock and reset
