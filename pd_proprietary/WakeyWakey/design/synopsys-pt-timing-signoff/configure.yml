@@ -27,6 +27,9 @@ outputs:
 #-------------------------------------------------------------------------
 
 commands:
+  - cp inputs/design.pt.sdc inputs/design.pt.sdc-unmodified
+  - rm inputs/design.pt.sdc
+  - cp inputs/design.pt.sdc-unmodified inputs/design.pt.sdc
   - vim -T dumb --noplugin -n -S "fix_pt_appends.vim" "inputs/design.pt.sdc"
   - pt_shell -file pt.tcl
   - mkdir -p outputs && cd outputs
