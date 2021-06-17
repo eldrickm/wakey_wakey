@@ -24,7 +24,7 @@
  *
  * user_proj_example
  *
- * TODO: Write Description
+ * Instatiates WakeyWakey in user_proj_example for Caravel integration
  *-------------------------------------------------------------
  */
 
@@ -125,11 +125,11 @@ module user_proj_example (
     // =========================================================================
     // Pin Directions (Output Enable)
     // =========================================================================
-    assign io_oeb[37] = 1'b1;       // wake_o
-    assign io_oeb[36] = 1'b0;       // pdm_data_i
-    assign io_oeb[35] = 1'b1;       // pdm_clk_o
-    assign io_oeb[34] = 1'b0;       // vad_i
-    assign io_oeb[33:0] = 34'b0;    // unused, except by test bench
+    assign io_oeb[37] = 1'b0;       // wake_o
+    assign io_oeb[36] = 1'b1;       // pdm_data_i
+    assign io_oeb[35] = 1'b0;       // pdm_clk_o
+    assign io_oeb[34] = 1'b1;       // vad_i
+    assign io_oeb[33:0] = 34'b1;    // unused, except by test bench
 
     // =========================================================================
     // Wakey Wakey Outputs
@@ -328,7 +328,6 @@ module wakey_wakey (
         // clock, reset, and enable
         .clk_i(clk_i),
         .rst_n_i(rst_n_i),
-        // TODO: Activate Pin hooks up here
         .en_i(pipeline_en),
 
         // pdm input
@@ -434,10 +433,8 @@ endmodule
 // Verification: Matthew Pauly
 // Notes:
 // User address space goes from 0x3000_0000 to 0x7FFF_FFFF
-// TODO: Sensitize to cyc_i?
-// TODO: Adjust wishbone ack for Store and Load on CTRL?
-// TODO: Remove technically unecessary mux to zeros in Data Registers
-// TODO: Check wave timings on ack for new delayed signals
+// INFO: Design not sensitized to cyc_i; only strobe is needed if trust wb
+// INFO: Wishbone ack may be one cycle too early, add NOP to firmware if needed
 // =============================================================================
 
 module cfg #(
@@ -805,18 +802,12 @@ module ctl # (
     // Local Parameters
     // =========================================================================
     // 5ms empirically determined with microphone. See test/pdm_capture_test.
-    // Design Compiler does not support rtoi
+    // INFO: Design Compiler does not support rtoi
     // localparam COUNT_CYCLES   = $rtoi(0.005 * F_SYSTEM_CLK);
-    // integer type needed to keep DC from flaggging COUNT_CYCLES as a non
-    // constant expression
-    // TODO: make sure that this value is as expected after DC Synthesis
-    // Could also use a division by integer if multiplication by decimal does not
-    // expand as expected
-    // localparam integer COUNT_CYCLES   = F_SYSTEM_CLK / 200;
     `ifdef COCOTB_SIM
-    localparam integer COUNT_CYCLES  = 0.005 * 1000;
+    localparam integer COUNT_CYCLES  = 1000 / 200;
     `else
-    localparam integer COUNT_CYCLES  = 0.005 * F_SYSTEM_CLK;
+    localparam integer COUNT_CYCLES  = F_SYSTEM_CLK / 200;
     `endif
     localparam COUNTER_BW            = $clog2(COUNT_CYCLES + 1);
 
@@ -898,12 +889,107 @@ module ctl # (
     `endif
 
 endmodule
+// ============================================================================
+// Module:       Maximum
+// Design:       Eldrick Millares
+// Verification: Matthew Pauly
+// Notes:
+// INFO: Hard coded for 2 elements.
+// ============================================================================
+
+module argmax #(
+    parameter I_BW = 24,
+
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter VECTOR_LEN = 2
+) (
+    // clock and reset
+    input                                       clk_i,
+    input                                       rst_n_i,
+
+    // streaming input
+    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data_i,
+    input                                       valid_i,
+    input                                       last_i,
+    output                                      ready_o,
+
+    // streaming output
+    output signed [VECTOR_LEN - 1 : 0]          data_o,
+    output                                      valid_o,
+    output                                      last_o,
+    input                                       ready_i
+);
+
+    genvar i;
+
+    // =========================================================================
+    // Input Unpacking
+    // =========================================================================
+    wire signed [I_BW - 1 : 0] data_arr [VECTOR_LEN - 1 : 0];
+    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: unpack_inputs
+        assign data_arr[i] = data_i[(i + 1) * I_BW - 1 : i * I_BW];
+    end
+
+    // =========================================================================
+    // Max
+    // =========================================================================
+    wire [VECTOR_LEN - 1 : 0] argmax_one_hot;
+    reg  [VECTOR_LEN - 1 : 0] argmax_one_hot_q;
+
+    assign argmax_one_hot = (data_arr[0] > data_arr[1]) ? 'b01 : 'b10;
+
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            argmax_one_hot_q <= 'd0;
+        end else begin
+            argmax_one_hot_q <= argmax_one_hot;
+        end
+    end
+
+    // =========================================================================
+    // Output Assignment
+    // =========================================================================
+    // register all outputs
+    reg valid_q, last_q, ready_q;
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            valid_q <= 'b0;
+            last_q  <= 'b0;
+            ready_q <= 'b0;
+        end else begin
+            valid_q <= valid_i;
+            last_q  <= last_i;
+            ready_q <= ready_i;
+        end
+    end
+
+    assign data_o   = argmax_one_hot_q;
+    assign valid_o  = valid_q;
+    assign last_o   = last_q;
+    assign ready_o  = ready_q;
+
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
+    initial begin
+        $dumpfile ("wave.vcd");
+        $dumpvars (0, argmax);
+        #1;
+    end
+    `endif
+    `endif
+
+endmodule
 // =============================================================================
 // Module:       Convolution Memory
 // Design:       Eldrick Millares
 // Verification: Matthew Pauly
 // Notes:
-// TODO: Implement rd_data_o for reading memories
 //
 // Stores weights, biases, and shifts in different banks, numbered like so:
 // [0, NUM_FILTERS-1] : Kernel weights for nth output channel
@@ -1137,7 +1223,6 @@ endmodule
 // Design:       Eldrick Millares
 // Verification: Matthew Pauly
 // Notes:
-// TODO: Handle Full and Empty
 // ============================================================================
 
 module conv_sipo #(
@@ -1285,1028 +1370,6 @@ module conv_sipo #(
     `endif
 
 endmodule
-// ============================================================================
-// Max Pool
-// Design: Eldrick Millares
-// Verification: Matthew Pauly
-// Notes:
-// ============================================================================
-
-module max_pool #(
-    parameter BW = 8
-) (
-    // clock and reset
-    input                      clk_i,
-    input                      rst_n_i,
-
-    // streaming input
-    input  signed [BW - 1 : 0] data_i,
-    input                      valid_i,
-    input                      last_i,
-    output                     ready_o,
-
-    // streaming output
-    output signed [BW - 1 : 0] data_o,
-    output                     valid_o,
-    output                     last_o,
-    input                      ready_i
-);
-
-    // =========================================================================
-    // Output Register Declaratons
-    // =========================================================================
-    reg signed [BW - 1 : 0] data_q, data_q2, max;
-    reg valid_q, valid_q2, valid_q3, last_q, last_q2, ready_q;
-
-    // =========================================================================
-    // State Machine
-    // =========================================================================
-    localparam STATE_IDLE   = 2'd0,
-               STATE_LOAD_1 = 2'd1,
-               STATE_LOAD_2 = 2'd2,
-               STATE_VALID  = 2'd3;
-    reg [1:0] state;
-
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            state <= STATE_IDLE;
-        end else begin
-            case(state)
-                STATE_IDLE: begin
-                    state <= (valid_i) ? STATE_LOAD_1 : STATE_IDLE;
-                end
-                STATE_LOAD_1: begin
-                    state <= (valid_i) ? STATE_LOAD_2 : STATE_IDLE;
-                end
-                STATE_LOAD_2: begin
-                    state <= STATE_VALID;
-                end
-                STATE_VALID: begin
-                    state <= (valid_q) ?
-                             ((last_q) ? STATE_VALID : STATE_LOAD_2) :
-                             STATE_IDLE;
-                end
-                default: begin
-                end
-            endcase
-        end
-    end
-
-    // register all outputs
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            valid_q  <= 'b0;
-            valid_q2 <= 'b0;
-            valid_q3 <= 'b0;
-            last_q   <= 'b0;
-            last_q2  <= 'b0;
-            ready_q  <= 'b0;
-            data_q   <= 'b0;
-            data_q2  <= 'b0;
-            max      <= 'b0;
-        end else begin
-            valid_q  <= valid_i;
-            valid_q2 <= valid_q;
-            valid_q3 <= valid_q2;
-            last_q   <= last_i;
-            last_q2  <= last_q;
-            ready_q  <= ready_i;
-            data_q   <= data_i;
-            data_q2  <= data_q;
-            max      <= (state == STATE_VALID) ? 
-                          data_q  // if 2 new data are not ready yet just
-                                  // output the first one
-                          : ((data_q > data_q2) ? data_q : data_q2);
-        end
-    end
-
-
-    assign data_o  = max;
-    assign valid_o = (state == STATE_VALID);
-    assign last_o  = last_q2;
-    assign ready_o = ready_q;
-
-    // =========================================================================
-    // Simulation Only Waveform Dump (.vcd export)
-    // =========================================================================
-    `ifdef COCOTB_SIM
-    `ifndef SCANNED
-    `define SCANNED
-    initial begin
-        $dumpfile ("wave.vcd");
-        $dumpvars (0, max_pool);
-        #1;
-    end
-    `endif
-    `endif
-
-endmodule
-// ============================================================================
-// Quantizer
-// Design: Eldrick Millares
-// Verification: Matthew Pauly
-// Notes:
-// TODO: Can we synthesize a variable arithmetic right shift?
-// TODO: Does this need to be signed? Guess is no since it is after ReLU
-// ============================================================================
-
-module quantizer #(
-    parameter I_BW     = 32,
-    parameter O_BW     = 8,
-    parameter SHIFT_BW = $clog2(I_BW)
-) (
-    input                    clk_i,
-    input                    rst_n_i,
-
-    input [SHIFT_BW - 1 : 0] shift_i,
-
-    input [I_BW - 1 : 0]     data_i,
-    input                    valid_i,
-    input                    last_i,
-    output                   ready_o,
-
-    output [O_BW - 1 : 0]    data_o,
-    output                   valid_o,
-    output                   last_o,
-    input                    ready_i
-);
-
-    localparam [O_BW - 1 : 0] saturate_point = {1'b0, {O_BW - 1{1'b1}}};
-
-    reg [I_BW - 1 : 0] shifted;
-
-    always @(posedge clk_i) begin
-        shifted <= (data_i >> shift_i);
-    end
-
-    wire [O_BW - 1 : 0] truncated;
-    assign truncated = shifted[O_BW - 1 : 0];
-
-    // register all outputs
-    reg valid_q, last_q, ready_q;
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            valid_q <= 'b0;
-            last_q  <= 'b0;
-            ready_q <= 'b0;
-        end else begin
-            valid_q <= valid_i;
-            last_q  <= last_i;
-            ready_q <= ready_i;
-        end
-    end
-
-    assign data_o  = (shifted > saturate_point) ? saturate_point :
-                                                  shifted[O_BW - 1 : 0];
-    assign valid_o = valid_q;
-    assign last_o  = last_q;
-    assign ready_o = ready_q;
-
-    // =========================================================================
-    // Simulation Only Waveform Dump (.vcd export)
-    // =========================================================================
-    `ifdef COCOTB_SIM
-    `ifndef SCANNED
-    `define SCANNED
-    initial begin
-        $dumpfile ("wave.vcd");
-        $dumpvars (0, quantizer);
-        #1;
-    end
-    `endif
-    `endif
-
-endmodule
-// =============================================================================
-// Module:       Recycler
-// Design:       Eldrick Millares
-// Verification: Matthew Pauly
-// Notes:
-// Constraint: FRAME_LEN > FILTER_LEN
-// Constraint: FILTER_LEN == 3
-// In order to change filter size, you'll have to parameterize the vec_add
-// unit.
-// TODO: Fix initial deque errors
-// TODO: Handle deassertions of valid midstream
-// TODO: Handle Full and Empty
-// =============================================================================
-
-module recycler #(
-    parameter BW          = 8,
-    parameter FRAME_LEN   = 50,
-    parameter VECTOR_LEN  = 13,
-    parameter NUM_FILTERS = 8,
-
-    // =========================================================================
-    // Local Parameters - Do Not Edit
-    // =========================================================================
-    parameter VECTOR_BW  = VECTOR_LEN * BW
-) (
-    // clock and reset
-    input                             clk_i,
-    input                             rst_n_i,
-
-    // streaming input
-    input  signed [VECTOR_BW - 1 : 0] data_i,
-    input                             valid_i,
-    input                             last_i,
-    output                            ready_o,
-
-    // streaming output
-    output signed [VECTOR_BW - 1 : 0] data0_o,
-    output signed [VECTOR_BW - 1 : 0] data1_o,
-    output signed [VECTOR_BW - 1 : 0] data2_o,
-    output                            valid_o,
-    output                            last_o,
-    input                             ready_i
-);
-
-    genvar i;
-
-    // =========================================================================
-    // Local Parameters
-    // =========================================================================
-    // This unit is hard coded for width 3 filters
-    localparam FILTER_LEN = 3;
-    // Need to account for cycles where the ends of the featuremap wrap
-    // through the shift registers, hence the extra "+ NUM_FILTERS - 1"
-    localparam CYCLE_PERIOD = (FRAME_LEN + FILTER_LEN - 1);
-    localparam MAX_CYCLES = NUM_FILTERS * CYCLE_PERIOD;
-    // Number of cycles where we want to requeue data into the FIFO. For last
-    // filter want to drop all the data and leave the FIFO empty.
-    localparam MAX_CYCLES_REQUEUE = (NUM_FILTERS - 1) * CYCLE_PERIOD;
-
-    // bitwidth definitions
-    localparam COUNTER_BW = $clog2(MAX_CYCLES);
-    localparam FRAME_COUNTER_BW = $clog2(FRAME_LEN + FILTER_LEN - 1);
-
-    // ========================================================================
-    // Recycler Controller
-    // ========================================================================
-    // Define States
-    localparam STATE_IDLE    = 2'd0,
-               STATE_PRELOAD = 2'd1,
-               STATE_LOAD    = 2'd2,
-               STATE_CYCLE   = 2'd3;
-
-    reg [1:0] state;
-    reg [COUNTER_BW - 1 : 0] counter;
-    // frame_counter is used to determine when the output is invalid due to
-    // having the ends of the featuremap both in the shift registers
-    reg [FRAME_COUNTER_BW - 1 : 0] frame_counter;
-
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            counter <= 'd0;
-            state <= STATE_IDLE;
-        end else begin
-            case (state)
-                STATE_IDLE: begin
-                    // FIFO State only transitions to PRELOAD on valid input
-                    counter <= 'd0;
-                    frame_counter <= 'd0;
-                    state   <= (valid_i) ? STATE_PRELOAD : STATE_IDLE;
-                end
-                STATE_PRELOAD: begin
-                    // In PRELOAD, we're shifting the first FILTER_LEN - 1
-                    // elements into our shift register, then transition
-                    // to regular LOAD where the shift register is not active
-                    counter <= counter + 'd1;
-                    frame_counter <= 'd0;
-                    state   <= (counter == FILTER_LEN) ? STATE_LOAD :
-                                                         STATE_PRELOAD;
-                end
-                STATE_LOAD: begin
-                    // In LOAD we're just shifting enough elements until
-                    // last_i is asserted
-                    counter <= 'd0;
-                    frame_counter <= 'd0;
-                    state   <= (last_i) ? STATE_CYCLE: STATE_LOAD;
-                end
-                STATE_CYCLE: begin
-                    // In CYCLE, we begin cycling MAX_CYCLE times.
-                    // If valid_i is high, we transition straight into
-                    // PRELOAD again since a new frame is immediately
-                    // available.
-                    // If valid_i is deasserted, we transition into IDLE
-                    // and wait on the next input blocks to come in
-                    counter <= counter + 'd1;
-                    frame_counter <= (frame_counter < FRAME_LEN + FILTER_LEN - 1)
-                                        ? frame_counter + 'd1
-                                        : 'd1;
-                    state   <= (counter < MAX_CYCLES - 1) ? STATE_CYCLE :
-                               ((valid_i) ? STATE_PRELOAD : STATE_IDLE);
-                end
-                default: begin
-                    counter <= 'd0;
-                    frame_counter <= 'd0;
-                    state   <= STATE_IDLE;
-                end
-            endcase
-        end
-    end
-
-    // ========================================================================
-    // Recycling FIFO
-    // ========================================================================
-    // Needed to ensure we do not drop data_i the first cycle "valid"
-    // is asserted
-    reg [VECTOR_BW - 1: 0] data_i_q;
-    always @(posedge clk_i) begin
-        data_i_q <= data_i;
-    end
-
-    // Delayed by 1 cycle since data_i_q is delayed by one cycle
-    reg fifo_recycle;
-    always @(posedge clk_i) begin
-        fifo_recycle <= (state == STATE_CYCLE);
-    end
-
-    // FIFO Output Shift Register
-    reg [VECTOR_BW - 1 : 0] fifo_out_sr [FILTER_LEN - 1 : 0];
-
-    // Assign din to input if loading, otherwise feedback output to recycle
-    wire [VECTOR_BW - 1 : 0] fifo_din;
-    assign fifo_din = fifo_recycle ? fifo_out_sr[FILTER_LEN - 1] : data_i_q;
-
-    // Always enqueue if FIFO is not idle
-    wire fifo_enq;
-    assign fifo_enq = (!(state == STATE_IDLE) & (counter <= MAX_CYCLES_REQUEUE));
-
-    // Dequeue the FIFO when we begin recycling
-    // or dequeue the FIFO exactly FILTER_LEN - 1 times when Preloading
-    wire fifo_deq;
-    assign fifo_deq = ((state == STATE_CYCLE) |
-                       ((state == STATE_PRELOAD) &
-                        (counter < FILTER_LEN - 1)));
-
-    wire [VECTOR_BW - 1 : 0] fifo_dout;
-
-    fifo #(
-        .DATA_WIDTH(VECTOR_BW),
-        .FIFO_DEPTH(FRAME_LEN)
-    ) fifo_inst (
-        .clk_i(clk_i),
-        .rst_n_i(rst_n_i),
-
-        .enq_i(fifo_enq),
-        .deq_i(fifo_deq),
-
-        .din_i(fifo_din),
-        .dout_o(fifo_dout),
-
-        .full_o_n(),
-        .empty_o_n()
-    );
-
-    // FIFO Output Shift Register Enable
-    wire sr_en;
-    assign sr_en = (fifo_recycle | (state == STATE_PRELOAD));
-
-    // FIFO Output Shift Register
-    always @(posedge clk_i) begin
-        if (sr_en) begin
-            fifo_out_sr[0] <= fifo_dout;
-        end
-    end
-    for (i = 1; i < FILTER_LEN; i = i + 1) begin: create_fifo_out_sr
-        always @(posedge clk_i) begin
-            if (sr_en) begin
-                fifo_out_sr[i] <= fifo_out_sr[i-1];
-            end
-        end
-    end
-
-    // FIFO Output Valid Shift Register
-    reg fifo_out_valid;
-    always @(posedge clk_i) begin
-        fifo_out_valid <= (state == STATE_CYCLE);
-    end
-
-    // ========================================================================
-    // Output Assignment
-    // ========================================================================
-    assign data0_o = fifo_out_sr[0];
-    assign data1_o = fifo_out_sr[1];
-    assign data2_o = fifo_out_sr[2];
-    // Output is not valid when both ends of the featuremap are in the shift
-    // register
-    assign valid_o = fifo_out_valid & (frame_counter <= FRAME_LEN);
-    assign ready_o = ready_i;
-    assign last_o  = last_i;
-
-    // ========================================================================
-    // Simulation Only Waveform Dump (.vcd export)
-    // ========================================================================
-    `ifdef COCOTB_SIM
-    `ifndef SCANNED
-    `define SCANNED
-    initial begin
-        $dumpfile ("wave.vcd");
-        $dumpvars (0, recycler);
-        #1;
-    end
-    `endif
-    `endif
-
-endmodule
-// ============================================================================
-// Module:       Reduction Addition
-// Design:       Eldrick Millares
-// Verification: Matthew Pauly
-// Notes:
-// TODO: Can we make elements in sum minimum length?
-// ============================================================================
-
-module red_add #(
-    parameter I_BW = 18,
-    parameter O_BW = 32,
-    parameter VECTOR_LEN = 2
-) (
-    // clock and reset
-    input                                       clk_i,
-    input                                       rst_n_i,
-
-    // streaming input
-    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data_i,
-    input                                       valid_i,
-    input                                       last_i,
-    output                                      ready_o,
-
-    // streaming output
-    output signed [O_BW - 1 : 0]                data_o,
-    output                                      valid_o,
-    output                                      last_o,
-    input                                       ready_i
-);
-
-    genvar i;
-
-    // =========================================================================
-    // Input Unpacking
-    // =========================================================================
-    // unpacked arrays
-    wire signed [I_BW - 1 : 0] data_arr [VECTOR_LEN - 1 : 0];
-    wire signed [O_BW - 1 : 0] sum      [VECTOR_LEN - 1 : 0];
-    reg  signed [O_BW - 1 : 0] final_sum_q;
-
-    // unpack data input
-    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: unpack_inputs
-        assign data_arr[i] = data_i[(i + 1) * I_BW - 1 : i * I_BW];
-    end
-
-    // =========================================================================
-    // Reduction Addition
-    // =========================================================================
-    for (i = 1; i < VECTOR_LEN; i = i + 1) begin: reduction_sum
-         if (i == 1) begin
-             assign sum[i] = data_arr[i] + data_arr[i-1];
-         end else begin
-             assign sum[i] = sum[i-1] + data_arr[i];
-         end
-    end
-
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            final_sum_q <= 'd0;
-        end else begin
-            final_sum_q <= sum[VECTOR_LEN - 1];
-        end
-    end
-
-    // =========================================================================
-    // Output Assignment
-    // =========================================================================
-    // register all outputs
-    reg valid_q, last_q, ready_q;
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            valid_q <= 'b0;
-            last_q  <= 'b0;
-            ready_q <= 'b0;
-        end else begin
-            valid_q <= valid_i;
-            last_q  <= last_i;
-            ready_q <= ready_i;
-        end
-    end
-
-    assign data_o   = final_sum_q;
-    assign valid_o  = valid_q;
-    assign last_o   = last_q;
-    assign ready_o = ready_q;
-
-    // =========================================================================
-    // Simulation Only Waveform Dump (.vcd export)
-    // =========================================================================
-    `ifdef COCOTB_SIM
-    `ifndef SCANNED
-    `define SCANNED
-    initial begin
-        $dumpfile ("wave.vcd");
-        $dumpvars (0, red_add);
-        #1;
-    end
-    `endif
-    `endif
-
-endmodule
-// =============================================================================
-// Module:       ReLU (Rectified Linear Unit)
-// Design:       Eldrick Millares
-// Verification: Matthew Pauly
-// Notes:
-// =============================================================================
-
-module relu #(
-    parameter BW = 32
-) (
-    input                      clk_i,
-    input                      rst_n_i,
-
-    input  signed [BW - 1 : 0] data_i,
-    input                      valid_i,
-    input                      last_i,
-    output                     ready_o,
-
-    output signed [BW - 1 : 0] data_o,
-    output                     valid_o,
-    output                     last_o,
-    input                      ready_i
-);
-
-    // =========================================================================
-    // Rectification
-    // =========================================================================
-    reg [BW - 1 : 0] rectified;
-    always @(posedge clk_i) begin
-        rectified <= (data_i > 0) ? data_i : 0;
-    end
-
-    // =========================================================================
-    // Output Assignment
-    // =========================================================================
-    // register all outputs
-    reg valid_q, last_q, ready_q;
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            valid_q <= 'b0;
-            last_q  <= 'b0;
-            ready_q <= 'b0;
-        end else begin
-            valid_q <= valid_i;
-            last_q  <= last_i;
-            ready_q <= ready_i;
-        end
-    end
-
-    assign data_o  = rectified;
-    assign valid_o = valid_q;
-    assign last_o  = last_q;
-    assign ready_o = ready_q;
-
-    // =========================================================================
-    // Simulation Only Waveform Dump (.vcd export)
-    // =========================================================================
-    `ifdef COCOTB_SIM
-    `ifndef SCANNED
-    `define SCANNED
-    initial begin
-        $dumpfile ("wave.vcd");
-        $dumpvars (0, relu);
-        #1;
-    end
-    `endif
-    `endif
-
-endmodule
-// =============================================================================
-// Module:       Vector Adder
-// Design:       Eldrick Millares
-// Verification: Matthew Pauly
-// Notes:
-// =============================================================================
-
-module vec_add #(
-    parameter I_BW = 16,
-    parameter O_BW = 18,
-    parameter VECTOR_LEN = 13
-) (
-    // clock and reset
-    input                                       clk_i,
-    input                                       rst_n_i,
-
-    // streaming input
-    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data0_i,
-    input                                       valid0_i,
-    input                                       last0_i,
-    output                                      ready0_o,
-
-    // streaming input
-    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data1_i,
-    input                                       valid1_i,
-    input                                       last1_i,
-    output                                      ready1_o,
-
-    // streaming input
-    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data2_i,
-    input                                       valid2_i,
-    input                                       last2_i,
-    output                                      ready2_o,
-
-    // streaming output
-    output signed [(VECTOR_LEN * O_BW) - 1 : 0] data_o,
-    output                                      valid_o,
-    output                                      last_o,
-    input                                       ready_i
-);
-
-    genvar i;
-
-    // =========================================================================
-    // Input Unpacking
-    // =========================================================================
-    // unpacked arrays
-    wire signed [I_BW - 1 : 0] data0_arr [VECTOR_LEN - 1 : 0];
-    wire signed [I_BW - 1 : 0] data1_arr [VECTOR_LEN - 1 : 0];
-    wire signed [I_BW - 1 : 0] data2_arr [VECTOR_LEN - 1 : 0];
-    reg  signed [O_BW - 1 : 0] out_arr   [VECTOR_LEN - 1 : 0];
-
-    // unpack data input
-    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: unpack_inputs
-        assign data0_arr[i] = data0_i[(i + 1) * I_BW - 1 : i * I_BW];
-        assign data1_arr[i] = data1_i[(i + 1) * I_BW - 1 : i * I_BW];
-        assign data2_arr[i] = data2_i[(i + 1) * I_BW - 1 : i * I_BW];
-    end
-
-    // =========================================================================
-    // Vector Addition
-    // =========================================================================
-    // registered addition of data elements
-    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: vector_addition
-        always @(posedge clk_i) begin
-            if (!rst_n_i) begin
-                out_arr[i] <= 'd0;
-            end else begin
-                out_arr[i] <= data0_arr[i] + data1_arr[i] + data2_arr[i];
-            end
-        end
-    end
-
-    // =========================================================================
-    // Output Packing
-    // =========================================================================
-    // pack addition results
-    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: pack_output
-        assign data_o[(i + 1) * O_BW - 1 : i * O_BW] = out_arr[i];
-    end
-
-    // =========================================================================
-    // Output Assignment
-    // =========================================================================
-    // register all outputs
-    reg valid_q, last_q, ready_q;
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            valid_q <= 'b0;
-            last_q  <= 'b0;
-            ready_q <= 'b0;
-        end else begin
-            valid_q <= valid0_i & valid1_i & valid2_i;
-            last_q  <= last0_i | last1_i | last2_i;
-            ready_q <= ready_i;
-        end
-    end
-
-    assign valid_o  = valid_q;
-    assign last_o   = last_q;
-    assign ready0_o = ready_q;
-    assign ready1_o = ready_q;
-    assign ready2_o = ready_q;
-
-    // =========================================================================
-    // Simulation Only Waveform Dump (.vcd export)
-    // =========================================================================
-    `ifdef COCOTB_SIM
-    `ifndef SCANNED
-    `define SCANNED
-    initial begin
-        $dumpfile ("wave.vcd");
-        $dumpvars (0, vec_add);
-        #1;
-    end
-    `endif
-    `endif
-
-endmodule
-// =============================================================================
-// Module:       Vector Multiplier
-// Design:       Eldrick Millares
-// Verification: Matthew Pauly
-// Notes:
-// =============================================================================
-
-module vec_mul #(
-    parameter I_BW = 8,
-    parameter O_BW = 16,
-    parameter VECTOR_LEN = 13
-) (
-    // clock and reset
-    input                                       clk_i,
-    input                                       rst_n_i,
-
-    // streaming input
-    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data0_i,
-    input                                       valid0_i,
-    input                                       last0_i,
-    output                                      ready0_o,
-
-    // streaming input
-    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data1_i,
-    input                                       valid1_i,
-    input                                       last1_i,
-    output                                      ready1_o,
-
-    // streaming output
-    output signed [(VECTOR_LEN * O_BW) - 1 : 0] data_o,
-    output                                      valid_o,
-    output                                      last_o,
-    input                                       ready_i
-);
-
-    genvar i;
-
-    // =========================================================================
-    // Input Unpacking
-    // =========================================================================
-    // unpacked arrays
-    wire signed [I_BW - 1 : 0] data0_arr [VECTOR_LEN - 1 : 0];
-    wire signed [I_BW - 1 : 0] data1_arr [VECTOR_LEN - 1 : 0];
-    reg  signed [O_BW - 1 : 0] out_arr   [VECTOR_LEN - 1 : 0];
-
-    // unpack data input
-    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: unpack_inputs
-        assign data0_arr[i] = data0_i[(i + 1) * I_BW - 1 : i * I_BW];
-        assign data1_arr[i] = data1_i[(i + 1) * I_BW - 1 : i * I_BW];
-    end
-
-    // =========================================================================
-    // Vector Multiplication
-    // =========================================================================
-    // registered multiplication of data elements
-    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: vector_multiply
-        always @(posedge clk_i) begin
-            if (!rst_n_i) begin
-                out_arr[i] <= 'd0;
-            end else begin
-                out_arr[i] <= data0_arr[i] * data1_arr[i];
-            end
-        end
-    end
-
-    // =========================================================================
-    // Output Packing
-    // =========================================================================
-    // pack multiplication results
-    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: pack_output
-        assign data_o[(i + 1) * O_BW - 1 : i * O_BW] = out_arr[i];
-    end
-
-    // =========================================================================
-    // Output Assignment
-    // =========================================================================
-    // register all outputs
-    reg valid_q, last_q, ready_q;
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            valid_q <= 'b0;
-            last_q  <= 'b0;
-            ready_q <= 'b0;
-        end else begin
-            valid_q <= valid0_i & valid1_i;
-            last_q  <= last0_i | last1_i;
-            ready_q <= ready_i;
-        end
-    end
-
-    assign valid_o  = valid_q;
-    assign last_o   = last_q;
-    assign ready0_o = ready_q;
-    assign ready1_o = ready_q;
-
-    // =========================================================================
-    // Simulation Only Waveform Dump (.vcd export)
-    // =========================================================================
-    `ifdef COCOTB_SIM
-    `ifndef SCANNED
-    `define SCANNED
-    initial begin
-        $dumpfile ("wave.vcd");
-        $dumpvars (0, vec_mul);
-        #1;
-    end
-    `endif
-    `endif
-
-endmodule
-// =============================================================================
-// Module:       Zero Pad
-// Design:       Eldrick Millares
-// Verification: Matthew Pauly
-// Notes:
-// Adds 1 leading and 1 trailing zero to stream
-//
-// Minimum dead time between frames is 2 clock cycles.
-// This increased dead-time is needed because we reduce latency in this
-// module to just 1 cycle.
-//
-// TODO: Gate registers with valid
-// =============================================================================
-
-module zero_pad #(
-    parameter BW         = 8,
-    parameter VECTOR_LEN = 13,
-
-    // =========================================================================
-    // Local Parameters - Do Not Edit
-    // =========================================================================
-    parameter VECTOR_BW = VECTOR_LEN * BW
-) (
-    // clock and reset
-    input                             clk_i,
-    input                             rst_n_i,
-
-    // streaming input
-    input  signed [VECTOR_BW - 1 : 0] data_i,
-    input                             valid_i,
-    input                             last_i,
-    output                            ready_o,
-
-    // streaming output
-    output signed [VECTOR_BW - 1 : 0] data_o,
-    output                            valid_o,
-    output                            last_o,
-    input                             ready_i
-);
-
-    // =========================================================================
-    // Delay Lines
-    // =========================================================================
-    reg signed [VECTOR_BW - 1 : 0] data_q, data_q2;
-    reg valid_q, valid_q2, valid_q3, last_q, last_q2, last_q3, ready_q;
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            valid_q  <= 'b0;
-            valid_q2 <= 'b0;
-            valid_q3 <= 'b0;
-            last_q   <= 'b0;
-            last_q2  <= 'b0;
-            last_q3  <= 'b0;
-            ready_q  <= 'b0;
-            data_q   <= 'b0;
-            data_q2  <= 'b0;
-        end else begin
-            valid_q  <= valid_i;
-            valid_q2 <= valid_q;
-            valid_q3 <= valid_q2;
-            last_q   <= last_i;
-            last_q2  <= last_q;
-            last_q3  <= last_q2;
-            ready_q  <= ready_i;
-            data_q   <= (valid_i) ? data_i : 0;
-            data_q2  <= (valid_q) ? data_q : 0;
-        end
-    end
-
-    // =========================================================================
-    // Edge Detectors
-    // =========================================================================
-    // positive edge detector to emit initial 0
-    wire valid_i_pos_edge  = valid_i  & (!valid_q);
-
-    // negative edge detectors to extend valid_o, emit last 0
-    wire valid_q_neg_edge  = valid_q2 & (!valid_q);
-    wire valid_q2_neg_edge = valid_q3 & (!valid_q2);
-
-    // =========================================================================
-    // Output Assignment
-    // =========================================================================
-    assign data_o  = (valid_q2_neg_edge | valid_i_pos_edge) ? 0 : data_q2;
-    assign valid_o = valid_q | valid_q_neg_edge | valid_q2_neg_edge;
-    assign last_o  = last_q3;
-    assign ready_o = ready_q;
-
-    // =========================================================================
-    // Simulation Only Waveform Dump (.vcd export)
-    // =========================================================================
-    `ifdef COCOTB_SIM
-    `ifndef SCANNED
-    `define SCANNED
-    initial begin
-        $dumpfile ("wave.vcd");
-        $dumpvars (0, zero_pad);
-        #1;
-    end
-    `endif
-    `endif
-
-endmodule
-// ============================================================================
-// Module:       Maximum
-// Design:       Eldrick Millares
-// Verification: Matthew Pauly
-// Notes:
-// TODO: Hard coded for 2 elements - can we parameterize the one-hot compare?
-// ============================================================================
-
-module argmax #(
-    parameter I_BW = 24,
-
-    // =========================================================================
-    // Local Parameters - Do Not Edit
-    // =========================================================================
-    parameter VECTOR_LEN = 2
-) (
-    // clock and reset
-    input                                       clk_i,
-    input                                       rst_n_i,
-
-    // streaming input
-    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data_i,
-    input                                       valid_i,
-    input                                       last_i,
-    output                                      ready_o,
-
-    // streaming output
-    output signed [VECTOR_LEN - 1 : 0]          data_o,
-    output                                      valid_o,
-    output                                      last_o,
-    input                                       ready_i
-);
-
-    genvar i;
-
-    // =========================================================================
-    // Input Unpacking
-    // =========================================================================
-    wire signed [I_BW - 1 : 0] data_arr [VECTOR_LEN - 1 : 0];
-    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: unpack_inputs
-        assign data_arr[i] = data_i[(i + 1) * I_BW - 1 : i * I_BW];
-    end
-
-    // =========================================================================
-    // Max
-    // =========================================================================
-    wire [VECTOR_LEN - 1 : 0] argmax_one_hot;
-    reg  [VECTOR_LEN - 1 : 0] argmax_one_hot_q;
-
-    assign argmax_one_hot = (data_arr[0] > data_arr[1]) ? 'b01 : 'b10;
-
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            argmax_one_hot_q <= 'd0;
-        end else begin
-            argmax_one_hot_q <= argmax_one_hot;
-        end
-    end
-
-    // =========================================================================
-    // Output Assignment
-    // =========================================================================
-    // register all outputs
-    reg valid_q, last_q, ready_q;
-    always @(posedge clk_i) begin
-        if (!rst_n_i) begin
-            valid_q <= 'b0;
-            last_q  <= 'b0;
-            ready_q <= 'b0;
-        end else begin
-            valid_q <= valid_i;
-            last_q  <= last_i;
-            ready_q <= ready_i;
-        end
-    end
-
-    assign data_o   = argmax_one_hot_q;
-    assign valid_o  = valid_q;
-    assign last_o   = last_q;
-    assign ready_o  = ready_q;
-
-    // =========================================================================
-    // Simulation Only Waveform Dump (.vcd export)
-    // =========================================================================
-    `ifdef COCOTB_SIM
-    `ifndef SCANNED
-    `define SCANNED
-    initial begin
-        $dumpfile ("wave.vcd");
-        $dumpvars (0, argmax);
-        #1;
-    end
-    `endif
-    `endif
-
-endmodule
 // =============================================================================
 // Module:       1D Convolution
 // Design:       Eldrick Millares
@@ -2314,7 +1377,7 @@ endmodule
 // Notes:
 // Constraint: FRAME_LEN > FILTER_LEN
 // Constraint: FILTER_LEN == 3
-// TODO: Deal with ready's / backpressure
+// INFO: Does not deal with ready's / backpressure
 // =============================================================================
 
 module conv_top #(
@@ -2709,7 +1772,6 @@ endmodule
 // Verification: Matthew Pauly
 // Notes:
 // Constraint: BIAS_BW > BW
-// TODO: Implement rd_data_o for reading memories
 // =============================================================================
 
 module fc_mem #(
@@ -2905,8 +1967,6 @@ endmodule
 // Verification: Matthew Pauly
 // Notes:
 // Assumes BIAS_BW > BW
-// TODO: Implement rd_data_o for reading memories
-// TODO: Calculate O_BW from NUM_CLASSES?
 // ============================================================================
 
 module fc_top #(
@@ -3069,8 +2129,6 @@ endmodule
 // Assumes that biases have 2x bitwidth of weights, and outputs are 3x bitwidth
 // Also assumes that packet lengths are > 3 (which is the propogation length of
 // the bias out to the output, since it is pipelined).
-//
-// TODO: Check which signals have to be signed
 // ============================================================================
 
 module mac #(
@@ -3277,12 +2335,832 @@ module mac #(
 
 endmodule
 // ============================================================================
+// Max Pool
+// Design: Eldrick Millares
+// Verification: Matthew Pauly
+// Notes:
+// ============================================================================
+
+module max_pool #(
+    parameter BW = 8
+) (
+    // clock and reset
+    input                      clk_i,
+    input                      rst_n_i,
+
+    // streaming input
+    input  signed [BW - 1 : 0] data_i,
+    input                      valid_i,
+    input                      last_i,
+    output                     ready_o,
+
+    // streaming output
+    output signed [BW - 1 : 0] data_o,
+    output                     valid_o,
+    output                     last_o,
+    input                      ready_i
+);
+
+    // =========================================================================
+    // Output Register Declaratons
+    // =========================================================================
+    reg signed [BW - 1 : 0] data_q, data_q2, max;
+    reg valid_q, valid_q2, valid_q3, last_q, last_q2, ready_q;
+
+    // =========================================================================
+    // State Machine
+    // =========================================================================
+    localparam STATE_IDLE   = 2'd0,
+               STATE_LOAD_1 = 2'd1,
+               STATE_LOAD_2 = 2'd2,
+               STATE_VALID  = 2'd3;
+    reg [1:0] state;
+
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            state <= STATE_IDLE;
+        end else begin
+            case(state)
+                STATE_IDLE: begin
+                    state <= (valid_i) ? STATE_LOAD_1 : STATE_IDLE;
+                end
+                STATE_LOAD_1: begin
+                    state <= (valid_i) ? STATE_LOAD_2 : STATE_IDLE;
+                end
+                STATE_LOAD_2: begin
+                    state <= STATE_VALID;
+                end
+                STATE_VALID: begin
+                    state <= (valid_q) ?
+                             ((last_q) ? STATE_VALID : STATE_LOAD_2) :
+                             STATE_IDLE;
+                end
+                default: begin
+                end
+            endcase
+        end
+    end
+
+    // register all outputs
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            valid_q  <= 'b0;
+            valid_q2 <= 'b0;
+            valid_q3 <= 'b0;
+            last_q   <= 'b0;
+            last_q2  <= 'b0;
+            ready_q  <= 'b0;
+            data_q   <= 'b0;
+            data_q2  <= 'b0;
+            max      <= 'b0;
+        end else begin
+            valid_q  <= valid_i;
+            valid_q2 <= valid_q;
+            valid_q3 <= valid_q2;
+            last_q   <= last_i;
+            last_q2  <= last_q;
+            ready_q  <= ready_i;
+            data_q   <= data_i;
+            data_q2  <= data_q;
+            max      <= (state == STATE_VALID) ? 
+                          data_q  // if 2 new data are not ready yet just
+                                  // output the first one
+                          : ((data_q > data_q2) ? data_q : data_q2);
+        end
+    end
+
+
+    assign data_o  = max;
+    assign valid_o = (state == STATE_VALID);
+    assign last_o  = last_q2;
+    assign ready_o = ready_q;
+
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
+    initial begin
+        $dumpfile ("wave.vcd");
+        $dumpvars (0, max_pool);
+        #1;
+    end
+    `endif
+    `endif
+
+endmodule
+// ============================================================================
+// Quantizer
+// Design: Eldrick Millares
+// Verification: Matthew Pauly
+// Notes:
+// ============================================================================
+
+module quantizer #(
+    parameter I_BW     = 32,
+    parameter O_BW     = 8,
+    parameter SHIFT_BW = $clog2(I_BW)
+) (
+    input                    clk_i,
+    input                    rst_n_i,
+
+    input [SHIFT_BW - 1 : 0] shift_i,
+
+    input [I_BW - 1 : 0]     data_i,
+    input                    valid_i,
+    input                    last_i,
+    output                   ready_o,
+
+    output [O_BW - 1 : 0]    data_o,
+    output                   valid_o,
+    output                   last_o,
+    input                    ready_i
+);
+
+    localparam [O_BW - 1 : 0] saturate_point = {1'b0, {O_BW - 1{1'b1}}};
+
+    reg [I_BW - 1 : 0] shifted;
+
+    always @(posedge clk_i) begin
+        shifted <= (data_i >> shift_i);
+    end
+
+    wire [O_BW - 1 : 0] truncated;
+    assign truncated = shifted[O_BW - 1 : 0];
+
+    // register all outputs
+    reg valid_q, last_q, ready_q;
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            valid_q <= 'b0;
+            last_q  <= 'b0;
+            ready_q <= 'b0;
+        end else begin
+            valid_q <= valid_i;
+            last_q  <= last_i;
+            ready_q <= ready_i;
+        end
+    end
+
+    assign data_o  = (shifted > saturate_point) ? saturate_point :
+                                                  shifted[O_BW - 1 : 0];
+    assign valid_o = valid_q;
+    assign last_o  = last_q;
+    assign ready_o = ready_q;
+
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
+    initial begin
+        $dumpfile ("wave.vcd");
+        $dumpvars (0, quantizer);
+        #1;
+    end
+    `endif
+    `endif
+
+endmodule
+// =============================================================================
+// Module:       Recycler
+// Design:       Eldrick Millares
+// Verification: Matthew Pauly
+// Notes:
+// Constraint: FRAME_LEN > FILTER_LEN
+// Constraint: FILTER_LEN == 3
+// In order to change filter size, you'll have to parameterize the vec_add
+// unit.
+// INFO: SizedFIFO issues deque warning but functionality is correct.
+// INFO: Deassertions of valid midstream not permitted
+// =============================================================================
+
+module recycler #(
+    parameter BW          = 8,
+    parameter FRAME_LEN   = 50,
+    parameter VECTOR_LEN  = 13,
+    parameter NUM_FILTERS = 8,
+
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter VECTOR_BW  = VECTOR_LEN * BW
+) (
+    // clock and reset
+    input                             clk_i,
+    input                             rst_n_i,
+
+    // streaming input
+    input  signed [VECTOR_BW - 1 : 0] data_i,
+    input                             valid_i,
+    input                             last_i,
+    output                            ready_o,
+
+    // streaming output
+    output signed [VECTOR_BW - 1 : 0] data0_o,
+    output signed [VECTOR_BW - 1 : 0] data1_o,
+    output signed [VECTOR_BW - 1 : 0] data2_o,
+    output                            valid_o,
+    output                            last_o,
+    input                             ready_i
+);
+
+    genvar i;
+
+    // =========================================================================
+    // Local Parameters
+    // =========================================================================
+    // This unit is hard coded for width 3 filters
+    localparam FILTER_LEN = 3;
+    // Need to account for cycles where the ends of the featuremap wrap
+    // through the shift registers, hence the extra "+ NUM_FILTERS - 1"
+    localparam CYCLE_PERIOD = (FRAME_LEN + FILTER_LEN - 1);
+    localparam MAX_CYCLES = NUM_FILTERS * CYCLE_PERIOD;
+    // Number of cycles where we want to requeue data into the FIFO. For last
+    // filter want to drop all the data and leave the FIFO empty.
+    localparam MAX_CYCLES_REQUEUE = (NUM_FILTERS - 1) * CYCLE_PERIOD;
+
+    // bitwidth definitions
+    localparam COUNTER_BW = $clog2(MAX_CYCLES);
+    localparam FRAME_COUNTER_BW = $clog2(FRAME_LEN + FILTER_LEN - 1);
+
+    // ========================================================================
+    // Recycler Controller
+    // ========================================================================
+    // Define States
+    localparam STATE_IDLE    = 2'd0,
+               STATE_PRELOAD = 2'd1,
+               STATE_LOAD    = 2'd2,
+               STATE_CYCLE   = 2'd3;
+
+    reg [1:0] state;
+    reg [COUNTER_BW - 1 : 0] counter;
+    // frame_counter is used to determine when the output is invalid due to
+    // having the ends of the featuremap both in the shift registers
+    reg [FRAME_COUNTER_BW - 1 : 0] frame_counter;
+
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            counter <= 'd0;
+            state <= STATE_IDLE;
+        end else begin
+            case (state)
+                STATE_IDLE: begin
+                    // FIFO State only transitions to PRELOAD on valid input
+                    counter <= 'd0;
+                    frame_counter <= 'd0;
+                    state   <= (valid_i) ? STATE_PRELOAD : STATE_IDLE;
+                end
+                STATE_PRELOAD: begin
+                    // In PRELOAD, we're shifting the first FILTER_LEN - 1
+                    // elements into our shift register, then transition
+                    // to regular LOAD where the shift register is not active
+                    counter <= counter + 'd1;
+                    frame_counter <= 'd0;
+                    state   <= (counter == FILTER_LEN) ? STATE_LOAD :
+                                                         STATE_PRELOAD;
+                end
+                STATE_LOAD: begin
+                    // In LOAD we're just shifting enough elements until
+                    // last_i is asserted
+                    counter <= 'd0;
+                    frame_counter <= 'd0;
+                    state   <= (last_i) ? STATE_CYCLE: STATE_LOAD;
+                end
+                STATE_CYCLE: begin
+                    // In CYCLE, we begin cycling MAX_CYCLE times.
+                    // If valid_i is high, we transition straight into
+                    // PRELOAD again since a new frame is immediately
+                    // available.
+                    // If valid_i is deasserted, we transition into IDLE
+                    // and wait on the next input blocks to come in
+                    counter <= counter + 'd1;
+                    frame_counter <= (frame_counter < FRAME_LEN + FILTER_LEN - 1)
+                                        ? frame_counter + 'd1
+                                        : 'd1;
+                    state   <= (counter < MAX_CYCLES - 1) ? STATE_CYCLE :
+                               ((valid_i) ? STATE_PRELOAD : STATE_IDLE);
+                end
+                default: begin
+                    counter <= 'd0;
+                    frame_counter <= 'd0;
+                    state   <= STATE_IDLE;
+                end
+            endcase
+        end
+    end
+
+    // ========================================================================
+    // Recycling FIFO
+    // ========================================================================
+    // Needed to ensure we do not drop data_i the first cycle "valid"
+    // is asserted
+    reg [VECTOR_BW - 1: 0] data_i_q;
+    always @(posedge clk_i) begin
+        data_i_q <= data_i;
+    end
+
+    // Delayed by 1 cycle since data_i_q is delayed by one cycle
+    reg fifo_recycle;
+    always @(posedge clk_i) begin
+        fifo_recycle <= (state == STATE_CYCLE);
+    end
+
+    // FIFO Output Shift Register
+    reg [VECTOR_BW - 1 : 0] fifo_out_sr [FILTER_LEN - 1 : 0];
+
+    // Assign din to input if loading, otherwise feedback output to recycle
+    wire [VECTOR_BW - 1 : 0] fifo_din;
+    assign fifo_din = fifo_recycle ? fifo_out_sr[FILTER_LEN - 1] : data_i_q;
+
+    // Always enqueue if FIFO is not idle
+    wire fifo_enq;
+    assign fifo_enq = (!(state == STATE_IDLE) & (counter <= MAX_CYCLES_REQUEUE));
+
+    // Dequeue the FIFO when we begin recycling
+    // or dequeue the FIFO exactly FILTER_LEN - 1 times when Preloading
+    wire fifo_deq;
+    assign fifo_deq = ((state == STATE_CYCLE) |
+                       ((state == STATE_PRELOAD) &
+                        (counter < FILTER_LEN - 1)));
+
+    wire [VECTOR_BW - 1 : 0] fifo_dout;
+
+    fifo #(
+        .DATA_WIDTH(VECTOR_BW),
+        .FIFO_DEPTH(FRAME_LEN)
+    ) fifo_inst (
+        .clk_i(clk_i),
+        .rst_n_i(rst_n_i),
+
+        .enq_i(fifo_enq),
+        .deq_i(fifo_deq),
+
+        .din_i(fifo_din),
+        .dout_o(fifo_dout),
+
+        .full_o_n(),
+        .empty_o_n()
+    );
+
+    // FIFO Output Shift Register Enable
+    wire sr_en;
+    assign sr_en = (fifo_recycle | (state == STATE_PRELOAD));
+
+    // FIFO Output Shift Register
+    always @(posedge clk_i) begin
+        if (sr_en) begin
+            fifo_out_sr[0] <= fifo_dout;
+        end
+    end
+    for (i = 1; i < FILTER_LEN; i = i + 1) begin: create_fifo_out_sr
+        always @(posedge clk_i) begin
+            if (sr_en) begin
+                fifo_out_sr[i] <= fifo_out_sr[i-1];
+            end
+        end
+    end
+
+    // FIFO Output Valid Shift Register
+    reg fifo_out_valid;
+    always @(posedge clk_i) begin
+        fifo_out_valid <= (state == STATE_CYCLE);
+    end
+
+    // ========================================================================
+    // Output Assignment
+    // ========================================================================
+    assign data0_o = fifo_out_sr[0];
+    assign data1_o = fifo_out_sr[1];
+    assign data2_o = fifo_out_sr[2];
+    // Output is not valid when both ends of the featuremap are in the shift
+    // register
+    assign valid_o = fifo_out_valid & (frame_counter <= FRAME_LEN);
+    assign ready_o = ready_i;
+    assign last_o  = last_i;
+
+    // ========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // ========================================================================
+    `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
+    initial begin
+        $dumpfile ("wave.vcd");
+        $dumpvars (0, recycler);
+        #1;
+    end
+    `endif
+    `endif
+
+endmodule
+// ============================================================================
+// Module:       Reduction Addition
+// Design:       Eldrick Millares
+// Verification: Matthew Pauly
+// Notes:
+// ============================================================================
+
+module red_add #(
+    parameter I_BW = 18,
+    parameter O_BW = 32,
+    parameter VECTOR_LEN = 2
+) (
+    // clock and reset
+    input                                       clk_i,
+    input                                       rst_n_i,
+
+    // streaming input
+    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data_i,
+    input                                       valid_i,
+    input                                       last_i,
+    output                                      ready_o,
+
+    // streaming output
+    output signed [O_BW - 1 : 0]                data_o,
+    output                                      valid_o,
+    output                                      last_o,
+    input                                       ready_i
+);
+
+    genvar i;
+
+    // =========================================================================
+    // Input Unpacking
+    // =========================================================================
+    // unpacked arrays
+    wire signed [I_BW - 1 : 0] data_arr [VECTOR_LEN - 1 : 0];
+    wire signed [O_BW - 1 : 0] sum      [VECTOR_LEN - 1 : 0];
+    reg  signed [O_BW - 1 : 0] final_sum_q;
+
+    // unpack data input
+    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: unpack_inputs
+        assign data_arr[i] = data_i[(i + 1) * I_BW - 1 : i * I_BW];
+    end
+
+    // =========================================================================
+    // Reduction Addition
+    // =========================================================================
+    for (i = 1; i < VECTOR_LEN; i = i + 1) begin: reduction_sum
+         if (i == 1) begin
+             assign sum[i] = data_arr[i] + data_arr[i-1];
+         end else begin
+             assign sum[i] = sum[i-1] + data_arr[i];
+         end
+    end
+
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            final_sum_q <= 'd0;
+        end else begin
+            final_sum_q <= sum[VECTOR_LEN - 1];
+        end
+    end
+
+    // =========================================================================
+    // Output Assignment
+    // =========================================================================
+    // register all outputs
+    reg valid_q, last_q, ready_q;
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            valid_q <= 'b0;
+            last_q  <= 'b0;
+            ready_q <= 'b0;
+        end else begin
+            valid_q <= valid_i;
+            last_q  <= last_i;
+            ready_q <= ready_i;
+        end
+    end
+
+    assign data_o   = final_sum_q;
+    assign valid_o  = valid_q;
+    assign last_o   = last_q;
+    assign ready_o = ready_q;
+
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
+    initial begin
+        $dumpfile ("wave.vcd");
+        $dumpvars (0, red_add);
+        #1;
+    end
+    `endif
+    `endif
+
+endmodule
+// =============================================================================
+// Module:       ReLU (Rectified Linear Unit)
+// Design:       Eldrick Millares
+// Verification: Matthew Pauly
+// Notes:
+// =============================================================================
+
+module relu #(
+    parameter BW = 32
+) (
+    input                      clk_i,
+    input                      rst_n_i,
+
+    input  signed [BW - 1 : 0] data_i,
+    input                      valid_i,
+    input                      last_i,
+    output                     ready_o,
+
+    output signed [BW - 1 : 0] data_o,
+    output                     valid_o,
+    output                     last_o,
+    input                      ready_i
+);
+
+    // =========================================================================
+    // Rectification
+    // =========================================================================
+    reg [BW - 1 : 0] rectified;
+    always @(posedge clk_i) begin
+        rectified <= (data_i > 0) ? data_i : 0;
+    end
+
+    // =========================================================================
+    // Output Assignment
+    // =========================================================================
+    // register all outputs
+    reg valid_q, last_q, ready_q;
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            valid_q <= 'b0;
+            last_q  <= 'b0;
+            ready_q <= 'b0;
+        end else begin
+            valid_q <= valid_i;
+            last_q  <= last_i;
+            ready_q <= ready_i;
+        end
+    end
+
+    assign data_o  = rectified;
+    assign valid_o = valid_q;
+    assign last_o  = last_q;
+    assign ready_o = ready_q;
+
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
+    initial begin
+        $dumpfile ("wave.vcd");
+        $dumpvars (0, relu);
+        #1;
+    end
+    `endif
+    `endif
+
+endmodule
+// =============================================================================
+// Module:       Vector Adder
+// Design:       Eldrick Millares
+// Verification: Matthew Pauly
+// Notes:
+// =============================================================================
+
+module vec_add #(
+    parameter I_BW = 16,
+    parameter O_BW = 18,
+    parameter VECTOR_LEN = 13
+) (
+    // clock and reset
+    input                                       clk_i,
+    input                                       rst_n_i,
+
+    // streaming input
+    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data0_i,
+    input                                       valid0_i,
+    input                                       last0_i,
+    output                                      ready0_o,
+
+    // streaming input
+    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data1_i,
+    input                                       valid1_i,
+    input                                       last1_i,
+    output                                      ready1_o,
+
+    // streaming input
+    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data2_i,
+    input                                       valid2_i,
+    input                                       last2_i,
+    output                                      ready2_o,
+
+    // streaming output
+    output signed [(VECTOR_LEN * O_BW) - 1 : 0] data_o,
+    output                                      valid_o,
+    output                                      last_o,
+    input                                       ready_i
+);
+
+    genvar i;
+
+    // =========================================================================
+    // Input Unpacking
+    // =========================================================================
+    // unpacked arrays
+    wire signed [I_BW - 1 : 0] data0_arr [VECTOR_LEN - 1 : 0];
+    wire signed [I_BW - 1 : 0] data1_arr [VECTOR_LEN - 1 : 0];
+    wire signed [I_BW - 1 : 0] data2_arr [VECTOR_LEN - 1 : 0];
+    reg  signed [O_BW - 1 : 0] out_arr   [VECTOR_LEN - 1 : 0];
+
+    // unpack data input
+    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: unpack_inputs
+        assign data0_arr[i] = data0_i[(i + 1) * I_BW - 1 : i * I_BW];
+        assign data1_arr[i] = data1_i[(i + 1) * I_BW - 1 : i * I_BW];
+        assign data2_arr[i] = data2_i[(i + 1) * I_BW - 1 : i * I_BW];
+    end
+
+    // =========================================================================
+    // Vector Addition
+    // =========================================================================
+    // registered addition of data elements
+    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: vector_addition
+        always @(posedge clk_i) begin
+            if (!rst_n_i) begin
+                out_arr[i] <= 'd0;
+            end else begin
+                out_arr[i] <= data0_arr[i] + data1_arr[i] + data2_arr[i];
+            end
+        end
+    end
+
+    // =========================================================================
+    // Output Packing
+    // =========================================================================
+    // pack addition results
+    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: pack_output
+        assign data_o[(i + 1) * O_BW - 1 : i * O_BW] = out_arr[i];
+    end
+
+    // =========================================================================
+    // Output Assignment
+    // =========================================================================
+    // register all outputs
+    reg valid_q, last_q, ready_q;
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            valid_q <= 'b0;
+            last_q  <= 'b0;
+            ready_q <= 'b0;
+        end else begin
+            valid_q <= valid0_i & valid1_i & valid2_i;
+            last_q  <= last0_i | last1_i | last2_i;
+            ready_q <= ready_i;
+        end
+    end
+
+    assign valid_o  = valid_q;
+    assign last_o   = last_q;
+    assign ready0_o = ready_q;
+    assign ready1_o = ready_q;
+    assign ready2_o = ready_q;
+
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
+    initial begin
+        $dumpfile ("wave.vcd");
+        $dumpvars (0, vec_add);
+        #1;
+    end
+    `endif
+    `endif
+
+endmodule
+// =============================================================================
+// Module:       Vector Multiplier
+// Design:       Eldrick Millares
+// Verification: Matthew Pauly
+// Notes:
+// =============================================================================
+
+module vec_mul #(
+    parameter I_BW = 8,
+    parameter O_BW = 16,
+    parameter VECTOR_LEN = 13
+) (
+    // clock and reset
+    input                                       clk_i,
+    input                                       rst_n_i,
+
+    // streaming input
+    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data0_i,
+    input                                       valid0_i,
+    input                                       last0_i,
+    output                                      ready0_o,
+
+    // streaming input
+    input  signed [(VECTOR_LEN * I_BW) - 1 : 0] data1_i,
+    input                                       valid1_i,
+    input                                       last1_i,
+    output                                      ready1_o,
+
+    // streaming output
+    output signed [(VECTOR_LEN * O_BW) - 1 : 0] data_o,
+    output                                      valid_o,
+    output                                      last_o,
+    input                                       ready_i
+);
+
+    genvar i;
+
+    // =========================================================================
+    // Input Unpacking
+    // =========================================================================
+    // unpacked arrays
+    wire signed [I_BW - 1 : 0] data0_arr [VECTOR_LEN - 1 : 0];
+    wire signed [I_BW - 1 : 0] data1_arr [VECTOR_LEN - 1 : 0];
+    reg  signed [O_BW - 1 : 0] out_arr   [VECTOR_LEN - 1 : 0];
+
+    // unpack data input
+    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: unpack_inputs
+        assign data0_arr[i] = data0_i[(i + 1) * I_BW - 1 : i * I_BW];
+        assign data1_arr[i] = data1_i[(i + 1) * I_BW - 1 : i * I_BW];
+    end
+
+    // =========================================================================
+    // Vector Multiplication
+    // =========================================================================
+    // registered multiplication of data elements
+    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: vector_multiply
+        always @(posedge clk_i) begin
+            if (!rst_n_i) begin
+                out_arr[i] <= 'd0;
+            end else begin
+                out_arr[i] <= data0_arr[i] * data1_arr[i];
+            end
+        end
+    end
+
+    // =========================================================================
+    // Output Packing
+    // =========================================================================
+    // pack multiplication results
+    for (i = 0; i < VECTOR_LEN; i = i + 1) begin: pack_output
+        assign data_o[(i + 1) * O_BW - 1 : i * O_BW] = out_arr[i];
+    end
+
+    // =========================================================================
+    // Output Assignment
+    // =========================================================================
+    // register all outputs
+    reg valid_q, last_q, ready_q;
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            valid_q <= 'b0;
+            last_q  <= 'b0;
+            ready_q <= 'b0;
+        end else begin
+            valid_q <= valid0_i & valid1_i;
+            last_q  <= last0_i | last1_i;
+            ready_q <= ready_i;
+        end
+    end
+
+    assign valid_o  = valid_q;
+    assign last_o   = last_q;
+    assign ready0_o = ready_q;
+    assign ready1_o = ready_q;
+
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
+    initial begin
+        $dumpfile ("wave.vcd");
+        $dumpvars (0, vec_mul);
+        #1;
+    end
+    `endif
+    `endif
+
+endmodule
+// ============================================================================
 // Module:       Wake
 // Design:       Eldrick Millares
 // Verification: Matthew Pauly
 // Notes:
-// TODO: Make multi-class?
-// TODO: Make SUSTAIN_LEN configurable?
+// INFO: Assumes wake word class is 0th bit of data_i
+// INFO: SUSTAIN_LEN hard coded for 1/2 second
 // ============================================================================
 
 module wake #(
@@ -3405,7 +3283,7 @@ module wrd #(
 
     // conv_sipo module parameters
     parameter CONV_SIPO_BW         = MAX_POOL1_BW,                    // 8
-    // TODO: $rtoi and $ceil are not supported in Design Compiler
+    // INFO: $rtoi and $ceil are not supported in Design Compiler
     // parameter CONV_SIPO_FRAME_LEN  = $rtoi($ceil(I_FRAME_LEN / 2.0)), // 25
     parameter CONV_SIPO_FRAME_LEN  = I_FRAME_LEN / 2, // 25
     parameter CONV_SIPO_VECTOR_LEN = CONV1_NUM_FILTERS,               // 8
@@ -3432,7 +3310,7 @@ module wrd #(
 
     // max_pool2 module parameters
     parameter MAX_POOL2_BW        = CONV_SIPO_BW, // 8
-    // TODO: $rtoi and $ceil are not supported in Design Compiler
+    // INFO: $rtoi and $ceil are not supported in Design Compiler
     // parameter MAX_POOL2_FRAME_LEN = $rtoi($ceil(CONV_SIPO_FRAME_LEN / 2.0)), //13
     parameter MAX_POOL2_FRAME_LEN = CONV_SIPO_FRAME_LEN / 2 + 1, //13
 
@@ -3446,7 +3324,7 @@ module wrd #(
     parameter FC_VECTOR_O_BW = FC_O_BW * FC_NUM_CLASSES, // 64
     // fc memory configuration parameters
     parameter FC_BANK_BW = $clog2(FC_NUM_CLASSES * 2),
-    // TODO: Yosys will not resolve FC_FRAME_LEN, need to hard code
+    // INFO: Yosys will not resolve FC_FRAME_LEN, need to hard code
     // parameter FC_ADDR_BW = $clog2(FC_FRAME_LEN),
     parameter FC_ADDR_BW = $clog2(208),
 
@@ -3822,6 +3700,106 @@ module wrd #(
       $dumpfile ("wave.vcd");
       $dumpvars (0, wrd);
       #1;
+    end
+    `endif
+    `endif
+
+endmodule
+// =============================================================================
+// Module:       Zero Pad
+// Design:       Eldrick Millares
+// Verification: Matthew Pauly
+// Notes:
+// Adds 1 leading and 1 trailing zero to stream
+//
+// Minimum dead time between frames is 2 clock cycles.
+// This increased dead-time is needed because we reduce latency in this
+// module to just 1 cycle.
+// =============================================================================
+
+module zero_pad #(
+    parameter BW         = 8,
+    parameter VECTOR_LEN = 13,
+
+    // =========================================================================
+    // Local Parameters - Do Not Edit
+    // =========================================================================
+    parameter VECTOR_BW = VECTOR_LEN * BW
+) (
+    // clock and reset
+    input                             clk_i,
+    input                             rst_n_i,
+
+    // streaming input
+    input  signed [VECTOR_BW - 1 : 0] data_i,
+    input                             valid_i,
+    input                             last_i,
+    output                            ready_o,
+
+    // streaming output
+    output signed [VECTOR_BW - 1 : 0] data_o,
+    output                            valid_o,
+    output                            last_o,
+    input                             ready_i
+);
+
+    // =========================================================================
+    // Delay Lines
+    // =========================================================================
+    reg signed [VECTOR_BW - 1 : 0] data_q, data_q2;
+    reg valid_q, valid_q2, valid_q3, last_q, last_q2, last_q3, ready_q;
+    always @(posedge clk_i) begin
+        if (!rst_n_i) begin
+            valid_q  <= 'b0;
+            valid_q2 <= 'b0;
+            valid_q3 <= 'b0;
+            last_q   <= 'b0;
+            last_q2  <= 'b0;
+            last_q3  <= 'b0;
+            ready_q  <= 'b0;
+            data_q   <= 'b0;
+            data_q2  <= 'b0;
+        end else begin
+            valid_q  <= valid_i;
+            valid_q2 <= valid_q;
+            valid_q3 <= valid_q2;
+            last_q   <= last_i;
+            last_q2  <= last_q;
+            last_q3  <= last_q2;
+            ready_q  <= ready_i;
+            data_q   <= (valid_i) ? data_i : 0;
+            data_q2  <= (valid_q) ? data_q : 0;
+        end
+    end
+
+    // =========================================================================
+    // Edge Detectors
+    // =========================================================================
+    // positive edge detector to emit initial 0
+    wire valid_i_pos_edge  = valid_i  & (!valid_q);
+
+    // negative edge detectors to extend valid_o, emit last 0
+    wire valid_q_neg_edge  = valid_q2 & (!valid_q);
+    wire valid_q2_neg_edge = valid_q3 & (!valid_q2);
+
+    // =========================================================================
+    // Output Assignment
+    // =========================================================================
+    assign data_o  = (valid_q2_neg_edge | valid_i_pos_edge) ? 0 : data_q2;
+    assign valid_o = valid_q | valid_q_neg_edge | valid_q2_neg_edge;
+    assign last_o  = last_q3;
+    assign ready_o = ready_q;
+
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
+    initial begin
+        $dumpfile ("wave.vcd");
+        $dumpvars (0, zero_pad);
+        #1;
     end
     `endif
     `endif
@@ -5482,7 +5460,7 @@ module fft_wrapper #(
     // =========================================================================
     // output sample counter for holding valid_o
     localparam FFT_LEN                  = 256;
-    // TODO: $rtoi and $ceil are not supported in Design Compiler
+    // INFO: $rtoi and $ceil are not supported in Design Compiler
     // localparam RFFT_LEN                 = $rtoi(FFT_LEN / 2 + 1);
     localparam RFFT_LEN                 = FFT_LEN / 2 + 1;
     localparam OUTPUT_COUNTER_BW        = $clog2(RFFT_LEN);
@@ -6837,7 +6815,7 @@ module quant #(
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    // TODO: Design Compiler does not support $pow()
+    // INFO: Design Compiler does not support $pow()
     // localparam CLIP = $pow(2, O_BW - 1) - 1;  // clip to this if larger
     localparam CLIP = (1 << (O_BW - 1)) - 1;  // clip to this if larger
 
@@ -8848,6 +8826,210 @@ module	convround(i_clk, i_ce, i_val, o_val);
 endmodule
 ////////////////////////////////////////////////////////////////////////////////
 //
+// Filename:	fftmain.v
+// {{{
+// Project:	A General Purpose Pipelined FFT Implementation
+//
+// Purpose:	This is the main module in the General Purpose FPGA FFT
+//		implementation.  As such, all other modules are subordinate
+//	to this one.  This module accomplish a fixed size Complex FFT on
+//	256 data points.
+//	The FFT is fully pipelined, and accepts as inputs one complex two's
+//	complement sample per clock.
+//
+// Parameters:
+//	i_clk	The clock.  All operations are synchronous with this clock.
+//	i_reset	Synchronous reset, active high.  Setting this line will
+//			force the reset of all of the internals to this routine.
+//			Further, following a reset, the o_sync line will go
+//			high the same time the first output sample is valid.
+//	i_ce	A clock enable line.  If this line is set, this module
+//			will accept one complex input value, and produce
+//			one (possibly empty) complex output value.
+//	i_sample	The complex input sample.  This value is split
+//			into two two's complement numbers, 16 bits each, with
+//			the real portion in the high order bits, and the
+//			imaginary portion taking the bottom 16 bits.
+//	o_result	The output result, of the same format as i_sample,
+//			only having 21 bits for each of the real and imaginary
+//			components, leading to 42 bits total.
+//	o_sync	A one bit output indicating the first sample of the FFT frame.
+//			It also indicates the first valid sample out of the FFT
+//			on the first frame.
+//
+// Arguments:	This file was computer generated using the following command
+//		line:
+//
+//		% ./fftgen -f 256 -a hdr
+//
+//	This core will use hardware accelerated multiplies (DSPs)
+//	for 0 of the 8 stages
+//
+// Creator:	Dan Gisselquist, Ph.D.
+//		Gisselquist Technology, LLC
+//
+////////////////////////////////////////////////////////////////////////////////
+// }}}
+// Copyright (C) 2015-2021, Gisselquist Technology, LLC
+// {{{
+// This file is part of the general purpose pipelined FFT project.
+//
+// The pipelined FFT project is free software (firmware): you can redistribute
+// it and/or modify it under the terms of the GNU Lesser General Public License
+// as published by the Free Software Foundation, either version 3 of the
+// License, or (at your option) any later version.
+//
+// The pipelined FFT project is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTIBILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser
+// General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program.  (It's in the $(ROOT)/doc directory.  Run make
+// with no target there if the PDF file isn't present.)  If not, see
+// <http://www.gnu.org/licenses/> for a copy.
+// }}}
+// License:	LGPL, v3, as defined and found on www.gnu.org,
+// {{{
+//		http://www.gnu.org/licenses/lgpl.html
+//
+// }}}
+////////////////////////////////////////////////////////////////////////////////
+//
+//
+`default_nettype	none
+//
+//
+//
+module fftmain(i_clk, i_reset, i_ce,
+		i_sample, o_result, o_sync);
+	// The bit-width of the input, IWIDTH, output, OWIDTH, and the log
+	// of the FFT size.  These are localparams, rather than parameters,
+	// because once the core has been generated, they can no longer be
+	// changed.  (These values can be adjusted by running the core
+	// generator again.)  The reason is simply that these values have
+	// been hardwired into the core at several places.
+	localparam	IWIDTH=16, OWIDTH=21; // LGWIDTH=8;
+	//
+	input	wire				i_clk, i_reset, i_ce;
+	//
+	input	wire	[(2*IWIDTH-1):0]	i_sample;
+	output	reg	[(2*OWIDTH-1):0]	o_result;
+	output	reg				o_sync;
+
+
+	// Outputs of the FFT, ready for bit reversal.
+	wire				br_sync;
+	wire	[(2*OWIDTH-1):0]	br_result;
+
+
+	wire		w_s256;
+	wire	[33:0]	w_d256;
+	fftstage	#(IWIDTH,IWIDTH+4,17,7,0,
+			0, 1, "cmem_256.hex")
+		stage_256(i_clk, i_reset, i_ce,
+			(!i_reset), i_sample, w_d256, w_s256);
+
+
+	wire		w_s128;
+	wire	[35:0]	w_d128;
+	fftstage	#(17,21,18,6,0,
+			0, 1, "cmem_128.hex")
+		stage_128(i_clk, i_reset, i_ce,
+			w_s256, w_d256, w_d128, w_s128);
+
+	wire		w_s64;
+	wire	[35:0]	w_d64;
+	fftstage	#(18,22,18,5,0,
+			0, 1, "cmem_64.hex")
+		stage_64(i_clk, i_reset, i_ce,
+			w_s128, w_d128, w_d64, w_s64);
+
+	wire		w_s32;
+	wire	[37:0]	w_d32;
+	fftstage	#(18,22,19,4,0,
+			0, 1, "cmem_32.hex")
+		stage_32(i_clk, i_reset, i_ce,
+			w_s64, w_d64, w_d32, w_s32);
+
+	wire		w_s16;
+	wire	[37:0]	w_d16;
+	fftstage	#(19,23,19,3,0,
+			0, 1, "cmem_16.hex")
+		stage_16(i_clk, i_reset, i_ce,
+			w_s32, w_d32, w_d16, w_s16);
+
+	wire		w_s8;
+	wire	[39:0]	w_d8;
+	fftstage	#(19,23,20,2,0,
+			0, 1, "cmem_8.hex")
+		stage_8(i_clk, i_reset, i_ce,
+			w_s16, w_d16, w_d8, w_s8);
+
+	wire		w_s4;
+	wire	[39:0]	w_d4;
+	qtrstage	#(20,20,8,0,0)	stage_4(i_clk, i_reset, i_ce,
+						w_s8, w_d8, w_d4, w_s4);
+	wire		w_s2;
+	wire	[41:0]	w_d2;
+	laststage	#(20,21,1)	stage_2(i_clk, i_reset, i_ce,
+					w_s4, w_d4, w_d2, w_s2);
+
+
+	wire	br_start;
+	reg	r_br_started;
+	initial	r_br_started = 1'b0;
+	always @(posedge i_clk)
+	if (i_reset)
+		r_br_started <= 1'b0;
+	else if (i_ce)
+		r_br_started <= r_br_started || w_s2;
+	assign	br_start = r_br_started || w_s2;
+
+	// Now for the bit-reversal stage.
+	bitreverse	#(8,21)
+	revstage(
+		// {{{
+		.i_clk(i_clk),
+		.i_reset(i_reset),
+		.i_ce(i_ce & br_start),
+		.i_in(w_d2),
+		.o_out(br_result),
+		.o_sync(br_sync)
+		// }}}
+	);
+
+
+	// Last clock: Register our outputs, we're done.
+	initial	o_sync  = 1'b0;
+	always @(posedge i_clk)
+	if (i_reset)
+		o_sync  <= 1'b0;
+	else if (i_ce)
+		o_sync  <= br_sync;
+
+	always @(posedge i_clk)
+	if (i_ce)
+		o_result  <= br_result;
+
+
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
+    initial begin
+      $dumpfile ("wave.vcd");
+      $dumpvars (0, fftmain);
+      #1;
+    end
+    `endif
+    `endif
+
+endmodule
+////////////////////////////////////////////////////////////////////////////////
+//
 // Filename:	hwbfly.v
 // {{{
 // Project:	A General Purpose Pipelined FFT Implementation
@@ -10285,210 +10467,6 @@ module	qtrstage(i_clk, i_reset, i_ce, i_sync, i_data, o_data, o_sync);
 	end
 
 `endif
-endmodule
-////////////////////////////////////////////////////////////////////////////////
-//
-// Filename:	fftmain.v
-// {{{
-// Project:	A General Purpose Pipelined FFT Implementation
-//
-// Purpose:	This is the main module in the General Purpose FPGA FFT
-//		implementation.  As such, all other modules are subordinate
-//	to this one.  This module accomplish a fixed size Complex FFT on
-//	256 data points.
-//	The FFT is fully pipelined, and accepts as inputs one complex two's
-//	complement sample per clock.
-//
-// Parameters:
-//	i_clk	The clock.  All operations are synchronous with this clock.
-//	i_reset	Synchronous reset, active high.  Setting this line will
-//			force the reset of all of the internals to this routine.
-//			Further, following a reset, the o_sync line will go
-//			high the same time the first output sample is valid.
-//	i_ce	A clock enable line.  If this line is set, this module
-//			will accept one complex input value, and produce
-//			one (possibly empty) complex output value.
-//	i_sample	The complex input sample.  This value is split
-//			into two two's complement numbers, 16 bits each, with
-//			the real portion in the high order bits, and the
-//			imaginary portion taking the bottom 16 bits.
-//	o_result	The output result, of the same format as i_sample,
-//			only having 21 bits for each of the real and imaginary
-//			components, leading to 42 bits total.
-//	o_sync	A one bit output indicating the first sample of the FFT frame.
-//			It also indicates the first valid sample out of the FFT
-//			on the first frame.
-//
-// Arguments:	This file was computer generated using the following command
-//		line:
-//
-//		% ./fftgen -f 256 -a hdr
-//
-//	This core will use hardware accelerated multiplies (DSPs)
-//	for 0 of the 8 stages
-//
-// Creator:	Dan Gisselquist, Ph.D.
-//		Gisselquist Technology, LLC
-//
-////////////////////////////////////////////////////////////////////////////////
-// }}}
-// Copyright (C) 2015-2021, Gisselquist Technology, LLC
-// {{{
-// This file is part of the general purpose pipelined FFT project.
-//
-// The pipelined FFT project is free software (firmware): you can redistribute
-// it and/or modify it under the terms of the GNU Lesser General Public License
-// as published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version.
-//
-// The pipelined FFT project is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTIBILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser
-// General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with this program.  (It's in the $(ROOT)/doc directory.  Run make
-// with no target there if the PDF file isn't present.)  If not, see
-// <http://www.gnu.org/licenses/> for a copy.
-// }}}
-// License:	LGPL, v3, as defined and found on www.gnu.org,
-// {{{
-//		http://www.gnu.org/licenses/lgpl.html
-//
-// }}}
-////////////////////////////////////////////////////////////////////////////////
-//
-//
-`default_nettype	none
-//
-//
-//
-module fftmain(i_clk, i_reset, i_ce,
-		i_sample, o_result, o_sync);
-	// The bit-width of the input, IWIDTH, output, OWIDTH, and the log
-	// of the FFT size.  These are localparams, rather than parameters,
-	// because once the core has been generated, they can no longer be
-	// changed.  (These values can be adjusted by running the core
-	// generator again.)  The reason is simply that these values have
-	// been hardwired into the core at several places.
-	localparam	IWIDTH=16, OWIDTH=21; // LGWIDTH=8;
-	//
-	input	wire				i_clk, i_reset, i_ce;
-	//
-	input	wire	[(2*IWIDTH-1):0]	i_sample;
-	output	reg	[(2*OWIDTH-1):0]	o_result;
-	output	reg				o_sync;
-
-
-	// Outputs of the FFT, ready for bit reversal.
-	wire				br_sync;
-	wire	[(2*OWIDTH-1):0]	br_result;
-
-
-	wire		w_s256;
-	wire	[33:0]	w_d256;
-	fftstage	#(IWIDTH,IWIDTH+4,17,7,0,
-			0, 1, "cmem_256.hex")
-		stage_256(i_clk, i_reset, i_ce,
-			(!i_reset), i_sample, w_d256, w_s256);
-
-
-	wire		w_s128;
-	wire	[35:0]	w_d128;
-	fftstage	#(17,21,18,6,0,
-			0, 1, "cmem_128.hex")
-		stage_128(i_clk, i_reset, i_ce,
-			w_s256, w_d256, w_d128, w_s128);
-
-	wire		w_s64;
-	wire	[35:0]	w_d64;
-	fftstage	#(18,22,18,5,0,
-			0, 1, "cmem_64.hex")
-		stage_64(i_clk, i_reset, i_ce,
-			w_s128, w_d128, w_d64, w_s64);
-
-	wire		w_s32;
-	wire	[37:0]	w_d32;
-	fftstage	#(18,22,19,4,0,
-			0, 1, "cmem_32.hex")
-		stage_32(i_clk, i_reset, i_ce,
-			w_s64, w_d64, w_d32, w_s32);
-
-	wire		w_s16;
-	wire	[37:0]	w_d16;
-	fftstage	#(19,23,19,3,0,
-			0, 1, "cmem_16.hex")
-		stage_16(i_clk, i_reset, i_ce,
-			w_s32, w_d32, w_d16, w_s16);
-
-	wire		w_s8;
-	wire	[39:0]	w_d8;
-	fftstage	#(19,23,20,2,0,
-			0, 1, "cmem_8.hex")
-		stage_8(i_clk, i_reset, i_ce,
-			w_s16, w_d16, w_d8, w_s8);
-
-	wire		w_s4;
-	wire	[39:0]	w_d4;
-	qtrstage	#(20,20,8,0,0)	stage_4(i_clk, i_reset, i_ce,
-						w_s8, w_d8, w_d4, w_s4);
-	wire		w_s2;
-	wire	[41:0]	w_d2;
-	laststage	#(20,21,1)	stage_2(i_clk, i_reset, i_ce,
-					w_s4, w_d4, w_d2, w_s2);
-
-
-	wire	br_start;
-	reg	r_br_started;
-	initial	r_br_started = 1'b0;
-	always @(posedge i_clk)
-	if (i_reset)
-		r_br_started <= 1'b0;
-	else if (i_ce)
-		r_br_started <= r_br_started || w_s2;
-	assign	br_start = r_br_started || w_s2;
-
-	// Now for the bit-reversal stage.
-	bitreverse	#(8,21)
-	revstage(
-		// {{{
-		.i_clk(i_clk),
-		.i_reset(i_reset),
-		.i_ce(i_ce & br_start),
-		.i_in(w_d2),
-		.o_out(br_result),
-		.o_sync(br_sync)
-		// }}}
-	);
-
-
-	// Last clock: Register our outputs, we're done.
-	initial	o_sync  = 1'b0;
-	always @(posedge i_clk)
-	if (i_reset)
-		o_sync  <= 1'b0;
-	else if (i_ce)
-		o_sync  <= br_sync;
-
-	always @(posedge i_clk)
-	if (i_ce)
-		o_result  <= br_result;
-
-
-    // =========================================================================
-    // Simulation Only Waveform Dump (.vcd export)
-    // =========================================================================
-    `ifdef COCOTB_SIM
-    `ifndef SCANNED
-    `define SCANNED
-    initial begin
-      $dumpfile ("wave.vcd");
-      $dumpvars (0, fftmain);
-      #1;
-    end
-    `endif
-    `endif
-
 endmodule
 ////////////////////////////////////////////////////////////////////////////////
 //
