@@ -12,7 +12,8 @@ export PRECHECK_ROOT=$(pwd)/precheck
 
 export GCC_PATH=$(pwd)/riscv-tools-install/bin
 
-module load magic
+# module load magic
+export PATH=/tmp/install/cad/bin:$PATH
 
 # needed to grab GLIBCXX_3.4.2x libraries needed in dv simulation
 module load innovus
