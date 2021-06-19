@@ -1,6 +1,4 @@
 cif istyle sky130(vendor)
-gds order true
-gds noduplicates true
 gds read design_merged.gds
 load $::env(design_name)
 select top cell
