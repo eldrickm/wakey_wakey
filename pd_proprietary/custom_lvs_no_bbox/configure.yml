@@ -1,0 +1,30 @@
+build_dir: 27-mentor-calibre-comparison-nobbox
+build_id: '27'
+commands:
+- echo "Removing w_xxx# pins from extracted netlist. 'Error detected while"
+- echo "processing...' message can be ignored."
+- vim -T dumb --noplugin -n -S "remove_w_pins.vim" "inputs/design_extracted.spice"
+- sh run_lvs.sh
+debug:
+- calibre -rve -lvs svdb
+edges_i:
+  adk:
+  - f: adk
+    step: 6-skywater-130nm
+  design.lvs.v:
+  - f: design.lvs.v
+    step: 17-cadence-innovus-signoff
+  design_extracted.spice:
+  - f: design_extracted.spice
+    step: 26-open-magic-gds2spice
+edges_o: {}
+inputs:
+- adk
+- design_extracted.spice
+- design.lvs.v
+name: mentor-calibre-comparison
+outputs:
+- lvs.report
+parameters:
+  design_name: user_project_wrapper
+source: /tmp/mjpauly-ee272/wakey_wakey/pd_proprietary/WakeyWakey/design/mentor-calibre-comparison

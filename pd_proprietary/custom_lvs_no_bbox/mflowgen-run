@@ -1,0 +1,29 @@
+#! /usr/bin/env bash
+set -euo pipefail
+#=========================================================================
+# mflowgen-run
+#=========================================================================
+# Generator : /home/users/mjpauly/repos/mflowgen/mflowgen/core/build_orchestrator.py
+
+# Pre
+
+rm -f .time_end
+date +%Y-%m%d-%H%M-%S > .time_start
+MFLOWGEN_STEP_HOME=$PWD
+export design_name=user_project_wrapper
+
+# Commands
+
+echo "Removing w_xxx# pins from extracted netlist. 'Error detected while"
+echo "processing...' message can be ignored."
+cp inputs/design_extracted.spice inputs/design_extracted.spice-unmodified
+rm inputs/design_extracted.spice
+cp inputs/design_extracted.spice-unmodified inputs/design_extracted.spice
+vim -T dumb --noplugin -n -S "remove_w_pins.vim" "inputs/design_extracted.spice"
+sh run_lvs.sh
+
+# Post
+
+cd $MFLOWGEN_STEP_HOME
+date +%Y-%m%d-%H%M-%S > .time_end
+

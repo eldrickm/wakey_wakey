@@ -1,0 +1,15 @@
+#! /usr/bin/env bash
+set -euo pipefail
+#=========================================================================
+# mflowgen-debug
+#=========================================================================
+# Generator : /home/users/mjpauly/repos/mflowgen/mflowgen/core/build_orchestrator.py
+
+# Pre
+
+export design_name=user_proj_example
+
+# Debug
+
+calibre -rve -lvs svdb
+
