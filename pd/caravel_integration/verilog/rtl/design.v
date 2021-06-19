@@ -24,7 +24,7 @@
  *
  * user_proj_example
  *
- * TODO: Write Description
+ * Instatiates WakeyWakey in user_proj_example for Caravel integration
  *-------------------------------------------------------------
  */
 
@@ -108,6 +108,11 @@ module user_proj_example (
         .wbs_ack_o(wbs_ack_o),
         .wbs_dat_o(wbs_dat_o),
 
+        // logic analyzer signals
+        .la_data_in_i(la_data_in),
+        .la_data_out_o(la_data_out),
+        .la_oenb_i(la_oenb),
+
         // microphone i/o
         `ifdef COCOTB_SIM
         .dfe_data(dfe_data),  // bypass DFE for test bench
@@ -119,17 +124,17 @@ module user_proj_example (
         .vad_i(vad),
 
         // wake output
-        .wake_o(wake)
+        .wake_o_muxed(wake)
     );
 
     // =========================================================================
     // Pin Directions (Output Enable)
     // =========================================================================
-    assign io_oeb[37] = 1'b1;       // wake_o
-    assign io_oeb[36] = 1'b0;       // pdm_data_i
-    assign io_oeb[35] = 1'b1;       // pdm_clk_o
-    assign io_oeb[34] = 1'b0;       // vad_i
-    assign io_oeb[33:0] = 34'b0;    // unused, except by test bench
+    assign io_oeb[37] = 1'b0;       // wake_o
+    assign io_oeb[36] = 1'b1;       // pdm_data_i
+    assign io_oeb[35] = 1'b0;       // pdm_clk_o
+    assign io_oeb[34] = 1'b1;       // vad_i
+    assign io_oeb[33:0] = 34'b1;    // unused, except by test bench
 
     // =========================================================================
     // Wakey Wakey Outputs
@@ -149,11 +154,6 @@ module user_proj_example (
     // IRQ
     // =========================================================================
     assign irq = 3'b000;            // unused
-
-    // =========================================================================
-    // Logic Analyzer Outputs
-    // =========================================================================
-    assign la_data_out = 128'b0;    // unused
 
     // =========================================================================
     // Simulation Only Waveform Dump (.vcd export)
@@ -192,6 +192,11 @@ module wakey_wakey (
     output          wbs_ack_o,
     output [31 : 0] wbs_dat_o,
 
+    // logic analyzer signals
+    input  [127:0] la_data_in_i,
+    output [127:0] la_data_out_o,
+    input  [127:0] la_oenb_i,
+
     // microphone i/o
     `ifdef COCOTB_SIM
     input [DFE_OUTPUT_BW - 1 : 0] dfe_data,  // bypass DFE for test bench
@@ -203,7 +208,7 @@ module wakey_wakey (
     input           vad_i,  // voice activity detection
 
     // wake output
-    output wake_o
+    output wake_o_muxed
 );
     localparam F_SYSTEM_CLK = 16000000;
 
@@ -300,7 +305,9 @@ module wakey_wakey (
     // CTL - Pipeline control
     // =========================================================================
     wire pipeline_en;
+    wire pipeline_en_muxed;
     wire wake_valid;  // driven by WRD
+    wire wake_valid_muxed;
 
     ctl #(
         .F_SYSTEM_CLK(F_SYSTEM_CLK)
@@ -310,7 +317,7 @@ module wakey_wakey (
 
         .vad_i(vad_i),
 
-        .wake_valid_i(wake_valid),
+        .wake_valid_i(wake_valid_muxed),
 
         .en_o(pipeline_en)
     );
@@ -320,7 +327,10 @@ module wakey_wakey (
     // =========================================================================
     localparam DFE_OUTPUT_BW = 8;
 
+    wire [DFE_OUTPUT_BW - 1 : 0] dfe_data_muxed;
+    wire                         dfe_valid_muxed;
     `ifndef COCOTB_SIM
+    wire pdm_data_i_muxed;
     wire [DFE_OUTPUT_BW - 1 : 0] dfe_data;
     wire                         dfe_valid;
 
@@ -328,11 +338,10 @@ module wakey_wakey (
         // clock, reset, and enable
         .clk_i(clk_i),
         .rst_n_i(rst_n_i),
-        // TODO: Activate Pin hooks up here
-        .en_i(pipeline_en),
+        .en_i(pipeline_en_muxed),
 
         // pdm input
-        .pdm_data_i(pdm_data_i),
+        .pdm_data_i(pdm_data_i_muxed),
 
         // pdm clock output
         .pdm_clk_o(pdm_clk_o),
@@ -351,16 +360,19 @@ module wakey_wakey (
     wire [ACO_OUTPUT_BW - 1 : 0] aco_data;
     wire                         aco_valid;
     wire                         aco_last;
+    wire [ACO_OUTPUT_BW - 1 : 0] aco_data_muxed;
+    wire                         aco_valid_muxed;
+    wire                         aco_last_muxed;
 
     aco aco_inst (
         // clock, reset, and enable
         .clk_i(clk_i),
         .rst_n_i(rst_n_i),
-        .en_i(pipeline_en),
+        .en_i(pipeline_en_muxed),
 
         // streaming input
-        .data_i(dfe_data),
-        .valid_i(dfe_valid),
+        .data_i(dfe_data_muxed),
+        .valid_i(dfe_valid_muxed),
 
         // streaming output
         .data_o(aco_data),
@@ -372,16 +384,17 @@ module wakey_wakey (
     // WRD - Word Recognition DNN Accelerator Module
     // =========================================================================
     wire wrd_ready;
+    wire wake_o;
 
     wrd wrd_inst (
         // clock and reset
         .clk_i(clk_i),
-        .rst_n_i(rst_n_i & pipeline_en),
+        .rst_n_i(rst_n_i & pipeline_en_muxed),
 
         // streaming input
-        .data_i(aco_data),
-        .valid_i(aco_valid),
-        .last_i(aco_last),
+        .data_i(aco_data_muxed),
+        .valid_i(aco_valid_muxed),
+        .last_i(aco_last_muxed),
         .ready_o(wrd_ready),
 
         // wake pin
@@ -414,6 +427,51 @@ module wakey_wakey (
     );
 
     // =========================================================================
+    // DBG - Debug Logic Analyzer
+    // =========================================================================
+    dbg #(
+        .DFE_OUTPUT_BW(DFE_OUTPUT_BW),
+        .ACO_OUTPUT_BW(ACO_OUTPUT_BW)
+    ) dbg_inst (
+        .clk_i(clk_i),
+        .rst_n_i(rst_n_i),
+
+        .la_data_in_i(la_data_in_i),
+        .la_data_out_o(la_data_out_o),
+        .la_oenb_i(la_oenb_i),
+
+        // ctl
+        .ctl_pipeline_en_i(pipeline_en),
+        .ctl_pipeline_en_o(pipeline_en_muxed),
+
+        `ifndef COCOTB_SIM
+        // mic -> dfe
+        .mic_pdm_data_i(pdm_data_i),
+        .mic_pdm_data_o(pdm_data_i_muxed),
+        `endif
+
+        // dfe -> aco
+        .dfe_data_i(dfe_data),
+        .dfe_valid_i(dfe_valid),
+        .dfe_data_o(dfe_data_muxed),
+        .dfe_valid_o(dfe_valid_muxed),
+
+        // aco -> wrd
+        .aco_data_i(aco_data),
+        .aco_valid_i(aco_valid),
+        .aco_last_i(aco_last),
+        .aco_data_o(aco_data_muxed),
+        .aco_valid_o(aco_valid_muxed),
+        .aco_last_o(aco_last_muxed),
+
+        // wrd -> wake
+        .wrd_wake_i(wake_o),
+        .wrd_wake_valid_i(wake_valid),
+        .wrd_wake_o(wake_o_muxed),
+        .wrd_wake_valid_o(wake_valid_muxed)
+    );
+
+    // =========================================================================
     // Simulation Only Waveform Dump (.vcd export)
     // =========================================================================
     `ifdef COCOTB_SIM
@@ -434,10 +492,8 @@ endmodule
 // Verification: Matthew Pauly
 // Notes:
 // User address space goes from 0x3000_0000 to 0x7FFF_FFFF
-// TODO: Sensitize to cyc_i?
-// TODO: Adjust wishbone ack for Store and Load on CTRL?
-// TODO: Remove technically unecessary mux to zeros in Data Registers
-// TODO: Check wave timings on ack for new delayed signals
+// INFO: Design not sensitized to cyc_i; only strobe is needed if trust wb
+// INFO: Wishbone ack may be one cycle too early, add NOP to firmware if needed
 // =============================================================================
 
 module cfg #(
@@ -805,18 +861,12 @@ module ctl # (
     // Local Parameters
     // =========================================================================
     // 5ms empirically determined with microphone. See test/pdm_capture_test.
-    // Design Compiler does not support rtoi
+    // INFO: Design Compiler does not support rtoi
     // localparam COUNT_CYCLES   = $rtoi(0.005 * F_SYSTEM_CLK);
-    // integer type needed to keep DC from flaggging COUNT_CYCLES as a non
-    // constant expression
-    // TODO: make sure that this value is as expected after DC Synthesis
-    // Could also use a division by integer if multiplication by decimal does not
-    // expand as expected
-    // localparam integer COUNT_CYCLES   = F_SYSTEM_CLK / 200;
     `ifdef COCOTB_SIM
-    localparam integer COUNT_CYCLES  = 0.005 * 1000;
+    localparam integer COUNT_CYCLES  = 1000 / 200;
     `else
-    localparam integer COUNT_CYCLES  = 0.005 * F_SYSTEM_CLK;
+    localparam integer COUNT_CYCLES  = F_SYSTEM_CLK / 200;
     `endif
     localparam COUNTER_BW            = $clog2(COUNT_CYCLES + 1);
 
@@ -903,7 +953,6 @@ endmodule
 // Design:       Eldrick Millares
 // Verification: Matthew Pauly
 // Notes:
-// TODO: Implement rd_data_o for reading memories
 //
 // Stores weights, biases, and shifts in different banks, numbered like so:
 // [0, NUM_FILTERS-1] : Kernel weights for nth output channel
@@ -1137,7 +1186,6 @@ endmodule
 // Design:       Eldrick Millares
 // Verification: Matthew Pauly
 // Notes:
-// TODO: Handle Full and Empty
 // ============================================================================
 
 module conv_sipo #(
@@ -1406,8 +1454,6 @@ endmodule
 // Design: Eldrick Millares
 // Verification: Matthew Pauly
 // Notes:
-// TODO: Can we synthesize a variable arithmetic right shift?
-// TODO: Does this need to be signed? Guess is no since it is after ReLU
 // ============================================================================
 
 module quantizer #(
@@ -1486,9 +1532,8 @@ endmodule
 // Constraint: FILTER_LEN == 3
 // In order to change filter size, you'll have to parameterize the vec_add
 // unit.
-// TODO: Fix initial deque errors
-// TODO: Handle deassertions of valid midstream
-// TODO: Handle Full and Empty
+// INFO: SizedFIFO issues deque warning but functionality is correct.
+// INFO: Deassertions of valid midstream not permitted
 // =============================================================================
 
 module recycler #(
@@ -1715,7 +1760,6 @@ endmodule
 // Design:       Eldrick Millares
 // Verification: Matthew Pauly
 // Notes:
-// TODO: Can we make elements in sum minimum length?
 // ============================================================================
 
 module red_add #(
@@ -2119,8 +2163,6 @@ endmodule
 // Minimum dead time between frames is 2 clock cycles.
 // This increased dead-time is needed because we reduce latency in this
 // module to just 1 cycle.
-//
-// TODO: Gate registers with valid
 // =============================================================================
 
 module zero_pad #(
@@ -2216,7 +2258,7 @@ endmodule
 // Design:       Eldrick Millares
 // Verification: Matthew Pauly
 // Notes:
-// TODO: Hard coded for 2 elements - can we parameterize the one-hot compare?
+// INFO: Hard coded for 2 elements.
 // ============================================================================
 
 module argmax #(
@@ -2314,7 +2356,7 @@ endmodule
 // Notes:
 // Constraint: FRAME_LEN > FILTER_LEN
 // Constraint: FILTER_LEN == 3
-// TODO: Deal with ready's / backpressure
+// INFO: Does not deal with ready's / backpressure
 // =============================================================================
 
 module conv_top #(
@@ -2709,7 +2751,6 @@ endmodule
 // Verification: Matthew Pauly
 // Notes:
 // Constraint: BIAS_BW > BW
-// TODO: Implement rd_data_o for reading memories
 // =============================================================================
 
 module fc_mem #(
@@ -2905,8 +2946,6 @@ endmodule
 // Verification: Matthew Pauly
 // Notes:
 // Assumes BIAS_BW > BW
-// TODO: Implement rd_data_o for reading memories
-// TODO: Calculate O_BW from NUM_CLASSES?
 // ============================================================================
 
 module fc_top #(
@@ -3069,8 +3108,6 @@ endmodule
 // Assumes that biases have 2x bitwidth of weights, and outputs are 3x bitwidth
 // Also assumes that packet lengths are > 3 (which is the propogation length of
 // the bias out to the output, since it is pipelined).
-//
-// TODO: Check which signals have to be signed
 // ============================================================================
 
 module mac #(
@@ -3281,8 +3318,8 @@ endmodule
 // Design:       Eldrick Millares
 // Verification: Matthew Pauly
 // Notes:
-// TODO: Make multi-class?
-// TODO: Make SUSTAIN_LEN configurable?
+// INFO: Assumes wake word class is 0th bit of data_i
+// INFO: SUSTAIN_LEN hard coded for 1/2 second
 // ============================================================================
 
 module wake #(
@@ -3405,7 +3442,7 @@ module wrd #(
 
     // conv_sipo module parameters
     parameter CONV_SIPO_BW         = MAX_POOL1_BW,                    // 8
-    // TODO: $rtoi and $ceil are not supported in Design Compiler
+    // INFO: $rtoi and $ceil are not supported in Design Compiler
     // parameter CONV_SIPO_FRAME_LEN  = $rtoi($ceil(I_FRAME_LEN / 2.0)), // 25
     parameter CONV_SIPO_FRAME_LEN  = I_FRAME_LEN / 2, // 25
     parameter CONV_SIPO_VECTOR_LEN = CONV1_NUM_FILTERS,               // 8
@@ -3432,7 +3469,7 @@ module wrd #(
 
     // max_pool2 module parameters
     parameter MAX_POOL2_BW        = CONV_SIPO_BW, // 8
-    // TODO: $rtoi and $ceil are not supported in Design Compiler
+    // INFO: $rtoi and $ceil are not supported in Design Compiler
     // parameter MAX_POOL2_FRAME_LEN = $rtoi($ceil(CONV_SIPO_FRAME_LEN / 2.0)), //13
     parameter MAX_POOL2_FRAME_LEN = CONV_SIPO_FRAME_LEN / 2 + 1, //13
 
@@ -3446,7 +3483,7 @@ module wrd #(
     parameter FC_VECTOR_O_BW = FC_O_BW * FC_NUM_CLASSES, // 64
     // fc memory configuration parameters
     parameter FC_BANK_BW = $clog2(FC_NUM_CLASSES * 2),
-    // TODO: Yosys will not resolve FC_FRAME_LEN, need to hard code
+    // INFO: Yosys will not resolve FC_FRAME_LEN, need to hard code
     // parameter FC_ADDR_BW = $clog2(FC_FRAME_LEN),
     parameter FC_ADDR_BW = $clog2(208),
 
@@ -5482,7 +5519,7 @@ module fft_wrapper #(
     // =========================================================================
     // output sample counter for holding valid_o
     localparam FFT_LEN                  = 256;
-    // TODO: $rtoi and $ceil are not supported in Design Compiler
+    // INFO: $rtoi and $ceil are not supported in Design Compiler
     // localparam RFFT_LEN                 = $rtoi(FFT_LEN / 2 + 1);
     localparam RFFT_LEN                 = FFT_LEN / 2 + 1;
     localparam OUTPUT_COUNTER_BW        = $clog2(RFFT_LEN);
@@ -6837,7 +6874,7 @@ module quant #(
     // =========================================================================
     // Local Parameters
     // =========================================================================
-    // TODO: Design Compiler does not support $pow()
+    // INFO: Design Compiler does not support $pow()
     // localparam CLIP = $pow(2, O_BW - 1) - 1;  // clip to this if larger
     localparam CLIP = (1 << (O_BW - 1)) - 1;  // clip to this if larger
 
@@ -6862,6 +6899,133 @@ module quant #(
         $dumpfile ("wave.vcd");
         $dumpvars (0, quant);
         #1;
+    end
+    `endif
+    `endif
+
+endmodule
+// =============================================================================
+// Module:       Debug
+// Design:       Eldrick Millares
+// Verification: Matthew Pauly
+// Notes:
+// =============================================================================
+
+module dbg #(
+    parameter DFE_OUTPUT_BW = 8,
+    parameter ACO_OUTPUT_BW = 8 * 13
+)(
+    // clock and reset
+    input                                   clk_i,
+    input                                   rst_n_i,
+
+    // logic analyzer signals
+    input  [127:0] la_data_in_i,
+    output [127:0] la_data_out_o,
+    input  [127:0] la_oenb_i,
+
+    // ctl
+    input  ctl_pipeline_en_i,
+
+    output ctl_pipeline_en_o,
+
+    `ifndef COCOTB_SIM
+    // mic -> dfe
+    input   mic_pdm_data_i,
+
+    output  mic_pdm_data_o,
+    `endif
+
+    // dfe -> aco
+    input [DFE_OUTPUT_BW - 1 : 0] dfe_data_i,
+    input dfe_valid_i,
+
+    output [DFE_OUTPUT_BW - 1 : 0] dfe_data_o,
+    output dfe_valid_o,
+
+    // aco -> wrd
+    input [ACO_OUTPUT_BW - 1 : 0] aco_data_i,
+    input aco_valid_i,
+    input aco_last_i,
+
+    output [ACO_OUTPUT_BW - 1 : 0] aco_data_o,
+    output aco_valid_o,
+    output aco_last_o,
+
+    // wrd -> wake
+    input wrd_wake_i,
+    input wrd_wake_valid_i,
+
+    output wrd_wake_o,
+    output wrd_wake_valid_o
+);
+    // =========================================================================
+    // Pack input signals into one 128-bit vector
+    // =========================================================================
+
+    wire [127:0] packed_input = {9'd0,
+                                 wrd_wake_valid_i,
+                                 wrd_wake_i,
+                                 aco_last_i,
+                                 aco_valid_i,
+                                 aco_data_i,
+                                 dfe_valid_i,
+                                 dfe_data_i,
+                                 `ifndef COCOTB_SIM
+                                 mic_pdm_data_i,
+                                 `else
+                                 1'b0,
+                                 `endif
+                                 ctl_pipeline_en_i};
+    assign la_data_out_o = packed_input;
+    wire [127:0] packed_output;
+
+    // =========================================================================
+    // Mux each bit between the logic analyzer input and the original signal
+    // =========================================================================
+
+    genvar i;
+    generate
+        for (i = 0; i < 128; i = i + 1) begin
+            assign packed_output[i] = (!la_oenb_i[i]) ? la_data_in_i[i] : packed_input[i];
+        end
+    endgenerate
+
+    // =========================================================================
+    // Unpack muxed data
+    // =========================================================================
+
+    // CTL -> *** - 1 Pin(s)
+    assign ctl_pipeline_en_o = packed_output[0];
+
+    // MIC -> DFE - 1 Pin(s)
+    `ifndef COCOTB_SIM
+    assign mic_pdm_data_o = packed_output[1];
+    `endif
+
+    // DFE -> ACO - 9 Pin(s)
+    assign dfe_data_o  = packed_output[9:2];
+    assign dfe_valid_o = packed_output[10];
+
+    // ACO -> WRD - 106 Pin(s)
+    assign aco_data_o  = packed_output[114:11];
+    assign aco_valid_o = packed_output[115];
+    assign aco_last_o  = packed_output[116];
+
+    // WRD -> WAKE - 2 Pin(s)
+    assign wrd_wake_o       = packed_output[117];
+    assign wrd_wake_valid_o = packed_output[118];
+
+    // =========================================================================
+    // Simulation Only Waveform Dump (.vcd export)
+    // =========================================================================
+    `ifdef COCOTB_SIM
+    `ifndef SCANNED
+    `define SCANNED
+    initial begin
+      $dumpfile ("wave.vcd");
+      $dumpvars (0, dbg);
+      #1;
     end
     `endif
     `endif

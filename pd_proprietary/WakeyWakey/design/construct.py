@@ -75,9 +75,11 @@ def construct():
   netgen_lvs      = Step( this_dir + '/open-netgen-lvs'                 )
   magic_antenna   = Step( this_dir + '/open-magic-antenna'              )
   calibre_lvs     = Step( this_dir + '/mentor-calibre-comparison'       )
+  pt_timing       = Step( this_dir + '/synopsys-pt-timing-signoff'      )
 
   export         = Step( this_dir + '/export-to-openlane'         )
   dc              = Step( this_dir + '/synopsys-dc-synthesis')  # NEW DC with netname case sensitivity fix
+  genlibdb        = Step( this_dir + '/synopsys-ptpx-genlibdb'          )
 
   # Default steps
 
@@ -98,7 +100,7 @@ def construct():
   route           = Step( 'cadence-innovus-route',         default=True )
   postroute       = Step( 'cadence-innovus-postroute',     default=True )
   gdsmerge        = Step( 'mentor-calibre-gdsmerge',       default=True )
-  pt_timing       = Step( 'synopsys-pt-timing-signoff',    default=True )
+  # pt_timing       = Step( 'synopsys-pt-timing-signoff',    default=True )
 
   gen_saif        = Step( 'synopsys-vcd2saif-convert',     default=True )
   gen_saif_rtl    = gen_saif.clone()
@@ -139,6 +141,7 @@ def construct():
   g.add_step( pt_timing       )
   g.add_step( gen_saif_rtl    )
   g.add_step( pt_power_rtl    )
+  g.add_step( genlibdb    )
   #  g.add_step( gl_sim          )
   #  g.add_step( gen_saif_gl     )
   #  g.add_step( pt_power_gl     )
@@ -179,7 +182,11 @@ def construct():
   g.connect_by_name( adk,             calibre_lvs  )
   g.connect_by_name( adk,             pt_timing       )
   g.connect_by_name( adk,             pt_power_rtl    )
+  g.connect_by_name( adk,             genlibdb    )
   #  g.connect_by_name( adk,             pt_power_gl     )
+
+  # g.connect_by_name( pt_timing,       genlibdb    )
+  g.connect_by_name( signoff,       genlibdb    )
 
   g.connect_by_name( rtl_sim,         gen_saif_rtl    ) # run.vcd
   #  g.connect_by_name( gl_sim,          gen_saif_gl     ) # run.vcd

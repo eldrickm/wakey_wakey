@@ -28,6 +28,9 @@ parameters:
 commands: 
   - echo "Removing w_xxx# pins from extracted netlist. 'Error detected while"
   - echo "processing...' message can be ignored."
+  - cp inputs/design_extracted.spice inputs/design_extracted.spice-unmodified
+  - rm inputs/design_extracted.spice
+  - cp inputs/design_extracted.spice-unmodified inputs/design_extracted.spice
   - vim -T dumb --noplugin -n -S "remove_w_pins.vim" "inputs/design_extracted.spice"
   - sh run_lvs.sh
 

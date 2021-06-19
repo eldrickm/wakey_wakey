@@ -108,6 +108,11 @@ module user_proj_example (
         .wbs_ack_o(wbs_ack_o),
         .wbs_dat_o(wbs_dat_o),
 
+        // logic analyzer signals
+        .la_data_in_i(la_data_in),
+        .la_data_out_o(la_data_out),
+        .la_oenb_i(la_oenb),
+
         // microphone i/o
         `ifdef COCOTB_SIM
         .dfe_data(dfe_data),  // bypass DFE for test bench
@@ -119,7 +124,7 @@ module user_proj_example (
         .vad_i(vad),
 
         // wake output
-        .wake_o(wake)
+        .wake_o_muxed(wake)
     );
 
     // =========================================================================
@@ -149,11 +154,6 @@ module user_proj_example (
     // IRQ
     // =========================================================================
     assign irq = 3'b000;            // unused
-
-    // =========================================================================
-    // Logic Analyzer Outputs
-    // =========================================================================
-    assign la_data_out = 128'b0;    // unused
 
     // =========================================================================
     // Simulation Only Waveform Dump (.vcd export)

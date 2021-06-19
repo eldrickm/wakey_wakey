@@ -20,6 +20,11 @@ module wakey_wakey (
     output          wbs_ack_o,
     output [31 : 0] wbs_dat_o,
 
+    // logic analyzer signals
+    input  [127:0] la_data_in_i,
+    output [127:0] la_data_out_o,
+    input  [127:0] la_oenb_i,
+
     // microphone i/o
     `ifdef COCOTB_SIM
     input [DFE_OUTPUT_BW - 1 : 0] dfe_data,  // bypass DFE for test bench
@@ -31,7 +36,7 @@ module wakey_wakey (
     input           vad_i,  // voice activity detection
 
     // wake output
-    output wake_o
+    output wake_o_muxed
 );
     localparam F_SYSTEM_CLK = 16000000;
 
@@ -128,7 +133,9 @@ module wakey_wakey (
     // CTL - Pipeline control
     // =========================================================================
     wire pipeline_en;
+    wire pipeline_en_muxed;
     wire wake_valid;  // driven by WRD
+    wire wake_valid_muxed;
 
     ctl #(
         .F_SYSTEM_CLK(F_SYSTEM_CLK)
@@ -138,7 +145,7 @@ module wakey_wakey (
 
         .vad_i(vad_i),
 
-        .wake_valid_i(wake_valid),
+        .wake_valid_i(wake_valid_muxed),
 
         .en_o(pipeline_en)
     );
@@ -148,7 +155,10 @@ module wakey_wakey (
     // =========================================================================
     localparam DFE_OUTPUT_BW = 8;
 
+    wire [DFE_OUTPUT_BW - 1 : 0] dfe_data_muxed;
+    wire                         dfe_valid_muxed;
     `ifndef COCOTB_SIM
+    wire pdm_data_i_muxed;
     wire [DFE_OUTPUT_BW - 1 : 0] dfe_data;
     wire                         dfe_valid;
 
@@ -156,10 +166,10 @@ module wakey_wakey (
         // clock, reset, and enable
         .clk_i(clk_i),
         .rst_n_i(rst_n_i),
-        .en_i(pipeline_en),
+        .en_i(pipeline_en_muxed),
 
         // pdm input
-        .pdm_data_i(pdm_data_i),
+        .pdm_data_i(pdm_data_i_muxed),
 
         // pdm clock output
         .pdm_clk_o(pdm_clk_o),
@@ -178,16 +188,19 @@ module wakey_wakey (
     wire [ACO_OUTPUT_BW - 1 : 0] aco_data;
     wire                         aco_valid;
     wire                         aco_last;
+    wire [ACO_OUTPUT_BW - 1 : 0] aco_data_muxed;
+    wire                         aco_valid_muxed;
+    wire                         aco_last_muxed;
 
     aco aco_inst (
         // clock, reset, and enable
         .clk_i(clk_i),
         .rst_n_i(rst_n_i),
-        .en_i(pipeline_en),
+        .en_i(pipeline_en_muxed),
 
         // streaming input
-        .data_i(dfe_data),
-        .valid_i(dfe_valid),
+        .data_i(dfe_data_muxed),
+        .valid_i(dfe_valid_muxed),
 
         // streaming output
         .data_o(aco_data),
@@ -199,16 +212,17 @@ module wakey_wakey (
     // WRD - Word Recognition DNN Accelerator Module
     // =========================================================================
     wire wrd_ready;
+    wire wake_o;
 
     wrd wrd_inst (
         // clock and reset
         .clk_i(clk_i),
-        .rst_n_i(rst_n_i & pipeline_en),
+        .rst_n_i(rst_n_i & pipeline_en_muxed),
 
         // streaming input
-        .data_i(aco_data),
-        .valid_i(aco_valid),
-        .last_i(aco_last),
+        .data_i(aco_data_muxed),
+        .valid_i(aco_valid_muxed),
+        .last_i(aco_last_muxed),
         .ready_o(wrd_ready),
 
         // wake pin
@@ -238,6 +252,51 @@ module wakey_wakey (
         .fc_rd_wr_addr_i(fc_rd_wr_addr),
         .fc_wr_data_i(fc_wr_data),
         .fc_rd_data_o(fc_rd_data)
+    );
+
+    // =========================================================================
+    // DBG - Debug Logic Analyzer
+    // =========================================================================
+    dbg #(
+        .DFE_OUTPUT_BW(DFE_OUTPUT_BW),
+        .ACO_OUTPUT_BW(ACO_OUTPUT_BW)
+    ) dbg_inst (
+        .clk_i(clk_i),
+        .rst_n_i(rst_n_i),
+
+        .la_data_in_i(la_data_in_i),
+        .la_data_out_o(la_data_out_o),
+        .la_oenb_i(la_oenb_i),
+
+        // ctl
+        .ctl_pipeline_en_i(pipeline_en),
+        .ctl_pipeline_en_o(pipeline_en_muxed),
+
+        `ifndef COCOTB_SIM
+        // mic -> dfe
+        .mic_pdm_data_i(pdm_data_i),
+        .mic_pdm_data_o(pdm_data_i_muxed),
+        `endif
+
+        // dfe -> aco
+        .dfe_data_i(dfe_data),
+        .dfe_valid_i(dfe_valid),
+        .dfe_data_o(dfe_data_muxed),
+        .dfe_valid_o(dfe_valid_muxed),
+
+        // aco -> wrd
+        .aco_data_i(aco_data),
+        .aco_valid_i(aco_valid),
+        .aco_last_i(aco_last),
+        .aco_data_o(aco_data_muxed),
+        .aco_valid_o(aco_valid_muxed),
+        .aco_last_o(aco_last_muxed),
+
+        // wrd -> wake
+        .wrd_wake_i(wake_o),
+        .wrd_wake_valid_i(wake_valid),
+        .wrd_wake_o(wake_o_muxed),
+        .wrd_wake_valid_o(wake_valid_muxed)
     );
 
     // =========================================================================

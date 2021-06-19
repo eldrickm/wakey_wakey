@@ -744,6 +744,9 @@ async def test_wakey_wakey(dut):
     #  dut.io_in.value[34] <= 0 # vad_i
     dut.io_in <= 0
 
+    dut.la_data_in <= 0
+    dut.la_oenb <= 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+
     # wait long enough for reset to be effective
     for _ in range(50):
         await FallingEdge(dut.wb_clk_i)
@@ -889,7 +892,6 @@ async def test_wakey_wakey(dut):
     #      await write_mem_params(dut, params)
     #      await do_mfcc_test(dut)
 
-    print('Make sure to source setup.bashrc!')
     print('To limit the number of tests, run with: make PLUSARGS="+n_tests=2"')
     params = na.get_params()
     await write_mem_params(dut, params)
