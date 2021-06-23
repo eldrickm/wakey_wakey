@@ -127,7 +127,7 @@ bool run_test() {
     mult_arr(writebuf);
     if (!check_output(writebuf, readbuf)) return false;
 
-    // return true;
+    return true;
     // return check_output(writebuf, readbuf);
     // */
 
@@ -259,7 +259,7 @@ void main()
     reg_mprj_xfer = 1;
     while (reg_mprj_xfer == 1) {}
 
-    la_test();
+    // la_test();
 
 
     // Flag start of the test

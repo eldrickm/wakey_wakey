@@ -17,14 +17,18 @@
 `include "defines.v"
 `define USE_POWER_PINS
 
-`ifdef GL
+`ifdef GL  // For full caravel GL sim, to do just user project wrapper,
+           // tweak the comments in the else clause
     // Assume default net type to be wire because GL netlists don't have the wire definitions
     `default_nettype wire
     `include "gl/user_project_wrapper.v"
-    // `include "gl/user_proj_example.v"
-    `include "gl/design.v"
+    `include "gl/user_proj_example.v"
+    // `include "gl/design.v"
 `else
-    `include "user_project_wrapper.v"
-    // `include "user_proj_example.v"
-    `include "design.v"
+     // Verilog netlist for user project
+    // `include "user_project_wrapper.v"
+    // `include "design.v"
+     // Gate level netlist for user project
+    `include "gl/user_project_wrapper.v"
+    `include "gl/user_proj_example.v"
 `endif
