@@ -162,6 +162,11 @@ This is well within our expectations.
 
 ![Wakey-Wakey High Level Block Diagram](./img/overview.png)
 
+### Layout
+
+![Wakey-Wakey Layout](./img/layout_full.png)
+
+A breakdown of the layout as it corresponds to each subsystem can be found [here](https://drive.google.com/drive/folders/19Xejo1aOgb-UYZny7Gxf69QG1T9MZ2v0?usp=sharing).
 
 ## References
 
