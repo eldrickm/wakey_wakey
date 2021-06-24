@@ -1,0 +1,25 @@
+****************************************
+Report : clock_skew
+Design : user_proj_example
+Version: Q-2019.12-SP2
+Date   : Wed Jun 16 22:56:05 2021
+****************************************
+
+
+****************************************
+Report : clock
+Design : user_proj_example
+Version: Q-2019.12-SP2
+Date   : Wed Jun 16 22:56:05 2021
+****************************************
+
+Attributes:
+    p - Propagated clock
+    G - Generated  clock
+    I - Inactive   clock
+
+Clock             Period          Waveform            Attrs     Sources
+-----------------------------------------------------------------------
+ideal_clock       62.500          {0.000 31.250}                {wb_clk_i}
+
+1

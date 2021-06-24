@@ -1,0 +1,145 @@
+Information: Checking 'no_input_delay'.
+Information: Checking 'no_driving_cell'.
+Information: Checking 'unconstrained_endpoints'.
+Warning: There are 61 endpoints which are not constrained for maximum delay.
+
+Endpoint
+--------------------------------------------------------------------------------
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_2_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_5_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/boundary_reg_3_/D
+wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_1_/D
+wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_0_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/boundary_reg_0_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/boundary_reg_4_/D
+wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_3_/D
+wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_2_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_13_/D
+wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_8_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/boundary_reg_2_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/boundary_reg_6_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_0_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_14_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_3_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_4_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_11_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_7_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_8_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/boundary_reg_5_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/boundary_reg_0_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/boundary_reg_1_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/boundary_reg_2_/D
+wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_14_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/boundary_reg_4_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/boundary_reg_7_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/boundary_reg_5_/D
+wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_7_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_10_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_4_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_9_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_6_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_15_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_1_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/boundary_reg_6_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/boundary_reg_3_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_2_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_5_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_12_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_14_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_10_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_6_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_15_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_8_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_12_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_13_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/boundary_reg_1_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_3_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_11_/D
+wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_11_/D
+wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_10_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_7_/D
+wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_4_/D
+wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_12_/D
+wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_6_/D
+wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_5_/D
+wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_9_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_9_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_0_/D
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_1_/D
+
+Information: Checking 'unexpandable_clocks'.
+Information: Checking 'latch_fanout'.
+Information: Checking 'no_clock'.
+Warning: There are 61 register clock pins with no clock.
+
+Clock Pin
+------------------------------------------------------------
+wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_0_/GATE
+wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_1_/GATE
+wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_2_/GATE
+wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_3_/GATE
+wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_4_/GATE
+wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_5_/GATE
+wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_6_/GATE
+wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_7_/GATE
+wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_8_/GATE
+wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_9_/GATE
+wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_10_/GATE
+wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_11_/GATE
+wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_12_/GATE
+wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_14_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/boundary_reg_0_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/boundary_reg_1_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/boundary_reg_2_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/boundary_reg_3_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/boundary_reg_4_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/boundary_reg_5_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/boundary_reg_6_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_0_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_1_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_2_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_3_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_4_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_5_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_6_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_7_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_8_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_9_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_10_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_11_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_12_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_13_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_14_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_15_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/boundary_reg_0_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/boundary_reg_1_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/boundary_reg_2_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/boundary_reg_3_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/boundary_reg_4_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/boundary_reg_5_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/boundary_reg_6_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/boundary_reg_7_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_0_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_1_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_2_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_3_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_4_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_5_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_6_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_7_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_8_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_9_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_10_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_11_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_12_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_13_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_14_/GATE
+wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_15_/GATE
+
+Information: Checking 'partial_input_delay'.
+Information: Checking 'generic'.
+Information: Checking 'loops'.
+Information: Checking 'generated_clocks'.
+Information: Checking 'pulse_clock_non_pulse_clock_merge'.
+Information: Checking 'pll_configuration'.
+0

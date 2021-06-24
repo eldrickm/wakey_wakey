@@ -1,0 +1,35 @@
+build_dir: 21-synopsys-pt-timing-signoff
+build_id: '21'
+commands:
+- cp inputs/design.pt.sdc inputs/design.pt.sdc-unmodified
+- rm inputs/design.pt.sdc
+- cp inputs/design.pt.sdc-unmodified inputs/design.pt.sdc
+- vim -T dumb --noplugin -n -S "fix_pt_appends.vim" "inputs/design.pt.sdc"
+- pt_shell -file pt.tcl
+- mkdir -p outputs && cd outputs
+- ln -sf ../design.sdf design.sdf
+edges_i:
+  adk:
+  - f: adk
+    step: 6-skywater-130nm
+  design.pt.sdc:
+  - f: design.pt.sdc
+    step: 17-cadence-innovus-signoff
+  design.spef.gz:
+  - f: design.spef.gz
+    step: 17-cadence-innovus-signoff
+  design.vcs.v:
+  - f: design.vcs.v
+    step: 17-cadence-innovus-signoff
+edges_o: {}
+inputs:
+- adk
+- design.vcs.v
+- design.pt.sdc
+- design.spef.gz
+name: synopsys-pt-timing-signoff
+outputs:
+- design.sdf
+parameters:
+  design_name: user_proj_example
+source: /tmp/mjpauly-ee272/wakey_wakey/pd_proprietary/WakeyWakey/design/synopsys-pt-timing-signoff

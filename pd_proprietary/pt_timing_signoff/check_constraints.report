@@ -1,0 +1,207 @@
+Information: Checked out license 'GalaxyConstraint' (PT-019)
+****************************************
+Report : check_constraints
+Version: Q-2019.12-SP2
+Date   : Wed Jun 16 22:54:55 2021
+****************************************
+
+Scenario Violations       Count Waived Description
+------------------------------------------------------------------------------
+Design: user_proj_example
+<Global Violations>          120  0    Scenario independent violations
+  warning                    120  0    
+    NTL_0001                 119  0    Output port 'port' is unbuffered.
+      1 of 119                    0    Output port 'la_data_out[118]' is unbuffered.
+      2 of 119                    0    Output port 'la_data_out[117]' is unbuffered.
+      3 of 119                    0    Output port 'la_data_out[116]' is unbuffered.
+      4 of 119                    0    Output port 'la_data_out[115]' is unbuffered.
+      5 of 119                    0    Output port 'la_data_out[114]' is unbuffered.
+      6 of 119                    0    Output port 'la_data_out[113]' is unbuffered.
+      7 of 119                    0    Output port 'la_data_out[112]' is unbuffered.
+      8 of 119                    0    Output port 'la_data_out[111]' is unbuffered.
+      9 of 119                    0    Output port 'la_data_out[110]' is unbuffered.
+      10 of 119                   0    Output port 'la_data_out[109]' is unbuffered.
+      11 of 119                   0    Output port 'la_data_out[108]' is unbuffered.
+      12 of 119                   0    Output port 'la_data_out[107]' is unbuffered.
+      13 of 119                   0    Output port 'la_data_out[106]' is unbuffered.
+      14 of 119                   0    Output port 'la_data_out[105]' is unbuffered.
+      15 of 119                   0    Output port 'la_data_out[104]' is unbuffered.
+      16 of 119                   0    Output port 'la_data_out[103]' is unbuffered.
+      17 of 119                   0    Output port 'la_data_out[102]' is unbuffered.
+      18 of 119                   0    Output port 'la_data_out[101]' is unbuffered.
+      19 of 119                   0    Output port 'la_data_out[100]' is unbuffered.
+      20 of 119                   0    Output port 'la_data_out[99]' is unbuffered.
+      21 of 119                   0    Output port 'la_data_out[98]' is unbuffered.
+      22 of 119                   0    Output port 'la_data_out[97]' is unbuffered.
+      23 of 119                   0    Output port 'la_data_out[96]' is unbuffered.
+      24 of 119                   0    Output port 'la_data_out[95]' is unbuffered.
+      25 of 119                   0    Output port 'la_data_out[94]' is unbuffered.
+      26 of 119                   0    Output port 'la_data_out[93]' is unbuffered.
+      27 of 119                   0    Output port 'la_data_out[92]' is unbuffered.
+      28 of 119                   0    Output port 'la_data_out[91]' is unbuffered.
+      29 of 119                   0    Output port 'la_data_out[90]' is unbuffered.
+      30 of 119                   0    Output port 'la_data_out[89]' is unbuffered.
+      31 of 119                   0    Output port 'la_data_out[88]' is unbuffered.
+      32 of 119                   0    Output port 'la_data_out[87]' is unbuffered.
+      33 of 119                   0    Output port 'la_data_out[86]' is unbuffered.
+      34 of 119                   0    Output port 'la_data_out[85]' is unbuffered.
+      35 of 119                   0    Output port 'la_data_out[84]' is unbuffered.
+      36 of 119                   0    Output port 'la_data_out[83]' is unbuffered.
+      37 of 119                   0    Output port 'la_data_out[82]' is unbuffered.
+      38 of 119                   0    Output port 'la_data_out[81]' is unbuffered.
+      39 of 119                   0    Output port 'la_data_out[80]' is unbuffered.
+      40 of 119                   0    Output port 'la_data_out[79]' is unbuffered.
+      41 of 119                   0    Output port 'la_data_out[78]' is unbuffered.
+      42 of 119                   0    Output port 'la_data_out[77]' is unbuffered.
+      43 of 119                   0    Output port 'la_data_out[76]' is unbuffered.
+      44 of 119                   0    Output port 'la_data_out[75]' is unbuffered.
+      45 of 119                   0    Output port 'la_data_out[74]' is unbuffered.
+      46 of 119                   0    Output port 'la_data_out[73]' is unbuffered.
+      47 of 119                   0    Output port 'la_data_out[72]' is unbuffered.
+      48 of 119                   0    Output port 'la_data_out[71]' is unbuffered.
+      49 of 119                   0    Output port 'la_data_out[70]' is unbuffered.
+      50 of 119                   0    Output port 'la_data_out[69]' is unbuffered.
+      51 of 119                   0    Output port 'la_data_out[68]' is unbuffered.
+      52 of 119                   0    Output port 'la_data_out[67]' is unbuffered.
+      53 of 119                   0    Output port 'la_data_out[66]' is unbuffered.
+      54 of 119                   0    Output port 'la_data_out[65]' is unbuffered.
+      55 of 119                   0    Output port 'la_data_out[64]' is unbuffered.
+      56 of 119                   0    Output port 'la_data_out[63]' is unbuffered.
+      57 of 119                   0    Output port 'la_data_out[62]' is unbuffered.
+      58 of 119                   0    Output port 'la_data_out[61]' is unbuffered.
+      59 of 119                   0    Output port 'la_data_out[60]' is unbuffered.
+      60 of 119                   0    Output port 'la_data_out[59]' is unbuffered.
+      61 of 119                   0    Output port 'la_data_out[58]' is unbuffered.
+      62 of 119                   0    Output port 'la_data_out[57]' is unbuffered.
+      63 of 119                   0    Output port 'la_data_out[56]' is unbuffered.
+      64 of 119                   0    Output port 'la_data_out[55]' is unbuffered.
+      65 of 119                   0    Output port 'la_data_out[54]' is unbuffered.
+      66 of 119                   0    Output port 'la_data_out[53]' is unbuffered.
+      67 of 119                   0    Output port 'la_data_out[52]' is unbuffered.
+      68 of 119                   0    Output port 'la_data_out[51]' is unbuffered.
+      69 of 119                   0    Output port 'la_data_out[50]' is unbuffered.
+      70 of 119                   0    Output port 'la_data_out[49]' is unbuffered.
+      71 of 119                   0    Output port 'la_data_out[48]' is unbuffered.
+      72 of 119                   0    Output port 'la_data_out[47]' is unbuffered.
+      73 of 119                   0    Output port 'la_data_out[46]' is unbuffered.
+      74 of 119                   0    Output port 'la_data_out[45]' is unbuffered.
+      75 of 119                   0    Output port 'la_data_out[44]' is unbuffered.
+      76 of 119                   0    Output port 'la_data_out[43]' is unbuffered.
+      77 of 119                   0    Output port 'la_data_out[42]' is unbuffered.
+      78 of 119                   0    Output port 'la_data_out[41]' is unbuffered.
+      79 of 119                   0    Output port 'la_data_out[40]' is unbuffered.
+      80 of 119                   0    Output port 'la_data_out[39]' is unbuffered.
+      81 of 119                   0    Output port 'la_data_out[38]' is unbuffered.
+      82 of 119                   0    Output port 'la_data_out[37]' is unbuffered.
+      83 of 119                   0    Output port 'la_data_out[36]' is unbuffered.
+      84 of 119                   0    Output port 'la_data_out[35]' is unbuffered.
+      85 of 119                   0    Output port 'la_data_out[34]' is unbuffered.
+      86 of 119                   0    Output port 'la_data_out[33]' is unbuffered.
+      87 of 119                   0    Output port 'la_data_out[32]' is unbuffered.
+      88 of 119                   0    Output port 'la_data_out[31]' is unbuffered.
+      89 of 119                   0    Output port 'la_data_out[30]' is unbuffered.
+      90 of 119                   0    Output port 'la_data_out[29]' is unbuffered.
+      91 of 119                   0    Output port 'la_data_out[28]' is unbuffered.
+      92 of 119                   0    Output port 'la_data_out[27]' is unbuffered.
+      93 of 119                   0    Output port 'la_data_out[26]' is unbuffered.
+      94 of 119                   0    Output port 'la_data_out[25]' is unbuffered.
+      95 of 119                   0    Output port 'la_data_out[24]' is unbuffered.
+      96 of 119                   0    Output port 'la_data_out[23]' is unbuffered.
+      97 of 119                   0    Output port 'la_data_out[22]' is unbuffered.
+      98 of 119                   0    Output port 'la_data_out[21]' is unbuffered.
+      99 of 119                   0    Output port 'la_data_out[20]' is unbuffered.
+      100 of 119                  0    Output port 'la_data_out[19]' is unbuffered.
+      101 of 119                  0    Output port 'la_data_out[18]' is unbuffered.
+      102 of 119                  0    Output port 'la_data_out[17]' is unbuffered.
+      103 of 119                  0    Output port 'la_data_out[16]' is unbuffered.
+      104 of 119                  0    Output port 'la_data_out[15]' is unbuffered.
+      105 of 119                  0    Output port 'la_data_out[14]' is unbuffered.
+      106 of 119                  0    Output port 'la_data_out[13]' is unbuffered.
+      107 of 119                  0    Output port 'la_data_out[12]' is unbuffered.
+      108 of 119                  0    Output port 'la_data_out[11]' is unbuffered.
+      109 of 119                  0    Output port 'la_data_out[10]' is unbuffered.
+      110 of 119                  0    Output port 'la_data_out[9]' is unbuffered.
+      111 of 119                  0    Output port 'la_data_out[8]' is unbuffered.
+      112 of 119                  0    Output port 'la_data_out[7]' is unbuffered.
+      113 of 119                  0    Output port 'la_data_out[6]' is unbuffered.
+      114 of 119                  0    Output port 'la_data_out[5]' is unbuffered.
+      115 of 119                  0    Output port 'la_data_out[4]' is unbuffered.
+      116 of 119                  0    Output port 'la_data_out[3]' is unbuffered.
+      117 of 119                  0    Output port 'la_data_out[2]' is unbuffered.
+      118 of 119                  0    Output port 'la_data_out[1]' is unbuffered.
+      119 of 119                  0    Output port 'la_data_out[0]' is unbuffered.
+    NTL_0004                 1    0    Net 'net' is a top-level feedthrough.
+      1 of 1                      0    Net 'la_data_out[1]' is a top-level feedthrough.
+default                      62   0    Default scenario violations
+  warning                    62   0    
+    CSL_0002                 1    0    Input/Output delays are defined relative to clock 'clock'. This clock has incomplete source latency values required for those external delays even though its source ports/pins have more complete source latencies defined on them.
+      1 of 1                      0    Input/Output delays are defined relative to clock 'ideal_clock'. This clock has incomplete source latency values required for those external delays even though its source ports/pins have more complete source latencies defined on them.
+    DES_0001                 61   0    Register clock pin 'pin' has no clock signal
+      1 of 61                     0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_15_/GATE' has no clock signal
+      2 of 61                     0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_14_/GATE' has no clock signal
+      3 of 61                     0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_13_/GATE' has no clock signal
+      4 of 61                     0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_12_/GATE' has no clock signal
+      5 of 61                     0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_11_/GATE' has no clock signal
+      6 of 61                     0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_10_/GATE' has no clock signal
+      7 of 61                     0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_9_/GATE' has no clock signal
+      8 of 61                     0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_8_/GATE' has no clock signal
+      9 of 61                     0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_7_/GATE' has no clock signal
+      10 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_6_/GATE' has no clock signal
+      11 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_5_/GATE' has no clock signal
+      12 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_4_/GATE' has no clock signal
+      13 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_3_/GATE' has no clock signal
+      14 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_2_/GATE' has no clock signal
+      15 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_1_/GATE' has no clock signal
+      16 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/coef_reg_0_/GATE' has no clock signal
+      17 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/boundary_reg_0_/GATE' has no clock signal
+      18 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/boundary_reg_6_/GATE' has no clock signal
+      19 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/boundary_reg_2_/GATE' has no clock signal
+      20 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/boundary_reg_5_/GATE' has no clock signal
+      21 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/boundary_reg_4_/GATE' has no clock signal
+      22 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/boundary_reg_3_/GATE' has no clock signal
+      23 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/even_filterbanks/boundary_reg_1_/GATE' has no clock signal
+      24 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_15_/GATE' has no clock signal
+      25 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_14_/GATE' has no clock signal
+      26 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_13_/GATE' has no clock signal
+      27 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_12_/GATE' has no clock signal
+      28 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_11_/GATE' has no clock signal
+      29 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_10_/GATE' has no clock signal
+      30 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_9_/GATE' has no clock signal
+      31 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_8_/GATE' has no clock signal
+      32 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_7_/GATE' has no clock signal
+      33 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_6_/GATE' has no clock signal
+      34 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_5_/GATE' has no clock signal
+      35 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_4_/GATE' has no clock signal
+      36 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_3_/GATE' has no clock signal
+      37 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_2_/GATE' has no clock signal
+      38 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_1_/GATE' has no clock signal
+      39 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/coef_reg_0_/GATE' has no clock signal
+      40 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/boundary_reg_0_/GATE' has no clock signal
+      41 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/boundary_reg_2_/GATE' has no clock signal
+      42 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/boundary_reg_7_/GATE' has no clock signal
+      43 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/boundary_reg_5_/GATE' has no clock signal
+      44 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/boundary_reg_1_/GATE' has no clock signal
+      45 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/boundary_reg_6_/GATE' has no clock signal
+      46 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/boundary_reg_4_/GATE' has no clock signal
+      47 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/filterbank_inst/odd_filterbanks/boundary_reg_3_/GATE' has no clock signal
+      48 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_14_/GATE' has no clock signal
+      49 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_12_/GATE' has no clock signal
+      50 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_11_/GATE' has no clock signal
+      51 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_10_/GATE' has no clock signal
+      52 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_9_/GATE' has no clock signal
+      53 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_8_/GATE' has no clock signal
+      54 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_7_/GATE' has no clock signal
+      55 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_6_/GATE' has no clock signal
+      56 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_5_/GATE' has no clock signal
+      57 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_4_/GATE' has no clock signal
+      58 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_3_/GATE' has no clock signal
+      59 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_2_/GATE' has no clock signal
+      60 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_1_/GATE' has no clock signal
+      61 of 61                    0    Register clock pin 'wakey_wakey_inst/aco_inst/dct_inst/coefs_reg_0_/GATE' has no clock signal
+------------------------------------------------------------------------------
+Total Error Messages         0    0    
+Total Warning Messages       182  0    
+Total Info Messages          0    0    
+Maximum memory usage for this GCA flow: 502.25 MB
+CPU usage for this GCA flow: 21 seconds
+1
